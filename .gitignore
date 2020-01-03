@@ -1,0 +1,13 @@
+.idea/
+node_modules/
+dist/
+
+# Local .env* files
+.env.local
+.env.*.local
+
+# Assets
+test/assets/*_streamed.mp4
+
+# Log files
+*.log
