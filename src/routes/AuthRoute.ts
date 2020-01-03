@@ -45,7 +45,7 @@ export class AuthRoute extends Route {
              * @swagger
              *
              * /auth/me:
-             *   post:
+             *   get:
              *     tags:
              *       - Authentication
              *     description: Gets current logged in user (by token)

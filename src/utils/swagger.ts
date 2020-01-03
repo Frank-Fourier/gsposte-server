@@ -1,6 +1,13 @@
-import { setup, serve } from "swagger-ui-express";
+import { setup, serve, SwaggerUiOptions } from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
 import packageJson from "../../package.json";
+
+export const swaggerOptions: SwaggerUiOptions = {
+    customCss: `
+        .swagger-ui .topbar { display: none }
+    `,
+    customSiteTitle: "GSPoste API Docs"
+};
 
 export const swaggerUi = setup(swaggerJSDoc({
     swaggerDefinition: {
@@ -20,6 +27,6 @@ export const swaggerUi = setup(swaggerJSDoc({
         "src/controllers/*Controller.ts",
         "src/routes/*Route.ts"
     ]
-}));
+}), swaggerOptions);
 
 export const serveSwagger = serve;
