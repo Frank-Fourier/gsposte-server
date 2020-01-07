@@ -12,7 +12,17 @@
         "types": [ "reflect-metadata", "mocha" ],
         "moduleResolution": "node",
         "esModuleInterop": true,
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "baseUrl": "src",
+        "paths": {
+            "@ioc": [ "ioc.ts" ],
+            "@server": [ "server.ts" ],
+            "@utils/*": [ "utils/*" ],
+            "@models/*": [ "models/*" ],
+            "@services/*": [ "services/*" ],
+            "@controllers/*": [ "controllers/*" ],
+            "@routes/*": [ "routes/*" ]
+        }
     },
     "include": [
         "src/**/*.ts",

@@ -1,0 +1,8 @@
+--require test/setupMocha.ts
+--require ts-node/register
+--require source-map-support/register
+--require src/index.ts
+--timeout 5000
+--extension ts
+--reporter landing
+--exit

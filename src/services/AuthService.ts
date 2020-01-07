@@ -3,12 +3,12 @@ import { inject } from "inversify";
 import { UserService } from "./UserService";
 import { ExtractJwt, Strategy, VerifiedCallback } from "passport-jwt";
 import { Handler as ExpressHandler, Request } from "express";
-import { UserDocument, UserRoles } from "../models/UserModel";
+import { UserDocument, UserRoles } from "@models/UserModel";
 import passport from "passport";
 import httpErrors from "http-errors";
 import moment from "moment";
 import jwt from "jwt-simple";
-import { comparePasswords } from "../utils/crypto";
+import { comparePasswords } from "@utils/crypto";
 
 export interface JwtToken {
     exp: number

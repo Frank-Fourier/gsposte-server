@@ -1,22 +1,25 @@
-import ora from "ora";
 import express from "express";
 import bodyParser from "body-parser";
-import helmet from "helmet";
 import mongoose from "mongoose";
+import ora from "ora";
+import helmet from "helmet";
 
 import { inject } from "inversify";
 import { provide } from "inversify-binding-decorators";
-import { Route } from "./routes/Route";
-import { logger } from "./utils/winston";
-import { MONGO_URI } from "./utils/mongo";
-import { cors } from "./utils/cors";
-import { AuthService } from "./services/AuthService";
-import { UserService } from "./services/UserService";
-import { serveSwagger, swaggerUi } from "./utils/swagger";
-import { ioc } from "./ioc";
-import { AuthRoute } from "./routes/AuthRoute";
-import { UserRoute } from "./routes/UserRoute";
-import { UserRoles } from "./models/UserModel";
+import { ioc } from "@ioc";
+
+import { AuthService } from "@services/AuthService";
+import { UserService } from "@services/UserService";
+import { UserRoles } from "@models/UserModel";
+
+import { Route } from "@routes/Route";
+import { AuthRoute } from "@routes/AuthRoute";
+import { UserRoute } from "@routes/UserRoute";
+
+import { MONGO_URI } from "@utils/mongo";
+import { logger } from "@utils/winston";
+import { cors } from "@utils/cors";
+import { swaggerUi, serveSwagger } from "@utils/swagger";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -95,6 +98,7 @@ export class ExpressServer {
     }
 
     private setupSwagger() {
+        if (process.env.NODE_ENV === "test") return;
         const spinner = ora("Setting up Swagger documentation!").start();
         this.app.use("/docs", serveSwagger, swaggerUi);
         spinner.succeed("Swagger is available at /docs!");
