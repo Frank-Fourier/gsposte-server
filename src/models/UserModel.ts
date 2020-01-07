@@ -1,7 +1,12 @@
 import { model, Model, Schema, Document } from "mongoose";
 import { encryptPasswordSync } from "../utils/crypto";
-import { Decoder, object, string } from "@mojotech/json-type-validation";
+import { array, constant, Decoder, object, oneOf, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
+
+export enum UserRoles {
+    ROLE_USER = "ROLE_USER",
+    ROLE_ADMIN = "ROLE_ADMIN"
+}
 
 /**
  * @swagger
@@ -19,10 +24,18 @@ import uniqueValidator from "mongoose-unique-validator";
  *         example: GiovanniOr2
  *       email:
  *         type: string
- *         example: giovanniorciuolo1999@gmail.com
+ *         example: giovanni.orciuolo1999@gmail.com
  *       password:
  *         type: string
- *         example: okokok!
+ *         example: OhyaWorstGirl
+ *       roles:
+ *         type: array
+ *         example: [ "ROLE_USER" ]
+ *         items:
+ *           type: string
+ *           enum:
+ *             - "ROLE_USER"
+ *             - "ROLE_ADMIN"
  *   UserDocument:
  *     allOf:
  *       - $ref: '#/definitions/User'
@@ -34,11 +47,15 @@ import uniqueValidator from "mongoose-unique-validator";
  *           createdAt:
  *             type: string
  *             example: 2019-03-25T18:16:24.892Z
+ *           updatedAt:
+ *             type: string
+ *             example: 2020-01-02T18:16:24.892Z
  */
 export interface User {
     username: string
     email: string
     password: string
+    roles?: UserRoles[]
 }
 export interface UserDocument extends User, Document {
 }
@@ -46,6 +63,10 @@ export const userDecoder: Decoder<User> = object({
     username: string(),
     email: string(),
     password: string(),
+    roles: optional(array(oneOf(
+        constant(UserRoles.ROLE_USER),
+        constant(UserRoles.ROLE_ADMIN)
+    ))),
 });
 
 /**
@@ -60,10 +81,10 @@ export const userDecoder: Decoder<User> = object({
  *     properties:
  *       currentPassword:
  *         type: string
- *         example: okokok!
+ *         example: FistsOfJustice!
  *       newPassword:
  *         type: string
- *         example: uau!
+ *         example: TakeOver!
  */
 export interface UserPasswordUpdate {
     currentPassword: string;
@@ -91,10 +112,15 @@ export const UserSchema = new Schema<User>({
         required: "Password is required",
         set: (password: string) => encryptPasswordSync(password),
     },
+    roles: [{
+        type: String,
+        enum: [ UserRoles.ROLE_USER, UserRoles.ROLE_ADMIN ],
+        default: UserRoles.ROLE_USER
+    }],
 }, {
     timestamps: {
         createdAt: true,
-        updatedAt: false,
+        updatedAt: true,
     }
 });
 

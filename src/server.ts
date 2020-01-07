@@ -16,6 +16,7 @@ import { serveSwagger, swaggerUi } from "./utils/swagger";
 import { ioc } from "./ioc";
 import { AuthRoute } from "./routes/AuthRoute";
 import { UserRoute } from "./routes/UserRoute";
+import { UserRoles } from "./models/UserModel";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -84,6 +85,7 @@ export class ExpressServer {
                 username: "system",
                 email: "system@server",
                 password: process.env.SYSTEM_PASS,
+                roles: [ UserRoles.ROLE_USER, UserRoles.ROLE_ADMIN ]
             });
         } catch (err) {
             spinner.fail(`Failed to create system user! ${err}`);

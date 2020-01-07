@@ -1,10 +1,9 @@
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { UserService } from "./UserService";
-import { Strategy, ExtractJwt, VerifiedCallback } from "passport-jwt";
-import { Request } from "express";
-import { Handler as ExpressHandler } from "express";
-import { UserDocument } from "../models/UserModel";
+import { ExtractJwt, Strategy, VerifiedCallback } from "passport-jwt";
+import { Handler as ExpressHandler, Request } from "express";
+import { UserDocument, UserRoles } from "../models/UserModel";
 import passport from "passport";
 import httpErrors from "http-errors";
 import moment from "moment";
@@ -28,10 +27,10 @@ export interface JwtToken {
  *     properties:
  *       usernameOrEmail:
  *         type: string
- *         example: GiovanniOr2
+ *         example: system
  *       password:
  *         type: string
- *         example: okokok!
+ *         example: FistsOfJustice!
  *         format: password
  */
 export interface LoginPayload {
@@ -56,25 +55,52 @@ export class AuthService {
         @inject(UserService) private userService: UserService
     ) {}
 
-    private getStrategy(): Strategy {
+    private getTokenStrategy(): Strategy {
         return new Strategy({
             secretOrKey: process.env.JWT_SECRET,
-            jwtFromRequest: ExtractJwt.fromExtractors([
-                ExtractJwt.fromAuthHeaderWithScheme("jwt"),
-            ]),
+            jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme("jwt"),
             passReqToCallback: true
         }, (req: Request, payload: JwtToken, done: VerifiedCallback) => {
-            this.userService.findById(payload.userId)
-                .then(user => {
-                    if (!user) return done(null, false, { message: "User by token not found!" });
+            (async () => {
+                try {
+                    const user = await this.userService.findById(payload.userId);
+                    if (!user) {
+                        return done({error: "User by token not found!"}, null);
+                    }
                     return done(null, user);
-                })
-                .catch(err => done(err));
+                } catch (err) {
+                    return done(err);
+                }
+            })();
+        });
+    }
+
+    private getAdminTokenStrategy(): Strategy {
+        return new Strategy({
+            secretOrKey: process.env.JWT_SECRET,
+            jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme("jwt"),
+            passReqToCallback: true
+        }, (req: Request, payload: JwtToken, done: VerifiedCallback) => {
+            (async () => {
+                try {
+                    const user = await this.userService.findById(payload.userId);
+                    if (!user) {
+                        return done({ error: "User by token not found!" });
+                    }
+                    if (user.roles && user.roles.includes(UserRoles.ROLE_ADMIN)) {
+                        return done(null, user);
+                    }
+                    return done({ error: "This call requires admin privileges!" });
+                } catch (err) {
+                    return done(err);
+                }
+            })();
         });
     }
 
     public getPassportMiddleware(): ExpressHandler {
-        passport.use("jwt", this.getStrategy());
+        passport.use("jwt", this.getTokenStrategy());
+        passport.use("jwt_admin", this.getAdminTokenStrategy());
         return passport.initialize();
     }
 

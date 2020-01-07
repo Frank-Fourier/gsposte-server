@@ -13,7 +13,7 @@ export class UserService extends MongoService<User, UserDocument> {
 
     public async updatePassword(user: UserDocument, passwordUpdate: UserPasswordUpdate) {
         if (!await comparePasswords(user.password, passwordUpdate.currentPassword)) {
-            throw new httpErrors.Forbidden("Wrong password!");
+            throw new httpErrors.Forbidden("Wrong old password!");
         }
         await this.updateById(user._id, { password: passwordUpdate.newPassword });
     }

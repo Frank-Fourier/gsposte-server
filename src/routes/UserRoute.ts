@@ -27,6 +27,8 @@ export class UserRoute extends Route {
              *         in: body
              *         schema:
              *           $ref: "#/definitions/User"
+             *     security:
+             *       - JWT: []
              *     responses:
              *       201:
              *         description: User created
@@ -42,7 +44,8 @@ export class UserRoute extends Route {
             {
                 subPath: "/register",
                 method: RequestMethod.POST,
-                requiresAuth: false,
+                requiresAuth: true,
+                requiresAdmin: true,
                 handler: (req, res) => this.userController.register(req, res)
             },
             /**

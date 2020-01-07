@@ -19,7 +19,7 @@ export class AuthRoute extends Route {
              *       - Authentication
              *     description: Login into the application
              *     produces:
-             *       - application/json
+             *       - text/plain
              *     parameters:
              *       - name: Payload
              *         description: Login payload

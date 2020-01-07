@@ -2,6 +2,8 @@ import { Application, NextFunction, Request, Response } from "express";
 import { injectable, unmanaged } from "inversify";
 import { authenticate } from "passport";
 
+type ExpressMiddleware = (req: Request, res: Response, next?: NextFunction) => void;
+
 export enum RequestMethod {
     POST = "post",
     GET = "get",
@@ -14,8 +16,9 @@ export interface RouteInfo {
     subPath: string
     method: RequestMethod
     requiresAuth: boolean
-    middleware?: any
-    handler: (req: Request, res: Response, next?: NextFunction) => void
+    requiresAdmin?: boolean
+    handler: ExpressMiddleware
+    middleware?: ExpressMiddleware
 }
 
 /**
@@ -26,6 +29,8 @@ export interface RouteInfo {
  *      description: Invalid request body
  *   Unauthorized:
  *     description: Invalid or expired authorization
+ *   Forbidden:
+ *     description: Higher privileges are required for this call
  *   NotFound:
  *     description: The specified resource was not found
  */
@@ -40,10 +45,11 @@ export class Route {
     makeRoutes(app: Application) {
         this.routes.forEach(route => {
             const path = `${process.env.API_PATH}${this.path}${route.subPath}`;
+
             route.requiresAuth ?
                 app.route(path)[route.method](
-                    authenticate('jwt', { session: false }),
-                    (req, res) => route.handler(req, res)
+                    authenticate(route.requiresAdmin ? "jwt_admin" : "jwt", { session: false }),
+                    (req, res, next) => route.handler(req, res, next)
                 ) :
                 app.route(path)[route.method](
                     (req, res, next) => route.middleware ? route.middleware(req, res, next) : next(),
