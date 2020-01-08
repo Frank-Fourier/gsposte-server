@@ -1,6 +1,6 @@
 {
 	"name": "gsposte-server",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "GSPoste REST API",
 	"main": "src/index.ts",
 	"repository": "git@bitbucket.org:stasbranger/gsposte-server.git",
@@ -9,14 +9,18 @@
 	"private": true,
 	"scripts": {
 		"dev": "cross-env NODE_ENV=development nodemon",
-		"build": "cross-env NODE_ENV=production tsc -p .",
+		"build": "tsc -p .",
+		"pretest": "tsc -p .",
+		"watch": "mocha-typescript-watch",
+		"dev-test-watch": "mocha-typescript-watch",
+		"prepare": "tsc -p .",
 		"test": "mocha test/**/*.spec.ts"
 	},
 	"dependencies": {
 		"@mojotech/json-type-validation": "^3.1.0",
 		"bcryptjs": "^2.4.3",
 		"body-parser": "^1.19.0",
-        "cross-env": "^6.0.3",
+		"cross-env": "^6.0.3",
 		"dotenv-flow": "^3.1.0",
 		"express": "^4.17.1",
 		"helmet": "^3.21.2",
@@ -33,11 +37,11 @@
 		"passport": "^0.4.1",
 		"passport-jwt": "^4.0.0",
 		"reflect-metadata": "^0.1.13",
-        "source-map-support": "^0.5.16",
+		"source-map-support": "^0.5.16",
 		"swagger-jsdoc": "^3.5.0",
 		"swagger-ui-express": "^4.1.2",
-        "ts-node": "^8.5.4",
-        "typescript": "^3.7.4",
+		"ts-node": "^8.5.4",
+		"typescript": "^3.7.4",
 		"winston": "^3.2.1"
 	},
 	"devDependencies": {
@@ -51,6 +55,7 @@
 		"@types/mocha": "^5.2.7",
 		"@types/mongoose": "^5.5.36",
 		"@types/mongoose-unique-validator": "^1.0.3",
+		"@types/node": "^13.1.4",
 		"@types/passport": "^1.0.2",
 		"@types/passport-jwt": "^3.0.3",
 		"@types/supertest": "^2.0.8",
@@ -60,16 +65,17 @@
 		"chai": "^4.2.0",
 		"faker": "^4.1.0",
 		"mocha": "^6.2.2",
+		"mocha-typescript": "^1.1.17",
 		"nodemon": "^2.0.2",
 		"supertest": "^4.0.2"
 	},
-    "_moduleAliases": {
-        "@ioc": "dist/src/ioc.js",
-        "@server": "dist/src/server.js",
-        "@utils": "dist/src/utils",
-        "@models": "dist/src/models",
-        "@services": "dist/src/services",
-        "@controllers": "dist/src/controllers",
-        "@routes": "dist/src/routes"
-    }
+	"_moduleAliases": {
+		"@ioc": "dist/src/ioc.js",
+		"@server": "dist/src/server.js",
+		"@utils": "dist/src/utils",
+		"@models": "dist/src/models",
+		"@services": "dist/src/services",
+		"@controllers": "dist/src/controllers",
+		"@routes": "dist/src/routes"
+	}
 }

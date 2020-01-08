@@ -1,5 +1,5 @@
 import { model, Model, Schema, Document } from "mongoose";
-import { encryptPasswordSync } from "../utils/crypto";
+import { encryptPasswordSync } from "@utils/crypto";
 import { array, constant, Decoder, object, oneOf, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
 
@@ -112,11 +112,11 @@ export const UserSchema = new Schema<User>({
         required: "Password is required",
         set: (password: string) => encryptPasswordSync(password),
     },
-    roles: [{
-        type: String,
+    roles: {
+        type: [ String ],
         enum: [ UserRoles.ROLE_USER, UserRoles.ROLE_ADMIN ],
-        default: UserRoles.ROLE_USER
-    }],
+        default: [ UserRoles.ROLE_USER ]
+    },
 }, {
     timestamps: {
         createdAt: true,

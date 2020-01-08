@@ -12,5 +12,5 @@ export function generateMockUser(): User {
 export const userGiovanni: User = {
     username: "GiovanniOr2",
     email: "giovanni.orciuolo1999@gmail.com",
-    password: "okokok!"
+    password: "Expurosion!!!!"
 };

@@ -9,7 +9,7 @@
         "inlineSources": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "types": [ "reflect-metadata", "mocha" ],
+        "types": [ "node", "reflect-metadata", "mocha" ],
         "moduleResolution": "node",
         "esModuleInterop": true,
         "resolveJsonModule": true,

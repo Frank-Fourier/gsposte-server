@@ -10,7 +10,6 @@ import { ioc } from "@ioc";
 
 import { AuthService } from "@services/AuthService";
 import { UserService } from "@services/UserService";
-import { UserRoles } from "@models/UserModel";
 
 import { Route } from "@routes/Route";
 import { AuthRoute } from "@routes/AuthRoute";
@@ -20,6 +19,7 @@ import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
 import { cors } from "@utils/cors";
 import { swaggerUi, serveSwagger } from "@utils/swagger";
+import { generateSystemUser } from "@utils/system";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -80,21 +80,8 @@ export class ExpressServer {
     }
 
     private async setupSystemUser() {
-        if (await this.userService.countDocuments() > 0) return;
-
-        const spinner = ora("Creating up system user!").start();
-        try {
-            await this.userService.save({
-                username: "system",
-                email: "system@server",
-                password: process.env.SYSTEM_PASS,
-                roles: [ UserRoles.ROLE_USER, UserRoles.ROLE_ADMIN ]
-            });
-        } catch (err) {
-            spinner.fail(`Failed to create system user! ${err}`);
-            return;
-        }
-        spinner.succeed("Created system user!");
+        if (await this.userService.countDocuments() > 0 || process.env.NODE_ENV === "test") return;
+        await generateSystemUser();
     }
 
     private setupSwagger() {
