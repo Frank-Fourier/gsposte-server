@@ -55,7 +55,7 @@ export class AuthRoute extends Route {
              *       - JWT: []
              *     responses:
              *       200:
-             *         description: User currently logged in
+             *         description: User currently logged in (Password will be encrypted)
              *         schema:
              *           $ref: "#/definitions/UserDocument"
              *       400:

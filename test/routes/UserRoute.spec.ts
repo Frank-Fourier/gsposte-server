@@ -7,10 +7,10 @@ import { getSystemUser, loginWithSystem } from "../test_utils";
 import { userGiovanni } from "../mocks/user";
 import { UserService } from "@services/UserService";
 import { cleanTestDB } from "@utils/mongo";
-import supertest from "supertest";
 import { UserRoles } from "@models/UserModel";
 import { AuthService } from "@services/AuthService";
 import { comparePasswords } from "@utils/crypto";
+import supertest from "supertest";
 
 const API = process.env.API_PATH;
 

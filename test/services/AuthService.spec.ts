@@ -15,7 +15,6 @@ import { generateSystemUser } from "@utils/system";
     static async before() { await generateSystemUser(); }
 
     @test async "Should login correctly" () {
-        debugger;
         let token: string;
         try {
             token = await this.authService.login({
@@ -23,7 +22,6 @@ import { generateSystemUser } from "@utils/system";
                 password: process.env.SYSTEM_PASS
             });
         } catch (err) {
-            debugger;
             logger.error(err);
             expect(err).not.to.exist;
         }
