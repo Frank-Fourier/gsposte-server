@@ -6,7 +6,7 @@ import { cleanTestDB } from "@utils/mongo";
 import { generateMockUser, userGiovanni } from "../mocks/user";
 import { UserDocument, UserRoles } from "@models/UserModel";
 import { logger } from "@utils/winston";
-import { assertSameUser } from "../asserts";
+import { assertSameUser } from "../test_utils";
 import faker from "faker/locale/it";
 import { generateSystemUser } from "@utils/system";
 
@@ -154,7 +154,7 @@ let dummy: UserDocument;
             user.email = trimEmail;
             anotherDummy = await this.userService.save(user);
         } catch (err) {
-            console.error(err);
+            logger.error(err);
             expect(err).not.to.exist;
         }
 
@@ -162,7 +162,7 @@ let dummy: UserDocument;
         try {
             found = await this.userService.findById(anotherDummy._id);
         } catch (err) {
-            console.error(err);
+            logger.error(err);
             expect(err).not.to.exist;
         }
         expect(found).to.exist;

@@ -65,7 +65,7 @@ export class AuthService {
                 try {
                     const user = await this.userService.findById(payload.userId);
                     if (!user) {
-                        return done({error: "User by token not found!"}, null);
+                        return done({ error: "User by token not found!" }, null);
                     }
                     return done(null, user);
                 } catch (err) {
@@ -75,32 +75,8 @@ export class AuthService {
         });
     }
 
-    private getAdminTokenStrategy(): Strategy {
-        return new Strategy({
-            secretOrKey: process.env.JWT_SECRET,
-            jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme("jwt"),
-            passReqToCallback: true
-        }, (req: Request, payload: JwtToken, done: VerifiedCallback) => {
-            (async () => {
-                try {
-                    const user = await this.userService.findById(payload.userId);
-                    if (!user) {
-                        return done({ error: "User by token not found!" });
-                    }
-                    if (user.roles && user.roles.includes(UserRoles.ROLE_ADMIN)) {
-                        return done(null, user);
-                    }
-                    return done({ error: "This call requires admin privileges!" });
-                } catch (err) {
-                    return done(err);
-                }
-            })();
-        });
-    }
-
     public getPassportMiddleware(): ExpressHandler {
         passport.use("jwt", this.getTokenStrategy());
-        passport.use("jwt_admin", this.getAdminTokenStrategy());
         return passport.initialize();
     }
 
@@ -110,13 +86,17 @@ export class AuthService {
             exp: expires,
             userId: user._id,
         };
-        const encodedToken = jwt.encode(token, process.env.JWT_SECRET);
+        const encoded = jwt.encode(token, process.env.JWT_SECRET);
 
-        return `JWT ${encodedToken}`;
+        return `JWT ${encoded}`;
     }
 
-    public decodeToken(encodedToken: string): JwtToken {
-        const split = encodedToken.split(" ");
+    public decodeToken(token: string): JwtToken {
+        if (!token) {
+            throw new httpErrors.BadRequest("Empty token!");
+        }
+
+        const split = token.split(" ");
         if (split.length !== 2) {
             throw new httpErrors.BadRequest("Invalid encoded token!");
         }
@@ -137,13 +117,20 @@ export class AuthService {
         return this.createToken(user);
     }
 
-    public async getUserByToken(encodedToken: string): Promise<UserDocument> {
+    public async getUserByToken(token: string): Promise<UserDocument> {
         try {
             return await this.userService.findById(
-                this.decodeToken(encodedToken).userId
+                this.decodeToken(token).userId
             );
         } catch (err) {
             throw new httpErrors.NotFound(err);
+        }
+    }
+
+    public async adminOnly(token: string) {
+        const user = await this.getUserByToken(token);
+        if (!user.roles.includes(UserRoles.ROLE_ADMIN)) {
+            throw new httpErrors.Forbidden("Higher privileges are required for this call.");
         }
     }
 

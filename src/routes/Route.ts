@@ -16,7 +16,6 @@ export interface RouteInfo {
     subPath: string
     method: RequestMethod
     requiresAuth: boolean
-    requiresAdmin?: boolean
     handler: ExpressMiddleware
     middleware?: ExpressMiddleware
 }
@@ -48,7 +47,7 @@ export class Route {
 
             route.requiresAuth ?
                 app.route(path)[route.method](
-                    authenticate(route.requiresAdmin ? "jwt_admin" : "jwt", { session: false }),
+                    authenticate("jwt", { session: false }),
                     (req, res, next) => route.handler(req, res, next)
                 ) :
                 app.route(path)[route.method](

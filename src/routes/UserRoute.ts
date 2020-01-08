@@ -1,7 +1,7 @@
 import { RequestMethod, Route } from "./Route";
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
-import { UserController } from "../controllers/UserController";
+import { UserController } from "@controllers/UserController";
 
 @provide(UserRoute)
 export class UserRoute extends Route {
@@ -45,7 +45,6 @@ export class UserRoute extends Route {
                 subPath: "/register",
                 method: RequestMethod.POST,
                 requiresAuth: true,
-                requiresAdmin: true,
                 handler: (req, res) => this.userController.register(req, res)
             },
             /**

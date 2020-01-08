@@ -1,7 +1,7 @@
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { RequestMethod, Route } from "./Route";
-import { AuthController } from "../controllers/AuthController";
+import { AuthController } from "@controllers/AuthController";
 
 @provide(AuthRoute)
 export class AuthRoute extends Route {

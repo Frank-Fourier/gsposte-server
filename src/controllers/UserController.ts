@@ -1,10 +1,10 @@
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { Request, Response } from "express";
-import { UserService } from "../services/UserService";
-import { AuthService } from "../services/AuthService";
-import { User, userDecoder, UserDocument, UserPasswordUpdate, userPasswordUpdateDecoder } from "../models/UserModel";
-import { logger } from "../utils/winston";
+import { UserService } from "@services/UserService";
+import { AuthService } from "@services/AuthService";
+import { User, userDecoder, UserDocument, UserPasswordUpdate, userPasswordUpdateDecoder } from "@models/UserModel";
+import { logger } from "@utils/winston";
 
 @provide(UserController)
 export class UserController {
@@ -16,6 +16,7 @@ export class UserController {
 
     public async register(req: Request, res: Response) {
         try {
+            await this.authService.adminOnly(req.headers.authorization);
             try { userDecoder.runWithException(req.body) } catch (err) { return res.status(400).send(err) }
 
             const user: User = req.body;
@@ -35,10 +36,10 @@ export class UserController {
         try {
             try { userPasswordUpdateDecoder.runWithException(req.body) } catch (err) { return res.status(400).send(err) }
 
-            const userDoc: UserDocument = await this.authService.getUserByToken(req.headers["authorization"]);
-            logger.info(`User ${userDoc.username} is requesting a password update...`);
+            const user: UserDocument = await this.authService.getUserByToken(req.headers.authorization);
+            logger.info(`User ${user.username} is updating its password!`);
 
-            await this.userService.updatePassword(userDoc, req.body as UserPasswordUpdate);
+            await this.userService.updatePassword(user, req.body as UserPasswordUpdate);
 
             return res.status(200).send({message: "Password updated successfully"});
         } catch (err) {
