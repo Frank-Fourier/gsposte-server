@@ -44,39 +44,39 @@ export class ExpressServer {
     }
 
     private setupConfig() {
-        const spinner = ora("Setting up config!").start();
+        const spinner = this.makeSpinner("Setting up config!");
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({ extended: false }));
         this.app.use(cors);
         this.app.use(helmet());
         this.app.disable("x-powered-by");
-        spinner.succeed();
+        spinner && spinner.succeed();
     }
 
     private setupDatabase() {
-        const spinner = ora("Connecting to database!").start();
+        const spinner = this.makeSpinner("Connecting to database!");
         mongoose.connect(MONGO_URI, {
             useNewUrlParser: true,
             useCreateIndex: true,
             useFindAndModify: false,
             useUnifiedTopology: true,
-        }).then(() => spinner.succeed("Connected to database!"))
+        }).then(() => spinner && spinner.succeed("Connected to database!"))
           .catch(err => {
-              spinner.fail("Couldn't connect to database...");
+              spinner && spinner.fail("Couldn't connect to database...");
               logger.error("◇ Failed to connect to MongoDB!", err);
           });
     }
 
     private setupRoutes() {
-        const spinner = ora("Setting up endpoints!").start();
+        const spinner = this.makeSpinner("Setting up endpoints!");
         this.routes.forEach(route => route.makeRoutes(this.app));
-        spinner.succeed();
+        spinner && spinner.succeed();
     }
 
     private setupPassport() {
-        const spinner = ora("Setting up passport authentication!").start();
+        const spinner = this.makeSpinner("Setting up passport authentication!");
         this.app.use(this.authService.getPassportMiddleware());
-        spinner.succeed();
+        spinner && spinner.succeed();
     }
 
     private async setupSystemUser() {
@@ -86,9 +86,14 @@ export class ExpressServer {
 
     private setupSwagger() {
         if (process.env.NODE_ENV === "test") return;
-        const spinner = ora("Setting up Swagger documentation!").start();
+        const spinner = this.makeSpinner("Setting up Swagger documentation!");
         this.app.use("/docs", serveSwagger, swaggerUi);
-        spinner.succeed("Swagger is available at /docs!");
+        spinner && spinner.succeed("Swagger is available at /docs!");
+    }
+
+    private makeSpinner(text: string): ora.Ora {
+        if (process.env.NODE_ENV === "test") return null;
+        return ora(text).start();
     }
 
 }

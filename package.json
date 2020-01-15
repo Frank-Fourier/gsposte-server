@@ -5,7 +5,7 @@
 	"main": "src/index.ts",
 	"repository": "git@bitbucket.org:stasbranger/gsposte-server.git",
 	"author": "Giovanni Orciuolo <giovanni.orciuolo1999@gmail.com>",
-	"license": "MIT",
+	"license": "GPLv3",
 	"private": true,
 	"scripts": {
 		"dev": "cross-env NODE_ENV=development nodemon",

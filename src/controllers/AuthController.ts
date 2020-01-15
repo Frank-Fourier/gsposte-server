@@ -1,7 +1,7 @@
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { Request, Response } from "express";
-import { AuthService, LoginPayload } from "../services/AuthService";
+import { AuthService, LoginPayload } from "@services/AuthService";
 import httpErrors from "http-errors";
 
 @provide(AuthController)

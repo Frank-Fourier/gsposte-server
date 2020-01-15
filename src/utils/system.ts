@@ -4,7 +4,7 @@ import { ioc } from "@ioc";
 import { UserService } from "@services/UserService";
 
 export async function generateSystemUser() {
-    const spinner = ora("Creating system user!").start();
+    const spinner = process.env.NODE_ENV != "test" ? ora("Creating system user!").start() : null;
     try {
         await ioc.resolve(UserService).save({
             username: "system",
@@ -16,5 +16,5 @@ export async function generateSystemUser() {
         spinner.fail(`Failed to create system user! ${err}`);
         return;
     }
-    spinner.succeed("Created system user!");
+    spinner && spinner.succeed("Created system user!");
 }

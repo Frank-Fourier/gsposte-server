@@ -6,7 +6,7 @@ GSPoste project backend REST API
 
 #### With Swagger
 On startup, the server will automatically generate the Swagger API spec and setup a Swagger UI endpoint all on its own!
-So just access it at ```{host}:{port}/api-docs``` while the server is running.
+So just access it at ```{host}:{port}/docs``` while the server is running.
 
 ### Develop
 
