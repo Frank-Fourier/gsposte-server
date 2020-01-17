@@ -14,7 +14,7 @@ import supertest from "supertest";
 
 const API = process.env.API_PATH;
 
-@suite class UserRouteTests {
+@suite("UserRoute") class UserRouteTests {
 
     http = supertest(ioc.resolve(ExpressServer).app);
     token = ""; // system token

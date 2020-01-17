@@ -1,14 +1,14 @@
 import { provide } from "inversify-binding-decorators";
-import { MongoService } from "./MongoService";
-import { UserModel, User, UserDocument, UserPasswordUpdate } from "@models/UserModel";
+import { MongoRepository } from "./MongoRepository";
+import { UserModel, User, UserDocument, UserPasswordUpdate, userDecoder } from "@models/UserModel";
 import { comparePasswords } from "@utils/crypto";
 import httpErrors from "http-errors";
 
 @provide(UserService)
-export class UserService extends MongoService<User, UserDocument> {
+export class UserService extends MongoRepository<User, UserDocument> {
 
-    constructor(public userModel = UserModel) {
-        super(userModel);
+    constructor(private userModel = UserModel) {
+        super(userModel, userDecoder);
     }
 
     public async updatePassword(user: UserDocument, passwordUpdate: UserPasswordUpdate) {

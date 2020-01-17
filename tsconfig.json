@@ -13,9 +13,10 @@
         "moduleResolution": "node",
         "esModuleInterop": true,
         "resolveJsonModule": true,
+        "target": "es5",
         "baseUrl": "src",
         "paths": {
-            "@ioc": [ "ioc.ts" ],
+            "@ioc": [ "inversify.config.ts" ],
             "@server": [ "server.ts" ],
             "@utils/*": [ "utils/*" ],
             "@models/*": [ "models/*" ],

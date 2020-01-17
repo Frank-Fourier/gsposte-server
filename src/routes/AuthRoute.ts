@@ -6,9 +6,9 @@ import { AuthController } from "@controllers/AuthController";
 @provide(AuthRoute)
 export class AuthRoute extends Route {
 
-    constructor(
-        @inject(AuthController) private authController: AuthController
-    ) {
+    @inject(AuthController) private authController: AuthController;
+
+    constructor() {
         super("/auth", [
             /**
              * @swagger

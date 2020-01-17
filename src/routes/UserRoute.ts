@@ -1,14 +1,14 @@
 import { RequestMethod, Route } from "./Route";
 import { provide } from "inversify-binding-decorators";
-import { inject } from "inversify";
 import { UserController } from "@controllers/UserController";
+import { inject } from "inversify";
 
 @provide(UserRoute)
 export class UserRoute extends Route {
 
-    constructor(
-        @inject(UserController) private userController: UserController
-    ) {
+    @inject(UserController) private userController: UserController;
+
+    constructor() {
         super("/user", [
             /**
              * @swagger
@@ -31,7 +31,7 @@ export class UserRoute extends Route {
              *       - JWT: []
              *     responses:
              *       201:
-             *         description: User created
+             *         description: User created (password will be encrypted)
              *         schema:
              *           $ref: "#/definitions/UserDocument"
              *       400:
@@ -39,7 +39,7 @@ export class UserRoute extends Route {
              *       401:
              *         $ref: "#/responses/Unauthorized"
              *       409:
-             *         description: Email must be unique
+             *         description: Email and username must be unique
              */
             {
                 subPath: "/register",

@@ -31,7 +31,6 @@ let dummy: UserDocument;
         expect(dummy.username).to.equal(this.mockUser.username);
         expect(dummy.email).to.equal(this.mockUser.email.toLowerCase());
         expect(dummy.password).not.to.equal(this.mockUser.password, "!!! PASSWORD WAS NOT HASHED !!!");
-        debugger;
         expect(dummy.roles).contains(UserRoles.ROLE_USER);
         expect(dummy._id).to.exist;
     }
@@ -49,7 +48,7 @@ let dummy: UserDocument;
     @test async "Should find dummy user by id and conditions" () {
         let found: UserDocument;
         try {
-            found = await this.userService.findById(dummy._id.toString());
+            found = await this.userService.findById(dummy._id);
         } catch (err) {
             logger.error(err);
             expect(err).not.to.exist;
@@ -119,8 +118,7 @@ let dummy: UserDocument;
             });
         } catch (err) {
             expect(err).to.exist;
-            expect(err.name).to.equal("ValidationError");
-            expect(err.errors.email.value).to.equal(anotherDummy.email)
+            expect(err.name).to.equal("ConflictError");
         }
         expect(updated).not.to.exist;
     }

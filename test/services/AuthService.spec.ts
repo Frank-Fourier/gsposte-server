@@ -73,17 +73,19 @@ import { generateSystemUser } from "@utils/system";
         }
 
         // Wrong password
+        let wrongToken: string;
         try {
-            const wrongToken = await this.authService.login({
+            wrongToken = await this.authService.login({
                 usernameOrEmail: "system@server",
                 password: process.env.SYSTEM_PASS + "I_CC_TP"
             });
-            expect(wrongToken, "I should not get a token from an invalid login!").not.to.exist;
         } catch (err) {
             expect(err).to.exist;
             expect(err.status).to.equal(401);
             expect(err.message).to.equal("Invalid username or password!");
         }
+
+        expect(wrongToken, "I should not get a token from an invalid login!").not.to.exist;
     }
 
     @test async "Should throw error when using an invalid JWT token" () {

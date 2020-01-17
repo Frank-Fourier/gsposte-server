@@ -2,7 +2,7 @@ import { Application, NextFunction, Request, Response } from "express";
 import { injectable, unmanaged } from "inversify";
 import { authenticate } from "passport";
 
-type ExpressMiddleware = (req: Request, res: Response, next?: NextFunction) => void;
+type ExpressMiddleware = (req: Request, res: Response, next?: NextFunction) => Promise<any>;
 
 export enum RequestMethod {
     POST = "post",
@@ -45,14 +45,18 @@ export class Route {
         this.routes.forEach(route => {
             const path = `${process.env.API_PATH}${this.path}${route.subPath}`;
 
+            const routeHandler = async (req: Request, res: Response) => {
+                route.handler(req, res).catch(err => res.status(err.statusCode || 500).send(err));
+            };
+
             route.requiresAuth ?
                 app.route(path)[route.method](
                     authenticate("jwt", { session: false }),
-                    (req, res, next) => route.handler(req, res, next)
+                    (req, res) => routeHandler(req, res)
                 ) :
                 app.route(path)[route.method](
                     (req, res, next) => route.middleware ? route.middleware(req, res, next) : next(),
-                    (req, res, next) => route.handler(req, res, next)
+                    (req, res) => routeHandler(req, res)
                 );
         });
     }

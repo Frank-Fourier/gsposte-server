@@ -51,9 +51,7 @@ export interface LoginPayload {
 @provide(AuthService)
 export class AuthService {
 
-    constructor(
-        @inject(UserService) private userService: UserService
-    ) {}
+    @inject(UserService) private userService: UserService;
 
     private getTokenStrategy(): Strategy {
         return new Strategy({
@@ -105,16 +103,19 @@ export class AuthService {
     }
 
     public async login(payload: LoginPayload): Promise<string> {
-        const user = await this.userService.queryOne({ $or: [
-            { username: payload.usernameOrEmail },
-            { email: payload.usernameOrEmail }
-        ]}).exec();
-
-        if (!user || !await comparePasswords(user.password, payload.password)) {
+        try {
+            // Grab the first user that has either payload username or payload email
+            const user = await this.userService.findOne({
+                $or: [
+                    { username: payload.usernameOrEmail },
+                    { email: payload.usernameOrEmail }
+                ]
+            });
+            await this.comparePasswords(user.password, payload.password);
+            return this.createToken(user);
+        } catch (err) {
             throw new httpErrors.Unauthorized("Invalid username or password!");
         }
-
-        return this.createToken(user);
     }
 
     public async getUserByToken(token: string): Promise<UserDocument> {
@@ -131,6 +132,12 @@ export class AuthService {
         const user = await this.getUserByToken(token);
         if (!user.roles.includes(UserRoles.ROLE_ADMIN)) {
             throw new httpErrors.Forbidden("Higher privileges are required for this call.");
+        }
+    }
+
+    private async comparePasswords(password: string, candidate: string) {
+        if (!await comparePasswords(password, candidate)) {
+            throw new httpErrors.Unauthorized("Invalid username or password!");
         }
     }
 

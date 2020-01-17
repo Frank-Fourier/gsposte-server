@@ -98,18 +98,19 @@ export const userPasswordUpdateDecoder: Decoder<UserPasswordUpdate> = object({
 export const UserSchema = new Schema<User>({
     username: {
         type: String,
-        required: "Username is required",
+        required: "Username is required.",
+        unique: true,
     },
     email: {
         type: String,
-        required: "Email is required",
+        required: "Email is required.",
         unique: true,
         trim: true,
         lowercase: true,
     },
     password: {
         type: String,
-        required: "Password is required",
+        required: "Password is required.",
         set: (password: string) => encryptPasswordSync(password),
     },
     roles: {

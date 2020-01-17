@@ -12,7 +12,7 @@ import { logger } from "@utils/winston";
 
 const API = process.env.API_PATH;
 
-@suite class AuthRouteTests {
+@suite("AuthRoute") class AuthRouteTests {
 
     http = supertest(ioc.resolve(ExpressServer).app);
 

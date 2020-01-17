@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 import ora from "ora";
 import helmet from "helmet";
 
-import { inject } from "inversify";
 import { provide } from "inversify-binding-decorators";
 import { ioc } from "@ioc";
 
@@ -30,8 +29,8 @@ export class ExpressServer {
     ];
 
     constructor(
-        @inject(AuthService) private authService: AuthService,
-        @inject(UserService) private userService: UserService,
+        private authService: AuthService,
+        private userService: UserService,
     ) {
         logger.info("Starting server");
         this.app = express();

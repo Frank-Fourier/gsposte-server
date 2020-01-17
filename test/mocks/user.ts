@@ -1,4 +1,5 @@
-import * as faker from "faker";
+import faker from "faker";
+import "faker/locale/it";
 import { User } from "@models/UserModel";
 
 export function generateMockUser(): User {
