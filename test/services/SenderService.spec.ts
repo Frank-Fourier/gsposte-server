@@ -87,16 +87,6 @@ import "faker/locale/it";
 
         expect(senders).to.exist;
         expect(senders.length).to.equal(2);
-
-        try {
-            // I should be using saved._id, instead I use system._id so I get an error
-            sender = await this.senderService.findById(this.system._id);
-        } catch (err) {
-            expect(err).to.exist;
-            expect(err.name).to.equal("NotFoundError");
-        }
-
-        expect(sender).not.to.exist;
     }
 
     @test async "Should update sender by id" () {

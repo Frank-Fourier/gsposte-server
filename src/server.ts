@@ -19,13 +19,15 @@ import { logger } from "@utils/winston";
 import { cors } from "@utils/cors";
 import { swaggerUi, serveSwagger } from "@utils/swagger";
 import { generateSystemUser } from "@utils/system";
+import { SenderRoute } from "@routes/SenderRoute";
 
 @provide(ExpressServer)
 export class ExpressServer {
     app: express.Application;
     routes: Route[] = [
         ioc.resolve(AuthRoute),
-        ioc.resolve(UserRoute)
+        ioc.resolve(UserRoute),
+        ioc.resolve(SenderRoute),
     ];
 
     constructor(

@@ -4,13 +4,58 @@ import { injectable, unmanaged } from "inversify";
 import { Decoder } from "@mojotech/json-type-validation";
 import httpErrors from "http-errors";
 
+/**
+ * @swagger
+ *
+ * definitions:
+ *   PaginateOptions:
+ *     type: object
+ *     properties:
+ *       pageIndex:
+ *         type: number
+ *         description: 0-based page number
+ *       pageSize:
+ *         type: number
+ *       sort:
+ *         type: object
+ *         description: Sort object following the Mongoose notation
+ *       populate:
+ *         type: string
+ *         description: Fields to populate separated by spaces
+ *       select:
+ *         type: string
+ *         description: Fields to select separated by spaces
+ */
 export interface PaginateOptions {
-    pageIndex: number
-    pageSize: number
-    sort?: unknown
+    pageIndex?: number
+    pageSize?: number
+    sort?: Object
     populate?: string
     select?: string
 }
+
+/**
+ * @swagger
+ *
+ * definitions:
+ *   Paginated:
+ *     type: object
+ *     properties:
+ *       meta:
+ *         type: object
+ *         properties:
+ *           total:
+ *             type: number
+ *             description: Total number of documents present (estimated)
+ *           pages:
+ *             type: number
+ *             description: Total number of pages (estimated by total)
+ *       docs:
+ *         type: array
+ *         description: Documents on this page
+ *         items:
+ *           type: object
+ */
 export interface Paginated<T extends Document> {
     meta: {
         total: number
@@ -19,6 +64,21 @@ export interface Paginated<T extends Document> {
     docs: T[]
 }
 
+/**
+ * @swagger
+ *
+ * definitions:
+ *   QueryModel:
+ *     type: object
+ *     properties:
+ *       pagination:
+ *         type: object
+ *         schema:
+ *           $ref: "#/definitions/PaginateOptions"
+ *       query:
+ *         type: object
+ *         description: Query object following the Mongoose query notation
+ */
 type MongoQuery<T> = Partial<T> | Object;
 
 @injectable()
@@ -65,15 +125,17 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async paginate(query: MongoQuery<DTO>, pagination: PaginateOptions): Promise<Paginated<Doc>> {
+    public async paginate(query: MongoQuery<DTO>, pagination: PaginateOptions, realCount = false): Promise<Paginated<Doc>> {
         try {
-            const docsCount = await this.model.estimatedDocumentCount();
+            const docsCount = realCount
+                ? await this.model.find(query).countDocuments().exec()
+                : await this.model.estimatedDocumentCount();
             return {
                 meta: {
                     total: docsCount,
                     pages: Math.ceil(docsCount / pagination.pageSize)
                 },
-                docs: await this.queryMany(query, pagination).orFail().exec()
+                docs: await this.queryMany(query || {}, pagination).orFail().exec()
             };
         } catch (err) {
             throw this.formatMongoError(err);
@@ -82,7 +144,7 @@ export class MongoRepository<DTO, Doc extends Document> {
 
     public async findOne(query: MongoQuery<DTO>): Promise<Doc> {
         try {
-            return await this.model.findOne(query).orFail().exec();
+            return await this.model.findOne(query || {}).orFail().exec();
         } catch (err) {
             throw this.formatMongoError(err);
         }
@@ -141,9 +203,10 @@ export class MongoRepository<DTO, Doc extends Document> {
     }
 
     public paginateOptionsFromObject(object: any): PaginateOptions {
+        if (!object) object = {};
         return {
-            pageIndex: parseInt(object["pageIndex"] || "10"),
-            pageSize: parseInt(object["pageSize"] || "0"),
+            pageIndex: parseInt(object["pageIndex"] || "0"),
+            pageSize: parseInt(object["pageSize"] || "10"),
             sort: JSON.parse(object["sort"] || "{}"),
             populate: object["populate"] || "",
             select: object["select"] || "",

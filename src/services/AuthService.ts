@@ -3,7 +3,7 @@ import { inject } from "inversify";
 import { UserService } from "./UserService";
 import { ExtractJwt, Strategy, VerifiedCallback } from "passport-jwt";
 import { Handler as ExpressHandler, Request } from "express";
-import { UserDocument, UserRoles } from "@models/UserModel";
+import { UserDocument } from "@models/UserModel";
 import passport from "passport";
 import httpErrors from "http-errors";
 import moment from "moment";
@@ -79,7 +79,7 @@ export class AuthService {
     }
 
     public createToken(user: UserDocument): string {
-        const expires = moment().utc().add({ months: 1 }).unix();
+        const expires = moment().utc().add({ weeks: 1 }).unix();
         const token: JwtToken = {
             exp: expires,
             userId: user._id,
@@ -128,9 +128,13 @@ export class AuthService {
         }
     }
 
-    public async adminOnly(token: string) {
-        const user = await this.getUserByToken(token);
-        if (!user.roles.includes(UserRoles.ROLE_ADMIN)) {
+    public async getUserFromRequest(req: Request): Promise<UserDocument> {
+        return this.getUserByToken(req.headers.authorization);
+    }
+
+    public async adminOnly(req: Request) {
+        const user = await this.getUserFromRequest(req);
+        if (!user.isAdmin()) {
             throw new httpErrors.Forbidden("Higher privileges are required for this call.");
         }
     }

@@ -56,6 +56,7 @@ export interface User {
     email: string
     password: string
     roles?: UserRoles[]
+    isAdmin?: () => boolean;
 }
 export interface UserDocument extends User, Document {
 }
@@ -126,5 +127,8 @@ export const UserSchema = new Schema<User>({
 });
 
 UserSchema.plugin(uniqueValidator);
+UserSchema.methods.isAdmin = function() {
+    return this.roles.includes(UserRoles.ROLE_ADMIN);
+};
 
 export const UserModel: Model<UserDocument> = model("User", UserSchema);

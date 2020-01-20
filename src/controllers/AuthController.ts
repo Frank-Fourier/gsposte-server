@@ -20,7 +20,7 @@ export class AuthController {
     }
 
     async me(req: Request, res: Response) {
-        const user = await this.authService.getUserByToken(req.headers.authorization);
+        const user = await this.authService.getUserFromRequest(req);
         return res.status(200).send(user);
     }
 

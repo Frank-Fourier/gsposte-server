@@ -13,7 +13,7 @@ export enum RequestMethod {
 
 // Route descriptor
 export interface RouteInfo {
-    subPath: string
+    path?: string
     method: RequestMethod
     requiresAuth: boolean
     handler: ExpressMiddleware
@@ -43,7 +43,7 @@ export class Route {
 
     makeRoutes(app: Application) {
         this.routes.forEach(route => {
-            const path = `${process.env.API_PATH}${this.path}${route.subPath}`;
+            const path = `${process.env.API_PATH}${this.path}${route.path || ""}`;
 
             const routeHandler = async (req: Request, res: Response) => {
                 route.handler(req, res).catch(err => res.status(err.statusCode || 500).send(err));

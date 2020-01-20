@@ -3,7 +3,7 @@ import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { UserService } from "@services/UserService";
 import { AuthService } from "@services/AuthService";
-import { User, UserDocument, UserPasswordUpdate, userPasswordUpdateDecoder } from "@models/UserModel";
+import { User, UserPasswordUpdate, userPasswordUpdateDecoder } from "@models/UserModel";
 import { logger } from "@utils/winston";
 
 @provide(UserController)
@@ -13,7 +13,7 @@ export class UserController {
     @inject(AuthService) private authService: AuthService;
 
     public async register(req: Request, res: Response) {
-        await this.authService.adminOnly(req.headers.authorization);
+        await this.authService.adminOnly(req);
         this.userService.validateObject(req.body);
 
         const user = req.body as User;
@@ -25,7 +25,7 @@ export class UserController {
 
     public async updatePassword(req: Request, res: Response) {
         try { userPasswordUpdateDecoder.runWithException(req.body) } catch (err) { return res.status(400).send(err) }
-        const user: UserDocument = await this.authService.getUserByToken(req.headers.authorization);
+        const user = await this.authService.getUserFromRequest(req);
 
         logger.info(`User ${user.username} is updating its password!`);
         await this.userService.updatePassword(user, req.body as UserPasswordUpdate);

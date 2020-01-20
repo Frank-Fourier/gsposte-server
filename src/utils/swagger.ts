@@ -24,6 +24,7 @@ export const swaggerUi = setup(swaggerJSDoc({
     apis: [
         "src/models/*Model.ts",
         "src/services/*Service.ts",
+        "src/services/*Repository.ts",
         "src/controllers/*Controller.ts",
         "src/routes/*Route.ts"
     ]

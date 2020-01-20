@@ -42,7 +42,7 @@ export class UserRoute extends Route {
              *         description: Email and username must be unique
              */
             {
-                subPath: "/register",
+                path: "/register",
                 method: RequestMethod.POST,
                 requiresAuth: true,
                 handler: (req, res) => this.userController.register(req, res)
@@ -74,7 +74,7 @@ export class UserRoute extends Route {
              *         $ref: "#/responses/Unauthorized"
              */
             {
-                subPath: "/update/password",
+                path: "/update/password",
                 method: RequestMethod.PUT,
                 requiresAuth: true,
                 handler: (req, res) => this.userController.updatePassword(req, res)

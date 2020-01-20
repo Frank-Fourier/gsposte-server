@@ -36,7 +36,7 @@ export class AuthRoute extends Route {
              *         description: Login failed. Invalid username/email or password
              */
             {
-                subPath: "/login",
+                path: "/login",
                 method: RequestMethod.POST,
                 requiresAuth: false,
                 handler: (req, res) => this.authController.login(req, res)
@@ -64,7 +64,7 @@ export class AuthRoute extends Route {
              *         $ref: "#/responses/Unauthorized"
              */
             {
-                subPath: "/me",
+                path: "/me",
                 method: RequestMethod.GET,
                 requiresAuth: true,
                 handler: (req, res) => this.authController.me(req, res)
