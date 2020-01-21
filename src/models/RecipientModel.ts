@@ -2,6 +2,50 @@ import { UserDocument } from "@models/UserModel";
 import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
 
+/**
+ * @swagger
+ *
+ * definitions:
+ *   Recipient:
+ *     type: object
+ *     required:
+ *       - fullName
+ *       - address
+ *       - city
+ *     properties:
+ *       fullName:
+ *         type: string
+ *         example: Makoto Nijima
+ *       address:
+ *         type: string
+ *         example: Yayoama Itchome St.
+ *       secondaryAddress:
+ *         type: string
+ *         example: Shujin Academy
+ *       city:
+ *         type: string
+ *         example: Tokyo
+ *       notes:
+ *         type: string
+ *         example: The sister of prosecutor Sae Nijima, and student council president at Shujin. She tries to blackmail the Thieves to force them to change the heart of a Yakuza boss, awakening to her Persona in the process. She is the canonic love interest for the protagonist.
+ *   RecipientDocument:
+ *     allOf:
+ *       - $ref: '#/definitions/Recipient'
+ *       - type: object
+ *         properties:
+ *           _id:
+ *             type: string
+ *             example: 5c991af86327ba47393f2fb3
+ *           user:
+ *             type: string
+ *             example: 5e14af210d3e883e729c3dd2
+ *           createdAt:
+ *             type: string
+ *             example: 2019-03-25T18:16:24.892Z
+ *           updatedAt:
+ *             type: string
+ *             example: 2020-01-02T18:16:24.892Z
+ */
 export interface Recipient {
     user?: string | UserDocument;
     fullName: string;

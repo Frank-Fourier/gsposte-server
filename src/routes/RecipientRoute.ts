@@ -20,6 +20,8 @@ export class RecipientRoute extends Route {
              *     description: Create a new recipient associated to a user
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Model
              *         description: Recipient to create
@@ -52,6 +54,8 @@ export class RecipientRoute extends Route {
              *     description: Find recipients associated with the user requesting. If admin, it ignores the association, you can find all of them.
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Query model
              *         required: true
@@ -83,6 +87,8 @@ export class RecipientRoute extends Route {
              *     description: Find recipient by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Recipient id
              *         required: true
@@ -116,6 +122,8 @@ export class RecipientRoute extends Route {
              *     description: Update recipient by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Recipient id
              *         required: true
@@ -153,6 +161,8 @@ export class RecipientRoute extends Route {
              *     description: Delete recipient by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Recipient id
              *         required: true

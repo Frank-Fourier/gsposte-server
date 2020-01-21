@@ -18,6 +18,8 @@ export class SenderRoute extends Route {
              *     description: Create a new sender associated to a user
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Model
              *         description: Sender to create
@@ -50,6 +52,8 @@ export class SenderRoute extends Route {
              *     description: Find senders associated with the user requesting. If admin, it ignores the association, you can find all of them.
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Query model
              *         required: true
@@ -81,6 +85,8 @@ export class SenderRoute extends Route {
              *     description: Find sender by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Sender id
              *         required: true
@@ -114,6 +120,8 @@ export class SenderRoute extends Route {
              *     description: Update sender by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Sender id
              *         required: true
@@ -151,6 +159,8 @@ export class SenderRoute extends Route {
              *     description: Delete sender by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
+             *     security:
+             *       - JWT: []
              *     parameters:
              *       - name: Sender id
              *         required: true

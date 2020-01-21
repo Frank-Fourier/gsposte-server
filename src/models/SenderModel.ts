@@ -9,7 +9,6 @@ import { UserDocument } from "@models/UserModel";
  *   Sender:
  *     type: object
  *     required:
- *       - user
  *       - name
  *       - description
  *       - address
@@ -23,7 +22,7 @@ import { UserDocument } from "@models/UserModel";
  *         example: One of your school teachers, later discovered to have a part-time maid job. She embodies the Temperance arcana.
  *       address:
  *         type: string
- *         example: Via Fake 21
+ *         example: Yayoama Itchome St.
  *       city:
  *         type: string
  *         example: Tokyo
