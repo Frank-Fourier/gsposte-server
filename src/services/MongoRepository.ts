@@ -34,6 +34,11 @@ export interface PaginateOptions {
     select?: string
 }
 
+export interface QueryOptions {
+    populate?: string
+    select?: string
+}
+
 /**
  * @swagger
  *
@@ -108,18 +113,18 @@ export class MongoRepository<DTO, Doc extends Document> {
                 .select(pagination.select || "");
     }
 
-    public async findById(id: string): Promise<Doc> {
+    public async findById(id: string, options: QueryOptions = {}): Promise<Doc> {
         this.checkValidObjectId(id);
         try {
-            return await this.model.findById(id).orFail().exec();
+            return await this.model.findById(id).populate(options.populate || "").select(options.select || "").orFail().exec();
         } catch (err) {
             throw this.formatMongoError(err);
         }
     }
 
-    public async find(query: MongoQuery<DTO>): Promise<Doc[]> {
+    public async find(query: MongoQuery<DTO>, options: QueryOptions = {}): Promise<Doc[]> {
         try {
-            return await this.queryMany(query).orFail().exec();
+            return await this.queryMany(query).populate(options.populate || "").select(options.select || "").orFail().exec();
         } catch (err) {
             throw this.formatMongoError(err);
         }
@@ -142,9 +147,9 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async findOne(query: MongoQuery<DTO>): Promise<Doc> {
+    public async findOne(query: MongoQuery<DTO>, options: QueryOptions = {}): Promise<Doc> {
         try {
-            return await this.model.findOne(query || {}).orFail().exec();
+            return await this.model.findOne(query || {}).populate(options.populate || "").select(options.select || "").orFail().exec();
         } catch (err) {
             throw this.formatMongoError(err);
         }

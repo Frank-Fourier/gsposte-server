@@ -1,10 +1,10 @@
+import { Request, Response } from "express";
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { RecipientService } from "@services/RecipientService";
 import { AuthService } from "@services/AuthService";
-import { Request, Response } from "express";
-import httpErrors from "http-errors";
 import { Recipient } from "@models/RecipientModel";
+import httpErrors from "http-errors";
 
 @provide(RecipientController)
 export class RecipientController {

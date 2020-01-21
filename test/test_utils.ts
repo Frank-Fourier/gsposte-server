@@ -5,6 +5,7 @@ import { AuthService } from "@services/AuthService";
 import { UserService } from "@services/UserService";
 import { Sender, SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
+import { Rubric, RubricDocument } from "@models/RubricModel";
 
 export function assertSameUser(original: UserDocument, candidate: UserDocument) {
     expect(candidate).to.exist;
@@ -33,6 +34,14 @@ export function assertSameRecipient(original: Recipient | RecipientDocument, can
     expect(candidate.address).to.equal(original.address);
     expect(candidate.secondaryAddress).to.equal(original.secondaryAddress);
     expect(candidate.city).to.equal(original.city);
+    expect(candidate.notes).to.equal(original.notes);
+}
+
+export function assertSameRubric(original: Rubric | RubricDocument, candidate: RubricDocument) {
+    expect(candidate).to.exist;
+    expect(candidate.user.toString()).to.equal(original.user.toString());
+    expect(candidate.name).to.equal(original.name);
+    expect(candidate.recipients).to.eql(original.recipients);
     expect(candidate.notes).to.equal(original.notes);
 }
 

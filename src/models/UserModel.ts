@@ -55,7 +55,7 @@ export interface User {
     username: string
     email: string
     password: string
-    roles?: UserRoles[]
+    roles?: Array<UserRoles>
     isAdmin?: () => boolean;
 }
 export interface UserDocument extends User, Document {
