@@ -9,7 +9,6 @@ import { generateMockSender } from "../mocks/sender";
 import { SenderDocument } from "@models/SenderModel";
 import { cleanTestDB } from "@utils/mongo";
 import faker from "faker";
-import "faker/locale/it";
 
 @suite ("SenderService") class SenderServiceTests {
 

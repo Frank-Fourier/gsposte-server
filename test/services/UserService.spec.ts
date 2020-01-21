@@ -7,8 +7,8 @@ import { generateMockUser, userGiovanni } from "../mocks/user";
 import { UserDocument, UserRoles } from "@models/UserModel";
 import { logger } from "@utils/winston";
 import { assertSameUser } from "../test_utils";
-import faker from "faker/locale/it";
 import { generateSystemUser } from "@utils/system";
+import faker from "faker";
 
 // User saved from userGiovanni
 let dummy: UserDocument;

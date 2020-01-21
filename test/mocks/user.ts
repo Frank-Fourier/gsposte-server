@@ -1,5 +1,4 @@
 import faker from "faker";
-import "faker/locale/it";
 import { User, UserDocument } from "@models/UserModel";
 import { UserService } from "@services/UserService";
 import { ioc } from "@ioc";

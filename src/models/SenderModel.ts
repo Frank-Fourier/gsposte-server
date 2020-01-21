@@ -71,6 +71,7 @@ export interface Sender {
 export interface SenderDocument extends Sender, Document {
 }
 export const senderDecoder: Decoder<Sender> = object({
+    user: optional(string()),
     name: string(),
     description: string(),
     address: string(),
@@ -90,18 +91,22 @@ export const SenderSchema = new Schema<Sender>({
     name: {
         type: String,
         required: "Name is required.",
+        maxlength: 100,
     },
     description: {
         type: String,
         required: "Description is required.",
+        maxlength: 500,
     },
     address: {
         type: String,
         required: "Address is required.",
+        maxlength: 200,
     },
     city: {
         type: String,
         required: "City is required.",
+        maxlength: 100,
     },
     iva: {
         type: String,
@@ -115,6 +120,7 @@ export const SenderSchema = new Schema<Sender>({
         type: String,
         trim: true,
         lowercase: true,
+        maxlength: 100,
     },
     notes: {
         type: String,

@@ -17,7 +17,11 @@ export class SenderController {
         const user = await this.authService.getUserFromRequest(req);
 
         const sender = req.body as Sender;
-        sender.user = user._id;
+        if (sender.user && !user.isAdmin()) {
+            // Force the associated user to be the request user
+            sender.user = user._id;
+        }
+
         const newSender = await this.senderService.save(sender);
 
         return res.status(201).send(newSender);

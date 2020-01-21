@@ -1,5 +1,4 @@
 import faker from "faker";
-import "faker/locale/it";
 import { Sender } from "@models/SenderModel";
 import { UserDocument } from "@models/UserModel";
 
