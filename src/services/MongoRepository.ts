@@ -26,17 +26,14 @@ import httpErrors from "http-errors";
  *         type: string
  *         description: Fields to select separated by spaces
  */
-export interface PaginateOptions {
+export interface QueryOptions {
+    populate?: string
+    select?: string,
+}
+export interface PaginateOptions extends QueryOptions {
     pageIndex?: number
     pageSize?: number
     sort?: Object
-    populate?: string
-    select?: string
-}
-
-export interface QueryOptions {
-    populate?: string
-    select?: string
 }
 
 /**
@@ -155,7 +152,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async updateById(id: string, updateBody: Partial<DTO>, upsert: boolean = false): Promise<Doc> {
+    public async updateById(id: string, updateBody: (Partial<DTO> | any), upsert: boolean = false): Promise<Doc> {
         this.checkValidObjectId(id);
         try {
             return await this.model.findByIdAndUpdate(id, updateBody, {

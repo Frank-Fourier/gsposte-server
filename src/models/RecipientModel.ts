@@ -1,6 +1,7 @@
 import { UserDocument } from "@models/UserModel";
 import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
+import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
 
 /**
  * @swagger
@@ -17,14 +18,35 @@ import { Decoder, object, optional, string } from "@mojotech/json-type-validatio
  *         type: string
  *         example: Makoto Nijima
  *       address:
- *         type: string
- *         example: Yayoama Itchome St.
- *       secondaryAddress:
- *         type: string
- *         example: Shujin Academy
- *       city:
- *         type: string
- *         example: Tokyo
+ *         type: object
+ *         required:
+ *           - street
+ *           - city
+ *           - zip
+ *           - province
+ *         properties:
+ *           street:
+ *             type: string
+ *             description: Street name (max length 44)
+ *             example: Yayoama Itchome St.
+ *           secondary:
+ *             type: string
+ *             description: Optional secondary address (max length 44)
+ *             example: Shujin Academy
+ *           city:
+ *             type: string
+ *             description: City name (max length 44)
+ *             example: Tokyo
+ *           zip:
+ *             type: string
+ *             example: 76123
+ *           province:
+ *             type: string
+ *             example: BA
+ *           country:
+ *             type: string
+ *             description: Will default to IT if not passed
+ *             example: JP
  *       notes:
  *         type: string
  *         example: The sister of prosecutor Sae Nijima, and student council president at Shujin. She tries to blackmail the Thieves to force them to change the heart of a Yakuza boss, awakening to her Persona in the process. She is the canonic love interest for the protagonist.
@@ -47,21 +69,18 @@ import { Decoder, object, optional, string } from "@mojotech/json-type-validatio
  *             example: 2020-01-02T18:16:24.892Z
  */
 export interface Recipient {
-    user?: string | UserDocument;
-    fullName: string;
-    address: string;
-    secondaryAddress?: string;
-    city: string;
-    notes?: string;
+    user?: string | UserDocument
+    fullName: string
+    address: Address
+    notes?: string
 }
 export interface RecipientDocument extends Recipient, Document {
+    address: AddressDocument
 }
 export const recipientDecoder: Decoder<Recipient> = object({
     user: optional(string()),
     fullName: string(),
-    address: string(),
-    secondaryAddress: optional(string()),
-    city: string(),
+    address: addressDecoder,
     notes: optional(string()),
 });
 
@@ -74,21 +93,11 @@ export const RecipientSchema = new Schema<Recipient>({
     fullName: {
         type: String,
         required: "Name is required.",
-        maxlength: 100,
+        maxlength: 44,
     },
     address: {
-        type: String,
-        required: "Address is required.",
-        maxlength: 200,
-    },
-    secondaryAddress: {
-        type: String,
-        maxlength: 200,
-    },
-    city: {
-        type: String,
-        required: "City is required.",
-        maxlength: 100,
+        type: AddressSchema,
+        required: "Address is required."
     },
     notes: {
         type: String,

@@ -30,7 +30,7 @@ export class UserController {
         logger.info(`User ${user.username} is updating its password!`);
         await this.userService.updatePassword(user, req.body as UserPasswordUpdate);
 
-        return res.status(200).send({message: "Password updated successfully"});
+        return res.status(200).send({ message: "Password updated successfully" });
     }
 
 }

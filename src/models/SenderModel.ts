@@ -1,6 +1,7 @@
 import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
+import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
 
 /**
  * @swagger
@@ -21,11 +22,35 @@ import { UserDocument } from "@models/UserModel";
  *         type: string
  *         example: One of your school teachers, later discovered to have a part-time maid job. She embodies the Temperance arcana.
  *       address:
- *         type: string
- *         example: Yayoama Itchome St.
- *       city:
- *         type: string
- *         example: Tokyo
+ *         type: object
+ *         required:
+ *           - street
+ *           - city
+ *           - zip
+ *           - province
+ *         properties:
+ *           street:
+ *             type: string
+ *             description: Street name (max length 44)
+ *             example: Yayoama Itchome St.
+ *           secondary:
+ *             type: string
+ *             description: Optional secondary address (max length 44)
+ *             example: Shujin Academy
+ *           city:
+ *             type: string
+ *             description: City name (max length 44)
+ *             example: Tokyo
+ *           zip:
+ *             type: string
+ *             example: 76123
+ *           province:
+ *             type: string
+ *             example: BA
+ *           country:
+ *             type: string
+ *             description: Will default to IT if not passed
+ *             example: JP
  *       iva:
  *         type: string
  *         example: 06998950726
@@ -60,21 +85,20 @@ export interface Sender {
     user?: string | UserDocument
     name: string
     description: string
-    address: string
-    city: string
+    address: Address
     iva?: string
     cf?: string
     email?: string
     notes?: string
 }
 export interface SenderDocument extends Sender, Document {
+    address: AddressDocument
 }
 export const senderDecoder: Decoder<Sender> = object({
     user: optional(string()),
     name: string(),
     description: string(),
-    address: string(),
-    city: string(),
+    address: addressDecoder,
     iva: optional(string()),
     cf: optional(string()),
     email: optional(string()),
@@ -98,14 +122,8 @@ export const SenderSchema = new Schema<Sender>({
         maxlength: 500,
     },
     address: {
-        type: String,
-        required: "Address is required.",
-        maxlength: 200,
-    },
-    city: {
-        type: String,
-        required: "City is required.",
-        maxlength: 100,
+        type: AddressSchema,
+        required: "Address is required."
     },
     iva: {
         type: String,

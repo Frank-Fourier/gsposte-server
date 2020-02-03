@@ -108,7 +108,7 @@ import faker from "faker";
         let updated: SenderDocument;
         try {
             // I should be using saved._id, instead I use system._id so I get an error
-            updated = await this.senderService.updateById(this.system._id, { address: "no fake gang" });
+            updated = await this.senderService.updateById(this.system._id, { "address.street": "no fake gang" });
         } catch (err) {
             expect(err).to.exist;
             expect(err.name).to.equal("NotFoundError");

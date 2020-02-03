@@ -106,7 +106,7 @@ import faker from "faker";
         let updated: RecipientDocument;
         try {
             // I should be using saved._id, instead I use system._id so I get an error
-            updated = await this.recipientService.updateById(this.system._id, { address: "no fake gang" });
+            updated = await this.recipientService.updateById(this.system._id, { "address.street": "no fake gang" });
         } catch (err) {
             expect(err).to.exist;
             expect(err.name).to.equal("NotFoundError");
@@ -117,14 +117,14 @@ import faker from "faker";
 
     @test async "Should not update recipient by id with invalid params" () {
         const saved = await this.recipientService.save(generateMockRecipient(this.system._id));
-        const newAddress = faker.lorem.sentence(500); // Address max length is 200
+        const newStreet = faker.lorem.sentence(100); // Address max length is 44
 
         let updated: RecipientDocument;
         try {
-            updated = await this.recipientService.updateById(saved._id, { address: newAddress });
+            updated = await this.recipientService.updateById(saved._id, { "address.street": newStreet });
         } catch (err) {
             expect(err).to.exist;
-            expect(err.message).to.equal("Path `address` (`" + newAddress + "`) is longer than the maximum allowed length (200).");
+            expect(err.message).to.equal("Path `street` (`" + newStreet + "`) is longer than the maximum allowed length (44).");
         }
 
         expect(updated).not.to.exist;

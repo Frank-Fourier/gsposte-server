@@ -9,6 +9,7 @@ import { generateSystemUser } from "@utils/system";
 import { assertSameSender, getSystemUser, loginWithSystem } from "../test_utils";
 import { generateMockSender } from "../mocks/sender";
 import { generateMockUser, saveMockUserAndLogin, userGiovanni } from "../mocks/user";
+import { generateMockAddress } from "../mocks/address";
 import { cleanTestDB } from "@utils/mongo";
 import supertest from "supertest";
 import faker from "faker";
@@ -65,7 +66,7 @@ const API = process.env.API_PATH;
 
     @test async "Should not be able to create a sender with invalid body" () {
         const mockSender = await generateMockSender((await getSystemUser())._id);
-        delete mockSender.city; // Required param
+        delete mockSender.address; // Required param
 
         await this.http
             .post(`${API}/sender`)
@@ -73,7 +74,7 @@ const API = process.env.API_PATH;
             .send(mockSender)
             .expect(400);
 
-        mockSender.city = faker.address.city();
+        mockSender.address = generateMockAddress();
         mockSender.cf = faker.random.alphaNumeric(20); // Surpasses char limit
 
         await this.http

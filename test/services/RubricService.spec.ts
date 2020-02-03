@@ -9,9 +9,9 @@ import { RecipientDocument } from "@models/RecipientModel";
 import { generateSystemUser } from "@utils/system";
 import { assertSameRubric, getSystemUser } from "../test_utils";
 import { generateMockRubric } from "../mocks/rubric";
+import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
 import faker from "faker";
-import { generateMockRecipient } from "../mocks/recipient";
 
 @suite ("RubricService") class RubricServiceTests {
 

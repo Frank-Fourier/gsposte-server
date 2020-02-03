@@ -33,7 +33,6 @@ export class ExpressServer {
         ioc.resolve(RecipientRoute),
         ioc.resolve(RubricRoute),
     ];
-
     constructor(
         private authService: AuthService,
         private userService: UserService,

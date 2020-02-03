@@ -6,6 +6,7 @@ import { UserService } from "@services/UserService";
 import { Sender, SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { Rubric, RubricDocument } from "@models/RubricModel";
+import { Address, AddressDocument } from "@models/schemas/AddressSchema";
 
 export function assertSameUser(original: UserDocument, candidate: UserDocument) {
     expect(candidate).to.exist;
@@ -20,21 +21,18 @@ export function assertSameSender(original: Sender | SenderDocument, candidate: S
     expect(candidate.user.toString()).to.equal(original.user.toString());
     expect(candidate.name).to.equal(original.name);
     expect(candidate.description).to.equal(original.description);
-    expect(candidate.address).to.equal(original.address);
-    expect(candidate.city).to.equal(original.city);
     expect(candidate.iva).to.equal(original.iva);
     expect(candidate.cf).to.equal(original.cf);
     expect(candidate.email).to.equal(original.email.trim().toLowerCase());
     expect(candidate.notes).to.equal(original.notes);
+    assertSameAddress(original.address, candidate.address);
 }
 
 export function assertSameRecipient(original: Recipient | RecipientDocument, candidate: RecipientDocument) {
     expect(candidate).to.exist;
     expect(candidate.user.toString()).to.equal(original.user.toString());
-    expect(candidate.address).to.equal(original.address);
-    expect(candidate.secondaryAddress).to.equal(original.secondaryAddress);
-    expect(candidate.city).to.equal(original.city);
     expect(candidate.notes).to.equal(original.notes);
+    assertSameAddress(original.address, candidate.address);
 }
 
 export function assertSameRubric(original: Rubric | RubricDocument, candidate: RubricDocument) {
@@ -43,6 +41,16 @@ export function assertSameRubric(original: Rubric | RubricDocument, candidate: R
     expect(candidate.name).to.equal(original.name);
     expect(candidate.recipients).to.eql(original.recipients);
     expect(candidate.notes).to.equal(original.notes);
+}
+
+export function assertSameAddress(original: Address | AddressDocument, candidate: AddressDocument) {
+    expect(candidate).to.exist;
+    expect(candidate.street).to.equal(original.street);
+    expect(candidate.secondary).to.equal(original.secondary);
+    expect(candidate.city).to.equal(original.city);
+    expect(candidate.zip).to.equal(original.zip);
+    expect(candidate.province).to.equal(original.province);
+    expect(candidate.country).to.equal(original.country);
 }
 
 export async function loginWithSystem(): Promise<string> {

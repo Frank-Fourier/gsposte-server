@@ -9,6 +9,7 @@ import { generateSystemUser } from "@utils/system";
 import { assertSameRecipient, getSystemUser, loginWithSystem } from "../test_utils";
 import { generateMockRecipient } from "../mocks/recipient";
 import { generateMockUser, saveMockUserAndLogin, userGiovanni } from "../mocks/user";
+import { generateMockAddress } from "../mocks/address";
 import { cleanTestDB } from "@utils/mongo";
 import supertest from "supertest";
 import faker from "faker";
@@ -30,13 +31,13 @@ const API = process.env.API_PATH;
     @test async "Should create a new recipient associated with system user" () {
         const mockRecipient = generateMockRecipient((await getSystemUser())._id);
 
-        const { body } = await this.http
+        const res = await this.http
             .post(`${API}/recipient`)
             .set("Authorization", this.token)
             .send(mockRecipient)
             .expect(201);
 
-        const recipient = await this.recipientService.findById(body._id);
+        const recipient = await this.recipientService.findById(res.body._id);
         assertSameRecipient(mockRecipient, recipient);
     }
 
@@ -65,7 +66,7 @@ const API = process.env.API_PATH;
 
     @test async "Should not be able to create a recipient with invalid body" () {
         const mockRecipient = await generateMockRecipient((await getSystemUser())._id);
-        delete mockRecipient.city; // Required param
+        delete mockRecipient.address; // Required param
 
         await this.http
             .post(`${API}/recipient`)
@@ -73,7 +74,7 @@ const API = process.env.API_PATH;
             .send(mockRecipient)
             .expect(400);
 
-        mockRecipient.city = faker.address.city();
+        mockRecipient.address = generateMockAddress();
         mockRecipient.notes = faker.lorem.sentence(500); // Surpasses char limit
 
         await this.http
@@ -83,7 +84,7 @@ const API = process.env.API_PATH;
             .expect(400);
 
         mockRecipient.notes = faker.lorem.sentence(10);
-        mockRecipient.address = faker.lorem.sentence(500); // Surpasses char limit
+        mockRecipient.address.street = faker.lorem.sentence(100); // Surpasses char limit
 
         await this.http
             .post(`${API}/recipient`)
@@ -91,8 +92,8 @@ const API = process.env.API_PATH;
             .send(mockRecipient)
             .expect(400);
 
-        mockRecipient.address = faker.address.streetAddress();
-        mockRecipient.secondaryAddress = faker.lorem.sentence(500); // Surpasses char limit
+        mockRecipient.address.street = faker.address.streetAddress();
+        mockRecipient.address.secondary = faker.lorem.sentence(100); // Surpasses char limit
 
         await this.http
             .post(`${API}/recipient`)
@@ -128,7 +129,7 @@ const API = process.env.API_PATH;
         expect(res.body.meta.total).to.equal(1);
         expect(res.body.meta.pages).to.equal(1);
         expect(res.body.docs.length).to.equal(1);
-        expect(res.body.docs[0].address).to.equal(mockRecipients[0].address);
+        expect(res.body.docs[0].address).to.eql(mockRecipients[0].address);
 
         res = await this.http
             .get(`${API}/recipient`)
@@ -178,17 +179,17 @@ const API = process.env.API_PATH;
             .send(mockRecipient)
             .expect(201);
 
-        const newAddress = "Via Lezzi 4316";
+        const newStreet = "Via Lezzi 4316";
 
         const { body } = await this.http
             .put(`${API}/recipient/${recipient._id}`)
             .set("Authorization", mockUser.token)
             .send({
-                address: newAddress
+                "address.street": newStreet
             })
             .expect(200);
 
-        recipient.address = newAddress; // Align with update
+        recipient.address.street = newStreet; // Align with update
         assertSameRecipient(recipient, body);
 
         const mockOtherUser = await saveMockUserAndLogin();
