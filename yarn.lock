@@ -112,6 +112,12 @@
     "@types/mongodb" "*"
     "@types/node" "*"
 
+"@types/multer@^1.4.0":
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/@types/multer/-/multer-1.4.0.tgz#a4a83bee02696f61f63b65a87f9ebe8bdf12b767"
+  dependencies:
+    "@types/express" "*"
+
 "@types/node-fetch@^2.5.4":
   version "2.5.4"
   resolved "https://registry.yarnpkg.com/@types/node-fetch/-/node-fetch-2.5.4.tgz#5245b6d8841fc3a6208b82291119bc11c4e0ce44"

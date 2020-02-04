@@ -1,6 +1,6 @@
 {
 	"name": "gsposte-server",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "GSPoste REST API",
 	"main": "src/index.ts",
 	"repository": "git@bitbucket.org:stasbranger/gsposte-server.git",
@@ -58,6 +58,7 @@
 		"@types/mocha": "^5.2.7",
 		"@types/mongoose": "^5.5.36",
 		"@types/mongoose-unique-validator": "^1.0.3",
+		"@types/multer": "^1.4.0",
 		"@types/node": "^13.1.4",
 		"@types/node-fetch": "^2.5.4",
 		"@types/passport": "^1.0.2",

@@ -223,7 +223,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    private formatMongoError(error: Error) {
+    protected formatMongoError(error: Error) {
         // I'm not using a switch statement because the linter is convinced that error.name can ONLY be "MongooseError"
         if (error.name === "ValidationError") {
             throw this.formatValidationError(error as Error.ValidationError);

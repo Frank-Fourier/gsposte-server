@@ -10,8 +10,8 @@ import { RecipientService } from "@services/RecipientService";
 import { cleanTestDB } from "@utils/mongo";
 import { generateMockSender } from "../mocks/sender";
 import { generateMockRecipient } from "../mocks/recipient";
-import uuid from "uuid/v4";
-import { PDFService } from "@services/PDFService";
+import { PdfService } from "@services/PdfService";
+import { generateUUID } from "@utils/random";
 
 /**
  * Since I can't use my fucking own unique EnvelopeID, and Postel doesn't have a test environment (wtf!!!), I will
@@ -25,7 +25,7 @@ const ENVELOPE_ID = 876457;
     postel = ioc.resolve(PostelService);
     senderService = ioc.resolve(SenderService);
     recipientService = ioc.resolve(RecipientService);
-    pdf = ioc.resolve(PDFService);
+    pdf = ioc.resolve(PdfService);
     system: UserDocument;
 
     static async before() { await generateSystemUser(); }
@@ -42,11 +42,11 @@ const ENVELOPE_ID = 876457;
         const options: MpxUploadOptions = {
             test: true,
             letterType: LetterType.LETTERA_SEMPLICE,
-            setID: `GSTEST_${uuid()}`,
+            setID: `GSTEST_${generateUUID()}`,
             envelopeID: ENVELOPE_ID,
             useSameEnvelopeID: true,
             pdf: {
-                numPages: 3,
+                numPages: 1,
                 base64: await this.pdf.toBase64("test/assets/test.pdf")
             }
         };

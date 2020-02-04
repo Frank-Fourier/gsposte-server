@@ -1,10 +1,10 @@
 import { provide } from "inversify-binding-decorators";
 import { SenderDocument } from "@models/SenderModel";
 import { RecipientDocument } from "@models/RecipientModel";
+import { Address } from "@models/schemas/AddressSchema";
 import { toJson, toXml } from "xml2json";
 import fetch, { Response } from "node-fetch";
 import httpErrors from "http-errors";
-import { Address } from "@models/schemas/AddressSchema";
 
 export const POSTEL_API = "https://postpdx.postel.it";
 
@@ -216,7 +216,7 @@ export class PostelService {
         // Call Postel
         const res = await this.callPostelApi("MpxQuery", xml);
         if (!res.ok) {
-            throw new httpErrors.InternalServerError("Upload API call to Postel failed!");
+            throw new httpErrors.InternalServerError("Query API call to Postel failed!");
         }
 
         return this.parseQueryResponse(await res.text());
@@ -363,8 +363,8 @@ export class PostelService {
                         NumPages: options.pdf.numPages,
                         Envelope: recipients.map((recipient, index) => {
                             return {
-                                PageStart: index + 1,
-                                PageEnd: index + 1,
+                                PageStart: 1,
+                                PageEnd: options.pdf.numPages,
                                 WorkProcessID: WorkProcessID[options.letterType],
                                 CustomerEnvelopeID: options.envelopeID + (options.useSameEnvelopeID ? 0 : (index + 1)),
                                 Data: {

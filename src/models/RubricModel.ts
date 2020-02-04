@@ -43,7 +43,7 @@ import { RecipientDocument } from "@models/RecipientModel";
 export interface Rubric {
     user?: string | UserDocument
     name: string
-    recipients?: Array<(string | RecipientDocument)>
+    recipients?: Array<string | RecipientDocument>
     notes?: string
 }
 export interface RubricDocument extends Rubric, Document {

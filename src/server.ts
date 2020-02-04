@@ -16,6 +16,7 @@ import { UserRoute } from "@routes/UserRoute";
 import { SenderRoute } from "@routes/SenderRoute";
 import { RecipientRoute } from "@routes/RecipientRoute";
 import { RubricRoute } from "@routes/RubricRoute";
+import { PdfRoute } from "@routes/PdfRoute";
 
 import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
@@ -32,6 +33,7 @@ export class ExpressServer {
         ioc.resolve(SenderRoute),
         ioc.resolve(RecipientRoute),
         ioc.resolve(RubricRoute),
+        ioc.resolve(PdfRoute),
     ];
     constructor(
         private authService: AuthService,

@@ -11,3 +11,6 @@ test/assets/*_streamed.mp4
 
 # Log files
 *.log
+
+# PDF files
+public/pdf/
