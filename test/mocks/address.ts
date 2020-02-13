@@ -1,13 +1,15 @@
+// @ts-ignore
+import faker from "faker/locale/it";
 import { Address } from "@models/schemas/AddressSchema";
-import faker from "faker";
 
 export function generateMockAddress(): Address {
+    const company = faker.company.companyName();
     return {
-        street: faker.address.streetName(),
-        secondary: faker.address.secondaryAddress(),
+        street: faker.address.streetAddress().split(" ").reverse().join(" "),
+        secondary: company + (company.includes("SPA") ? "" : " SPA"),
         city: faker.address.city(),
-        zip: "76123",
-        province: "BA",
+        zip: faker.address.zipCode(),
+        province: faker.address.stateAbbr(),
         country: "IT",
     }
 }

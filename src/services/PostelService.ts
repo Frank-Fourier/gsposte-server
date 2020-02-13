@@ -360,11 +360,11 @@ export class PostelService {
                     ProvinciaMittente: sender.address.province,
                     NazioneMittente: sender.address.country,
                     Pdf: {
-                        NumPages: options.pdf.numPages,
+                        NumPages: options.pdf.numPages * recipients.length,
                         Envelope: recipients.map((recipient, index) => {
                             return {
-                                PageStart: 1,
-                                PageEnd: options.pdf.numPages,
+                                PageStart: (index * options.pdf.numPages) + 1,
+                                PageEnd: (index * options.pdf.numPages) + options.pdf.numPages,
                                 WorkProcessID: WorkProcessID[options.letterType],
                                 CustomerEnvelopeID: options.envelopeID + (options.useSameEnvelopeID ? 0 : (index + 1)),
                                 Data: {

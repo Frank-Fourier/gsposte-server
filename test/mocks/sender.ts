@@ -1,4 +1,5 @@
-import faker from "faker";
+// @ts-ignore
+import faker from "faker/locale/it";
 import { Sender } from "@models/SenderModel";
 import { UserDocument } from "@models/UserModel";
 import { generateMockAddress } from "./address";

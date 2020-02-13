@@ -12,9 +12,10 @@ import { generateMockRubric } from "../mocks/rubric";
 import { generateMockUser, saveMockUserAndLogin, userGiovanni } from "../mocks/user";
 import { cleanTestDB } from "@utils/mongo";
 import supertest from "supertest";
-import faker from "faker";
 import { generateMockRecipient } from "../mocks/recipient";
 import { RecipientDocument } from "@models/RecipientModel";
+// @ts-ignore
+import faker from "faker/locale/it";
 
 const API = process.env.API_PATH;
 

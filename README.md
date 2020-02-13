@@ -10,7 +10,19 @@ So just access it at ```{host}:{port}/docs``` while the server is running.
 
 ### Develop
 
-Before all, install the dependencies needed to run this project:
+This project requires the following packages to be installed on the system: imagemagick, ghostscript, poppler-utils
+
+On Ubuntu:
+```shell
+$ sudo apt-get install imagemagick ghostscript poppler-utils
+```
+
+On OSX:
+```shell
+$ brew install imagemagick ghostscript poppler
+```
+
+Install the dependencies needed to run this project:
 ```shell
 $ yarn install
 OR

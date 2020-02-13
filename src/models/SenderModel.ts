@@ -13,7 +13,6 @@ import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models
  *       - name
  *       - description
  *       - address
- *       - city
  *     properties:
  *       name:
  *         type: string
@@ -22,35 +21,7 @@ import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models
  *         type: string
  *         example: One of your school teachers, later discovered to have a part-time maid job. She embodies the Temperance arcana.
  *       address:
- *         type: object
- *         required:
- *           - street
- *           - city
- *           - zip
- *           - province
- *         properties:
- *           street:
- *             type: string
- *             description: Street name (max length 44)
- *             example: Yayoama Itchome St.
- *           secondary:
- *             type: string
- *             description: Optional secondary address (max length 44)
- *             example: Shujin Academy
- *           city:
- *             type: string
- *             description: City name (max length 44)
- *             example: Tokyo
- *           zip:
- *             type: string
- *             example: 76123
- *           province:
- *             type: string
- *             example: BA
- *           country:
- *             type: string
- *             description: Will default to IT if not passed
- *             example: JP
+ *         $ref: "#/definitions/Address"
  *       iva:
  *         type: string
  *         example: 06998950726
@@ -114,7 +85,7 @@ export const SenderSchema = new Schema<Sender>({
     name: {
         type: String,
         required: "Name is required.",
-        maxlength: 100,
+        maxlength: 30,
     },
     description: {
         type: String,

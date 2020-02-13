@@ -7,7 +7,9 @@ dist/
 .env.*.local
 
 # Assets
-test/assets/*_streamed.mp4
+test/assets/*_margins.pdf
+test/assets/*_postel.pdf
+test/assets/*.html
 
 # Log files
 *.log

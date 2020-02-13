@@ -12,41 +12,12 @@ import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models
  *     required:
  *       - fullName
  *       - address
- *       - city
  *     properties:
  *       fullName:
  *         type: string
  *         example: Makoto Nijima
  *       address:
- *         type: object
- *         required:
- *           - street
- *           - city
- *           - zip
- *           - province
- *         properties:
- *           street:
- *             type: string
- *             description: Street name (max length 44)
- *             example: Yayoama Itchome St.
- *           secondary:
- *             type: string
- *             description: Optional secondary address (max length 44)
- *             example: Shujin Academy
- *           city:
- *             type: string
- *             description: City name (max length 44)
- *             example: Tokyo
- *           zip:
- *             type: string
- *             example: 76123
- *           province:
- *             type: string
- *             example: BA
- *           country:
- *             type: string
- *             description: Will default to IT if not passed
- *             example: JP
+ *         $ref: "#/definitions/Address"
  *       notes:
  *         type: string
  *         example: The sister of prosecutor Sae Nijima, and student council president at Shujin. She tries to blackmail the Thieves to force them to change the heart of a Yakuza boss, awakening to her Persona in the process. She is the canonic love interest for the protagonist.

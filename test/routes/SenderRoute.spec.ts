@@ -12,7 +12,8 @@ import { generateMockUser, saveMockUserAndLogin, userGiovanni } from "../mocks/u
 import { generateMockAddress } from "../mocks/address";
 import { cleanTestDB } from "@utils/mongo";
 import supertest from "supertest";
-import faker from "faker";
+// @ts-ignore
+import faker from "faker/locale/it";
 
 const API = process.env.API_PATH;
 

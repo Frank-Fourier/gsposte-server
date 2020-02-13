@@ -11,7 +11,8 @@ import { assertSameRubric, getSystemUser } from "../test_utils";
 import { generateMockRubric } from "../mocks/rubric";
 import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
-import faker from "faker";
+// @ts-ignore
+import faker from "faker/locale/it";
 
 @suite ("RubricService") class RubricServiceTests {
 

@@ -1,4 +1,5 @@
-import faker from "faker";
+// @ts-ignore
+import faker from "faker/locale/it";
 import { User, UserDocument } from "@models/UserModel";
 import { UserService } from "@services/UserService";
 import { ioc } from "@ioc";
