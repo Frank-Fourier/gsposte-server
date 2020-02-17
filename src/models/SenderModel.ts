@@ -85,7 +85,7 @@ export const SenderSchema = new Schema<Sender>({
     name: {
         type: String,
         required: "Name is required.",
-        maxlength: 30,
+        maxlength: 40,
     },
     description: {
         type: String,

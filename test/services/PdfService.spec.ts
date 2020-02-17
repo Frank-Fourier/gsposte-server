@@ -4,8 +4,9 @@ import { ioc } from "@ioc";
 import { PdfService } from "@services/PdfService";
 import { generateMockRecipient } from "../mocks/recipient";
 import { generateMockSender } from "../mocks/sender";
-import fs from "fs";
 import { Types } from "mongoose";
+import { logger } from "@utils/winston";
+import fs from "fs";
 
 @suite("PdfService") class PdfServiceTests {
 
@@ -25,6 +26,7 @@ import { Types } from "mongoose";
             const base64 = await this.pdf.formatPostelPDF("test/assets/format.pdf", sender, recipients, 150);
             await fs.promises.writeFile("test/assets/format_postel.pdf", Buffer.from(base64, "base64"));
         } catch (err) {
+            logger.error(err);
             expect(err).not.to.exist;
         }
     }

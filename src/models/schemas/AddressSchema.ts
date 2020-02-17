@@ -60,16 +60,16 @@ export const AddressSchema = new Schema<Address>({
     street: {
         type: String,
         required: "Street is required.",
-        maxlength: 44,
+        maxlength: 40,
     },
     secondary: {
         type: String,
-        maxlength: 44,
+        maxlength: 40,
     },
     city: {
         type: String,
         required: "City is required.",
-        maxlength: 44,
+        maxlength: 33,
     },
     zip: {
         type: String,

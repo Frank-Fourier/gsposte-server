@@ -125,7 +125,7 @@ import faker from "faker/locale/it";
             updated = await this.recipientService.updateById(saved._id, { "address.street": newStreet });
         } catch (err) {
             expect(err).to.exist;
-            expect(err.message).to.equal("Path `street` (`" + newStreet + "`) is longer than the maximum allowed length (44).");
+            expect(err.message).to.equal("Path `street` (`" + newStreet + "`) is longer than the maximum allowed length (40).");
         }
 
         expect(updated).not.to.exist;

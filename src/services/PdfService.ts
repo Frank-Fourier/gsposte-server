@@ -4,7 +4,7 @@ import { Request, Response } from "express";
 import { logger } from "@utils/winston";
 import { executeCommand, spawnCommand } from "@utils/command";
 import { Recipient } from "@models/RecipientModel";
-import { PDFDocument, PDFName, PDFPage, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, PDFName, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import path from "path";
 import httpErrors from "http-errors";
 import fs from "fs";
@@ -146,7 +146,7 @@ export class PdfService {
             // Draw info about the sender
             page.drawText(
                 `${sender.name.toUpperCase()}\n` +
-                `${sender.address.secondary.toUpperCase()}\n` +
+                (sender.address.secondary ? `${sender.address.secondary.toUpperCase()}\n` : "") +
                 `${sender.address.street.toUpperCase()}\n` +
                 `${sender.address.zip} ${sender.address.city.toUpperCase()} ${sender.address.province.toUpperCase()}`,
                 {
@@ -160,7 +160,7 @@ export class PdfService {
             // Draw info about the recipient
             page.drawText(
             `${rec.fullName.toUpperCase()}\n` +
-                `${rec.address.secondary.toUpperCase()}\n` +
+                (sender.address.secondary ? `${sender.address.secondary.toUpperCase()}\n` : "") +
                 `${rec.address.street.toUpperCase()}\n` +
                 `${rec.address.zip} ${rec.address.city.toUpperCase()} ${rec.address.province.toUpperCase()}`,
             {
@@ -171,38 +171,22 @@ export class PdfService {
                 lineHeight: 15
             });
 
-            // Print boxes in case I'm not running on production
             if (process.env.NODE_ENV !== "production") {
-                // Area finestra mittente
-                page.drawRectangle({
-                    x: px(10),
-                    y: height - px(14.01),
-                    width: px(90),
-                    height: -px(22),
-                    borderColor: rgb(0, 1, 0),
-                });
-
-                // Area finestra destinatario
-                page.drawRectangle({
-                    x: px(85),
-                    y: height - px(44),
-                    width: px(115),
-                    height: -px(52),
-                    borderColor: rgb(0, 0, 1),
-                });
-
-                // Area visibilità indirizzo destinatario
-                page.drawRectangle({
-                    x: px(114),
-                    y: height - px(63),
-                    width: px(86),
-                    height: -px(24),
-                    borderColor: rgb(0, 1, 0),
-                });
+                // Debug bounding boxes
+                this.drawPostelBoxes(page, px);
             }
 
             index += donorDoc.getPageCount();
         }
+
+        // Set final metadata and return as base64
+        pdfDoc.setAuthor("GSPoste");
+        pdfDoc.setCreator("GSPoste");
+        pdfDoc.setSubject("GSPoste");
+        pdfDoc.setLanguage("it-IT");
+        pdfDoc.setKeywords([]);
+        pdfDoc.setCreationDate(new Date());
+        pdfDoc.setModificationDate(new Date());
 
         return await pdfDoc.saveAsBase64();
     }
@@ -225,15 +209,9 @@ export class PdfService {
             <html>
                 <head>
                     <style>
-                        .first-page {
-                            margin: 96mm 10mm 10mm;
-                        }
-                        .page {
-                            margin: 2mm 10mm 10mm;
-                        }
-                        img {
-                            width: 100%;
-                        }
+                        .first-page { margin: 96mm 10mm 10mm; }
+                        .page { margin: 2mm 10mm 10mm; }
+                        img { width: 100%; }
                     </style>
                 </head>
                 <body>
@@ -353,6 +331,62 @@ export class PdfService {
             optimized: info["Optimized"] === "yes",
             version: info["PDF version"],
         }
+    }
+
+    private drawPostelBoxes(page: PDFPage, px: (mm: number) => number) {
+        const height = page.getHeight();
+
+        // Area finestra mittente
+        page.drawRectangle({
+            x: px(10),
+            y: height - px(14.01),
+            width: px(90),
+            height: -px(22),
+            borderColor: rgb(0, 1, 0),
+        });
+
+        // Area finestra destinatario
+        page.drawRectangle({
+            x: px(85),
+            y: height - px(44),
+            width: px(115),
+            height: -px(52),
+            borderColor: rgb(0, 0, 1),
+        });
+
+        // Area visibilità indirizzo destinatario
+        page.drawRectangle({
+            x: px(114),
+            y: height - px(63),
+            width: px(86),
+            height: -px(24),
+            borderColor: rgb(0, 1, 0),
+        });
+
+        // Aree riservate
+        page.drawRectangle({
+            x: px(100),
+            y: height - px(44),
+            width: px(43),
+            height: -px(19),
+            borderColor: rgb(1, 0, 0),
+        });
+        page.drawRectangle({
+            x: px(160),
+            y: height - px(44),
+            width: px(40),
+            height: -px(19),
+            borderColor: rgb(1, 0, 0),
+        });
+
+        // Area finestra raccomandata
+        page.drawRectangle({
+            x: px(10),
+            y: height - px(55),
+            width: px(75),
+            height: -px(30),
+            borderColor: rgb(0, 0, 1),
+        });
     }
 
 }
