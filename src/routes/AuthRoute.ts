@@ -30,8 +30,6 @@ export class AuthRoute extends Route {
              *     responses:
              *       200:
              *         description: Login successful, returns encoded JWT token
-             *         schema:
-             *           type: string
              *       401:
              *         description: Login failed. Invalid username/email or password
              */

@@ -17,7 +17,7 @@ export class RecipientController {
         const user = await this.authService.getUserFromRequest(req);
 
         const recipient = req.body as Recipient;
-        if (recipient.user && !user.isAdmin()) {
+        if (!recipient.user || (recipient.user && !user.isAdmin())) {
             // Force the associated user to be the request user
             recipient.user = user._id;
         }

@@ -14,6 +14,9 @@ import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models
  *       - description
  *       - address
  *     properties:
+ *       user:
+ *         type: string
+ *         example: 5c991af86327ba47393f2fb3
  *       name:
  *         type: string
  *         example: Sadayo Kawakami

@@ -26,19 +26,13 @@ export class PdfRoute extends Route {
              *       - JWT: []
              *     parameters:
              *       - name: file
-             *         description: PDF file to upload. Max file size allowed is 10MB. Max page size allowed is 10KB
+             *         description: PDF file to upload. Max file size allowed is 10MB.
              *         required: true
              *         in: formData
              *         type: file
              *     responses:
              *       201:
-             *         description: PDF uploaded correctly, returns the UUID associated with it
-             *         schema:
-             *           type: object
-             *           properties:
-             *             uuid:
-             *               type: string
-             *               description: The unique identifier associated with the uploaded PDF.
+             *         description: PDF uploaded correctly, returns its code (which is his filename)
              *       400:
              *         description: More than one file was passed to the request, or generic error while uploading.
              *       401:

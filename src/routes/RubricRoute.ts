@@ -47,8 +47,8 @@ export class RubricRoute extends Route {
             /**
              * @swagger
              *
-             * /rubric:
-             *   get:
+             * /rubric/query:
+             *   post:
              *     tags:
              *       - Rubrics
              *     description: Find rubrics associated with the user requesting. If admin, it ignores the association, you can find all of them.
@@ -73,7 +73,8 @@ export class RubricRoute extends Route {
              *         $ref: "#/responses/Unauthorized"
              */
             {
-                method: RequestMethod.GET,
+                path: "/query",
+                method: RequestMethod.POST,
                 requiresAuth: true,
                 handler: (req, res) => this.rubricController.find(req, res)
             },
@@ -90,7 +91,7 @@ export class RubricRoute extends Route {
              *     security:
              *       - JWT: []
              *     parameters:
-             *       - name: Rubric id
+             *       - name: id
              *         required: true
              *         in: path
              *         description: Mongo id of the rubric to find
@@ -125,7 +126,7 @@ export class RubricRoute extends Route {
              *     security:
              *       - JWT: []
              *     parameters:
-             *       - name: Rubric id
+             *       - name: id
              *         required: true
              *         in: path
              *         description: Mongo id of the rubric to update
@@ -164,7 +165,7 @@ export class RubricRoute extends Route {
              *     security:
              *       - JWT: []
              *     parameters:
-             *       - name: Rubric id
+             *       - name: id
              *         required: true
              *         in: path
              *         description: Mongo id of the rubric to delete

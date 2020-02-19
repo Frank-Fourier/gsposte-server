@@ -12,6 +12,9 @@ import { RecipientDocument } from "@models/RecipientModel";
  *     required:
  *       - name
  *     properties:
+ *       user:
+ *         type: string
+ *         example: 5c991af86327ba47393f2fb3
  *       name:
  *         type: string
  *         example: My Contacts
@@ -66,11 +69,11 @@ export const RubricSchema = new Schema<Rubric>({
         required: "Name is required.",
         maxlength: 100,
     },
-    recipients: {
-        type: [ Schema.Types.ObjectId ],
+    recipients: [{
+        type: Schema.Types.ObjectId,
         ref: "Recipient",
         default: []
-    },
+    }],
     notes: {
         type: String,
         maxlength: 500,

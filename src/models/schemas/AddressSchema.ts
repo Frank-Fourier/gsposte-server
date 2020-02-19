@@ -16,7 +16,7 @@ import { Decoder, object, optional, string } from "@mojotech/json-type-validatio
  *       street:
  *         type: string
  *         description: Street name (max length 44)
- *         example: Yayoama Itchome St.
+ *         example: Aoyama Itchome St.
  *       secondary:
  *         type: string
  *         description: Optional secondary address (max length 44)
@@ -27,7 +27,7 @@ import { Decoder, object, optional, string } from "@mojotech/json-type-validatio
  *         example: Tokyo
  *       zip:
  *         type: string
- *         example: 76123
+ *         example: "76123"
  *       province:
  *         type: string
  *         example: BA

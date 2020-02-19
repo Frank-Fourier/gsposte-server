@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import ora from "ora";
@@ -16,6 +16,7 @@ import { UserRoute } from "@routes/UserRoute";
 import { SenderRoute } from "@routes/SenderRoute";
 import { RecipientRoute } from "@routes/RecipientRoute";
 import { RubricRoute } from "@routes/RubricRoute";
+import { LetterRoute } from "@routes/LetterRoute";
 import { PdfRoute } from "@routes/PdfRoute";
 
 import { MONGO_URI } from "@utils/mongo";
@@ -33,8 +34,10 @@ export class ExpressServer {
         ioc.resolve(SenderRoute),
         ioc.resolve(RecipientRoute),
         ioc.resolve(RubricRoute),
+        ioc.resolve(LetterRoute),
         ioc.resolve(PdfRoute),
     ];
+
     constructor(
         private authService: AuthService,
         private userService: UserService,
@@ -52,6 +55,12 @@ export class ExpressServer {
     private setupConfig() {
         const spinner = this.makeSpinner("Setting up config!");
         this.app.use(bodyParser.json());
+        this.app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+            if (err instanceof SyntaxError && "body" in err) {
+                return res.status(400).send({ message: "Bad JSON" })
+            }
+            next();
+        });
         this.app.use(bodyParser.urlencoded({ extended: false }));
         this.app.use(cors);
         this.app.use(helmet());

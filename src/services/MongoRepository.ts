@@ -81,7 +81,7 @@ export interface Paginated<T extends Document> {
  *         type: object
  *         description: Query object following the Mongoose query notation
  */
-type MongoQuery<T> = Partial<T> | Object;
+export type MongoQuery<T> = Partial<T> | Object;
 
 @injectable()
 export class MongoRepository<DTO, Doc extends Document> {
@@ -99,7 +99,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    private queryMany(query: MongoQuery<DTO>, pagination?: PaginateOptions): DocumentQuery<Doc[], Doc> {
+    private queryMany(query: MongoQuery<DTO & Doc>, pagination?: PaginateOptions): DocumentQuery<Doc[], Doc> {
         return !pagination ?
             this.model.find(query) : // No pagination
             this.model.find(query)   // With pagination
@@ -119,7 +119,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async find(query: MongoQuery<DTO>, options: QueryOptions = {}): Promise<Doc[]> {
+    public async find(query: MongoQuery<DTO & Doc>, options: QueryOptions = {}): Promise<Doc[]> {
         try {
             return await this.queryMany(query).populate(options.populate || "").select(options.select || "").orFail().exec();
         } catch (err) {
@@ -127,7 +127,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async paginate(query: MongoQuery<DTO>, pagination: PaginateOptions, realCount = false): Promise<Paginated<Doc>> {
+    public async paginate(query: MongoQuery<DTO & Doc>, pagination: PaginateOptions, realCount = false): Promise<Paginated<Doc>> {
         try {
             const docsCount = realCount
                 ? await this.model.find(query).countDocuments().exec()
@@ -144,7 +144,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async findOne(query: MongoQuery<DTO>, options: QueryOptions = {}): Promise<Doc> {
+    public async findOne(query: MongoQuery<DTO & Doc>, options: QueryOptions = {}): Promise<Doc> {
         try {
             return await this.model.findOne(query || {}).populate(options.populate || "").select(options.select || "").orFail().exec();
         } catch (err) {
@@ -167,7 +167,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async updateOne(query: MongoQuery<DTO>, updateBody: Partial<DTO>, upsert: boolean = false): Promise<Doc> {
+    public async updateOne(query: MongoQuery<DTO & Doc>, updateBody: (Partial<DTO> | any), upsert: boolean = false): Promise<Doc> {
         try {
             return await this.model.findOneAndUpdate(query, updateBody, {
                 new: true,
@@ -190,7 +190,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public countDocuments(query?: MongoQuery<DTO>): Promise<number> {
+    public countDocuments(query?: MongoQuery<DTO & Doc>): Promise<number> {
         try {
             return this.model.countDocuments(query || {}).orFail().exec();
         } catch (err) {

@@ -17,7 +17,7 @@ export class RubricController {
         const user = await this.authService.getUserFromRequest(req);
 
         const rubric = req.body as Rubric;
-        if (rubric.user && !user.isAdmin()) {
+        if (!rubric.user || (rubric.user && !user.isAdmin())) {
             // Force the associated user to be the request user
             rubric.user = user._id;
         }

@@ -1,24 +1,25 @@
 import { provide } from "inversify-binding-decorators";
 import multer, { diskStorage, MulterError } from "multer";
+import { PDFDocument, PDFName, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { Request, Response } from "express";
+import { Sender, SenderDocument } from "@models/SenderModel";
+import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { logger } from "@utils/winston";
 import { executeCommand, spawnCommand } from "@utils/command";
-import { Recipient } from "@models/RecipientModel";
-import { PDFDocument, PDFName, PDFPage, StandardFonts, rgb } from "pdf-lib";
+import { generateRandomCode } from "@utils/random";
 import path from "path";
 import httpErrors from "http-errors";
 import fs from "fs";
 import fetch from "node-fetch";
 import puppeteer from "puppeteer";
-import { Sender } from "@models/SenderModel";
+import { Letter } from "@models/LetterModel";
 
 // Setup PDF upload middleware
 const uploader = multer({
     storage: diskStorage({
-        destination: "public/pdf/",
-        // The file name is ${UUID}.pdf
+        destination: process.env.PDF_ROOT || "public/pdf/",
         filename(req: Request, file: Express.Multer.File, callback: (error: (Error | null), filename: string) => void): void {
-            callback(null, `${req.body["uuid"]}.pdf`);
+            callback(null, `GS${generateRandomCode()}.pdf`);
         }
     }),
     limits: {
@@ -55,6 +56,8 @@ export interface PDFMeta {
     version?: string
 }
 
+const pdf_root = process.env.PDF_ROOT || "public/pdf/";
+
 @provide(PdfService)
 export class PdfService {
 
@@ -64,14 +67,19 @@ export class PdfService {
      *
      * @param req Request object
      * @param res Response object
-     * @returns Promise resolved when the upload is done. Throws with status code if the upload fails
+     * @returns Promise resolved with PDF code when the upload is done. Throws with status code if the upload fails
      */
-    public upload(req: Request, res: Response): Promise<void> {
+    public upload(req: Request, res: Response): Promise<string> {
         return new Promise(((resolve, reject) => {
             uploader(req, res, (err: MulterError | any) => {
+                if (!req.file) {
+                    logger.error("A file upload request was not accepted. Only PDF files are acceptable.");
+                    return reject(new httpErrors.NotAcceptable("Only PDF files are acceptable for upload."));
+                }
+
+                // Check if a Multer specific error occured while uploading (likely file did not meet criteria)
                 if (err instanceof MulterError) {
-                    // A Multer specific error occured while uploading (likely file did not meet criteria)
-                    logger.error(`Got MulterError while uploading a document [${err.code}]: ${err.message}`);
+                    logger.error(`Got MulterError while uploading a PDF [${err.code}]: ${err.message}`);
                     switch (err.code) {
                         case "LIMIT_FILE_COUNT":
                             return reject(new httpErrors.BadRequest("More than one file field was passed to this upload request."));
@@ -80,18 +88,44 @@ export class PdfService {
                         case "LIMIT_UNEXPECTED_FILE":
                             return reject(new httpErrors.NotAcceptable("Only PDF files are acceptable for upload."));
                     }
-                    return reject(new httpErrors.BadRequest(`Generic error while uploading the document: ${err.message} [${err.code}]`));
+                    return reject(new httpErrors.BadRequest(`Generic error while uploading: ${err.message} [${err.code}]`));
                 } else if (err) {
                     // There is an even more generic error!
-                    logger.error(`Generic error while uploading a document: ${err}`);
-                    return reject(new httpErrors.BadRequest(`Generic error while uploading the document: ${err}`));
+                    logger.error(`Generic error while uploading a PDF: ${err}`);
+                    return reject(new httpErrors.BadRequest(`Generic error while uploading: ${err}`));
                 }
 
                 // Everything went fine
-                logger.info("A new document was uploaded!");
-                return resolve();
+                const code = req.file.filename.replace(".pdf", "");
+                logger.info(`A new PDF was uploaded with code '${code}'.`);
+                return resolve(code);
             });
         }));
+    }
+
+    /**
+     * Wrapper around the postelFormat function to pass a Letter object
+     *
+     * @param letter to format from
+     * @returns Original Base64 returned from the format function
+     */
+    public async formatAndSavePdf(letter: Letter): Promise<string> {
+        if (process.env.NODE_ENV === "test") {
+            // Skip this function entirely
+            return null;
+        }
+        try {
+            const base64 = await this.postelFormat(`${pdf_root}${letter.codePdf}.pdf`,
+                letter.sender as SenderDocument,
+                letter.recipients as Array<RecipientDocument>,
+                letter.density
+            );
+            await fs.promises.writeFile(`${pdf_root}${letter.codePdf}_postel.pdf`, Buffer.from(base64, "base64"));
+            return base64;
+        } catch (err) {
+            logger.error(`Failed to format PDF for postel! Error: ${err}`);
+            throw err;
+        }
     }
 
     /**
@@ -104,7 +138,9 @@ export class PdfService {
      * @param density to use while converting the PDF
      * @returns Final base64 to send with Postel API
      */
-    public async formatPostelPDF(pdf_path: string, sender: Sender, recipients: Array<Recipient>, density: number): Promise<string> {
+    public async postelFormat(pdf_path: string, sender: SenderDocument | Sender, recipients: Array<RecipientDocument | Recipient>, density: number): Promise<string> {
+        logger.info(`Trying to format PDF for Postel from path: ${pdf_path}`);
+
         // There's no point if there are no recipients
         if (recipients.length === 0) {
             throw new httpErrors.BadRequest("Can't format a PDF with no recipients!");
@@ -160,7 +196,7 @@ export class PdfService {
             // Draw info about the recipient
             page.drawText(
             `${rec.fullName.toUpperCase()}\n` +
-                (sender.address.secondary ? `${sender.address.secondary.toUpperCase()}\n` : "") +
+                (rec.address.secondary ? `${rec.address.secondary.toUpperCase()}\n` : "") +
                 `${rec.address.street.toUpperCase()}\n` +
                 `${rec.address.zip} ${rec.address.city.toUpperCase()} ${rec.address.province.toUpperCase()}`,
             {
@@ -188,6 +224,7 @@ export class PdfService {
         pdfDoc.setCreationDate(new Date());
         pdfDoc.setModificationDate(new Date());
 
+        logger.info(`Formatted PDF for Postel from path: ${pdf_path}.`);
         return await pdfDoc.saveAsBase64();
     }
 
@@ -200,7 +237,7 @@ export class PdfService {
      * @param density to use while converting (150 or 300 is preferred)
      * @returns Buffer containing the PDF with margins applied
      */
-    public async applyPostelMargins(pdf_path: string, density: number): Promise<Buffer> {
+    private async applyPostelMargins(pdf_path: string, density: number): Promise<Buffer> {
         // Get the pages as images from the PDF file
         const images = await this.convertPagesToImages(pdf_path, density);
 
@@ -254,10 +291,10 @@ export class PdfService {
      * @param density
      * @returns array containing the pages as base64
      */
-    public async convertPagesToImages(pdf_path: string, density: number): Promise<string[]> {
+    private async convertPagesToImages(pdf_path: string, density: number): Promise<string[]> {
         try {
             // Get number of pages from PDF metadata
-            const pages = (await this.getMetadata(pdf_path)).pages;
+            const pages = (await this.metadata(pdf_path)).pages;
             const images: string[] = []; // Base64 array
 
             // Execute the convert command for each page
@@ -303,7 +340,7 @@ export class PdfService {
      *
      * @param pdf_path
      */
-    public async getMetadata(pdf_path: string): Promise<PDFMeta> {
+    public async metadata(pdf_path: string): Promise<PDFMeta> {
         const stdout = await executeCommand(`pdfinfo ${pdf_path}`);
         const info: any = {};
         stdout.split("\n").forEach((line) => {

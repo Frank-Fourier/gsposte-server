@@ -1,37 +1,39 @@
 import { RequestMethod, Route } from "@routes/Route";
+import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
-import { SenderController } from "@controllers/SenderController";
+import { LetterController } from "@controllers/LetterController";
 
-export class SenderRoute extends Route {
+@provide(LetterRoute)
+export class LetterRoute extends Route {
 
-    @inject(SenderController) private senderController: SenderController;
+    @inject(LetterController) private letterController: LetterController;
 
     constructor() {
-        super("/sender", [
+        super("/letter", [
             /**
              * @swagger
              *
-             * /sender:
+             * /letter:
              *   post:
              *     tags:
-             *       - Senders
-             *     description: Create a new sender associated to a user
+             *       - Letters
+             *     description: Create a new letter associated to a user
              *     produces:
              *       - application/json
              *     security:
              *       - JWT: []
              *     parameters:
              *       - name: Model
-             *         description: Sender to create
+             *         description: Letter to create
              *         required: true
              *         in: body
              *         schema:
-             *           $ref: "#/definitions/Sender"
+             *           $ref: "#/definitions/Letter"
              *     responses:
              *       201:
-             *         description: Sender created correctly
+             *         description: Letter created correctly
              *         schema:
-             *           $ref: "#/definitions/SenderDocument"
+             *           $ref: "#/definitions/LetterDocument"
              *       400:
              *         $ref: "#/responses/BadRequest"
              *       401:
@@ -40,16 +42,16 @@ export class SenderRoute extends Route {
             {
                 method: RequestMethod.POST,
                 requiresAuth: true,
-                handler: (req, res) => this.senderController.create(req, res)
+                handler: (req, res) => this.letterController.create(req, res)
             },
             /**
              * @swagger
              *
-             * /sender/query:
+             * /letter/query:
              *   post:
              *     tags:
-             *       - Senders
-             *     description: Find senders associated with the user requesting. If admin, it ignores the association, you can find all of them.
+             *       - Letters
+             *     description: Find letters associated with the user requesting. If admin, it ignores the association, you can find all of them.
              *     produces:
              *       - application/json
              *     security:
@@ -74,16 +76,16 @@ export class SenderRoute extends Route {
                 path: "/query",
                 method: RequestMethod.POST,
                 requiresAuth: true,
-                handler: (req, res) => this.senderController.find(req, res)
+                handler: (req, res) => this.letterController.find(req, res)
             },
             /**
              * @swagger
              *
-             * /sender/{id}:
+             * /letter/{id}:
              *   get:
              *     tags:
-             *       - Senders
-             *     description: Find sender by its id, associated with the user requesting. If admin, it ignores the association.
+             *       - Letters
+             *     description: Find letter by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
              *     security:
@@ -92,33 +94,33 @@ export class SenderRoute extends Route {
              *       - name: id
              *         required: true
              *         in: path
-             *         description: Mongo id of the sender to find
+             *         description: Mongo id of the letter to find
              *     responses:
              *       200:
-             *         description: Sender found
+             *         description: Letter found
              *         schema:
-             *           $ref: "#/definitions/SenderDocument"
+             *           $ref: "#/definitions/LetterDocument"
              *       400:
              *         $ref: "#/responses/BadRequest"
              *       401:
              *         $ref: "#/responses/Unauthorized"
              *       403:
-             *         description: You are not allowed to get info about senders of other users!
+             *         description: You are not allowed to get info about letters of other users!
              */
             {
                 path: "/:id",
                 method: RequestMethod.GET,
                 requiresAuth: true,
-                handler: (req, res) => this.senderController.findById(req, res)
+                handler: (req, res) => this.letterController.findById(req, res)
             },
             /**
              * @swagger
              *
-             * /sender/{id}:
+             * /letter/{id}:
              *   put:
              *     tags:
-             *       - Senders
-             *     description: Update sender by its id, associated with the user requesting. If admin, it ignores the association.
+             *       - Letters
+             *     description: Update letter by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
              *     security:
@@ -127,37 +129,37 @@ export class SenderRoute extends Route {
              *       - name: id
              *         required: true
              *         in: path
-             *         description: Mongo id of the sender to update
+             *         description: Mongo id of the letter to update
              *       - name: Update body
              *         required: true
              *         in: body
-             *         description: Update body following the Sender model
+             *         description: Update body following the Letter model
              *     responses:
              *       200:
-             *         description: Updated sender
+             *         description: Updated letter
              *         schema:
-             *           $ref: "#/definitions/SenderDocument"
+             *           $ref: "#/definitions/LetterDocument"
              *       400:
              *         $ref: "#/responses/BadRequest"
              *       401:
              *         $ref: "#/responses/Unauthorized"
              *       403:
-             *         description: You are not allowed to update senders of other users!
+             *         description: You are not allowed to update letters of other users!
              */
             {
                 path: "/:id",
                 method: RequestMethod.PUT,
                 requiresAuth: true,
-                handler: (req, res) => this.senderController.updateById(req, res)
+                handler: (req, res) => this.letterController.updateById(req, res)
             },
             /**
              * @swagger
              *
-             * /sender/{id}:
+             * /letter/{id}:
              *   delete:
              *     tags:
-             *       - Senders
-             *     description: Delete sender by its id, associated with the user requesting. If admin, it ignores the association.
+             *       - Letters
+             *     description: Delete letter by its id, associated with the user requesting. If admin, it ignores the association.
              *     produces:
              *       - application/json
              *     security:
@@ -166,24 +168,24 @@ export class SenderRoute extends Route {
              *       - name: id
              *         required: true
              *         in: path
-             *         description: Mongo id of the sender to delete
+             *         description: Mongo id of the letter to delete
              *     responses:
              *       200:
-             *         description: Deleted sender
+             *         description: Deleted letter
              *         schema:
-             *           $ref: "#/definitions/SenderDocument"
+             *           $ref: "#/definitions/LetterDocument"
              *       400:
              *         $ref: "#/responses/BadRequest"
              *       401:
              *         $ref: "#/responses/Unauthorized"
              *       403:
-             *         description: You are not allowed to delete senders of other users!
+             *         description: You are not allowed to delete letters of other users!
              */
             {
                 path: "/:id",
                 method: RequestMethod.DELETE,
                 requiresAuth: true,
-                handler: (req, res) => this.senderController.deleteById(req, res)
+                handler: (req, res) => this.letterController.deleteById(req, res)
             }
         ]);
     }

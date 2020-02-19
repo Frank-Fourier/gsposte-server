@@ -23,7 +23,7 @@ import fs from "fs";
                 generateMockRecipient(mockId),
             ];
 
-            const base64 = await this.pdf.formatPostelPDF("test/assets/format.pdf", sender, recipients, 150);
+            const base64 = await this.pdf.postelFormat("test/assets/format.pdf", sender, recipients, 150);
             await fs.promises.writeFile("test/assets/format_postel.pdf", Buffer.from(base64, "base64"));
         } catch (err) {
             logger.error(err);

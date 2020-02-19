@@ -32,7 +32,7 @@ export interface MpxUploadResponse {
     set: {
         code: number
         message: string
-        errors?: Array<{
+        errors: Array<{
             code: number
             message: string
         }>
@@ -41,7 +41,7 @@ export interface MpxUploadResponse {
     pdf: {
         code: number
         message: string
-        errors?: Array<{
+        errors: Array<{
             code: number
             message: string
         }>
@@ -51,7 +51,7 @@ export interface MpxUploadResponse {
         name: string
         code: number
         message: string
-        errors?: Array<{
+        errors: Array<{
             code: number
             message: string
         }>
@@ -60,7 +60,7 @@ export interface MpxUploadResponse {
     indexDeclaration?: {
         code: number
         message: string
-        errors?: Array<{
+        errors: Array<{
             code: number
             message: string
         }>
@@ -222,6 +222,12 @@ export class PostelService {
         return this.parseQueryResponse(await res.text());
     }
 
+    public isUploadResponseOk(response: MpxUploadResponse): boolean {
+        return (response.set.code === 0 && response.set.errors.length === 0) &&
+               (response.envelopes.every(e => e.code === 0 && e.errors.length === 0)) &&
+               (response.pdf.code === 0 && response.pdf.errors.length === 0);
+    }
+
     private callPostelApi(apiName: "Upload" | "MpxQuery", xmlBody: string): Promise<Response> {
         return fetch(`${POSTEL_API}/${apiName}.ashx`, {
             method: "POST",
@@ -351,7 +357,7 @@ export class PostelService {
                     Password: process.env.POSTEL_PASSWORD
                 },
                 Set: {
-                    Test: process.env.NODE_ENV === "test" ? "ON" : (options.test ? "ON" : "OFF"),
+                    Test: process.env.NODE_ENV !== "production" ? "ON" : (options.test ? "ON" : "OFF"),
                     CustomerSetID: options.setID,
                     RagioneSocialeMittente: sender.name,
                     IndirizzoMittente: sender.address.street,

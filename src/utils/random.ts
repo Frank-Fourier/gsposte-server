@@ -13,5 +13,5 @@ export function generateRandomCode(): string {
  * The seed is time-machine based
  */
 export function generateUUID(): string {
-    return uuid();
+    return uuid().toUpperCase();
 }

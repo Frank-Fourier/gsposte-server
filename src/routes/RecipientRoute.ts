@@ -47,8 +47,8 @@ export class RecipientRoute extends Route {
             /**
              * @swagger
              *
-             * /recipient:
-             *   get:
+             * /recipient/query:
+             *   post:
              *     tags:
              *       - Recipients
              *     description: Find recipients associated with the user requesting. If admin, it ignores the association, you can find all of them.
@@ -73,7 +73,8 @@ export class RecipientRoute extends Route {
              *         $ref: "#/responses/Unauthorized"
              */
             {
-                method: RequestMethod.GET,
+                path: "/query",
+                method: RequestMethod.POST,
                 requiresAuth: true,
                 handler: (req, res) => this.recipientController.find(req, res)
             },
@@ -90,7 +91,7 @@ export class RecipientRoute extends Route {
              *     security:
              *       - JWT: []
              *     parameters:
-             *       - name: Recipient id
+             *       - name: id
              *         required: true
              *         in: path
              *         description: Mongo id of the recipient to find
@@ -125,7 +126,7 @@ export class RecipientRoute extends Route {
              *     security:
              *       - JWT: []
              *     parameters:
-             *       - name: Recipient id
+             *       - name: id
              *         required: true
              *         in: path
              *         description: Mongo id of the recipient to update
@@ -164,7 +165,7 @@ export class RecipientRoute extends Route {
              *     security:
              *       - JWT: []
              *     parameters:
-             *       - name: Recipient id
+             *       - name: id
              *         required: true
              *         in: path
              *         description: Mongo id of the recipient to delete
