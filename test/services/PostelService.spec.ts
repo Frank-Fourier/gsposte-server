@@ -4,7 +4,7 @@ import { ioc } from "@ioc";
 import { generateSystemUser } from "@utils/system";
 import { getSystemUser } from "../test_utils";
 import { UserDocument } from "@models/UserModel";
-import { LetterType, PostelService, MpxUploadOptions } from "@services/PostelService";
+import { LetterKind, PostelService, MpxUploadOptions } from "@services/PostelService";
 import { SenderService } from "@services/SenderService";
 import { RecipientService } from "@services/RecipientService";
 import { cleanTestDB } from "@utils/mongo";
@@ -41,7 +41,7 @@ const ENVELOPE_ID = 876457;
         ];
         const options: MpxUploadOptions = {
             test: true,
-            letterType: LetterType.LETTERA_SEMPLICE,
+            letterType: LetterKind.LETTERA_SEMPLICE,
             setID: `GSTEST_${generateUUID()}`,
             envelopeID: ENVELOPE_ID,
             useSameEnvelopeID: true,

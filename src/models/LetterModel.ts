@@ -1,7 +1,7 @@
 import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, array, object, optional, string, oneOf, constant, number } from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
-import { LetterType } from "@services/PostelService";
+import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
 import { RecipientDocument } from "@models/RecipientModel";
 
@@ -75,14 +75,51 @@ import { RecipientDocument } from "@models/RecipientModel";
  *             type: object
  *             description: These values are used within Postel and updated by the Postel API. **Do not update these manually!!!**
  *             properties:
- *               setID:
- *                 type: string
- *                 description: The UUID used to identify this set of envelopes within Postel.
- *                 example: B887A8D3-2533-4AA7-9112-43ED8144BA96
  *               baseEnvelopeID:
  *                 type: number
  *                 description: The current value of CustomerEnvelopeID when the sending was done. Used to keep track of values.
  *                 example: 874979
+ *               set:
+ *                 type: object
+ *                 description: The object describing the Set as viewed from Postel
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     description: CustomerSetID passed to Postel on upload
+ *                     example: B887A8D3-2533-4AA7-9112-43ED8144BA96
+ *                   status:
+ *                     type: number
+ *                     description: Postel Status Code. 1 = Approvato. 2 = Lavorazione in corso. 3 = Completato. 4 = Offline. 5 = Da Approvare. 6 = Sospeso. 7 = Annullato.
+ *                     example: 1
+ *                   dateUploaded:
+ *                     type: string
+ *                     description: Upload date of this Set (YYYY-MM-DD HH:MM:SS format)
+ *                   dateCompleted:
+ *                     type: string
+ *                     description: Completion date of this Set (YYYY-MM-DD HH:MM:SS format)
+ *                   envelopes:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       description: Envelopes associated to this Set as viewed from Postel (each Recipient has its Envelope)
+ *                       properties:
+ *                         id:
+ *                           type: number
+ *                           description: CustomerEnvelopeID of this Envelope (will be a progressive)
+ *                           example: 874979
+ *                         status:
+ *                           type: number
+ *                           description: Postel Status Code. 1 = Approvato. 2 = Lavorazione in corso. 3 = Completato. 4 = Offline. 5 = Da Approvare. 6 = Sospeso. 7 = Annullato.
+ *                           example: 1
+ *                         dateUploaded:
+ *                           type: string
+ *                           description: Upload date of this Envelope (YYYY-MM-DD HH:MM:SS format)
+ *                         dateCompleted:
+ *                           type: string
+ *                           description: Completion date of this Envelope (YYYY-MM-DD HH:MM:SS format)
+ *                         tracking:
+ *                           type: string
+ *                           description: Queried and available when the letter kind is "Raccomandata" or "Raccomandata AR". It's used to track the ship status of an Envelope.
  *           createdAt:
  *             type: string
  *             example: 2019-03-25T18:16:24.892Z
@@ -96,7 +133,7 @@ export interface Letter {
     recipients: Array<string | RecipientDocument>
     subject: string
     sendAt?: Date | string
-    kind: LetterType
+    kind: LetterKind
     codePdf: string
     density?: number
     notes?: string
@@ -104,8 +141,20 @@ export interface Letter {
 export interface LetterDocument extends Letter, Document {
     sent: boolean
     postel?: {
-        setID: string
         baseEnvelopeID: number
+        set: {
+            id: string
+            status: number
+            dateUploaded?: Date | string
+            dateCompleted?: Date | string
+            envelopes: Array<{
+                id: number
+                status: number
+                dateUploaded?: Date | string
+                dateCompleted?: Date | string
+                tracking?: string
+            }>
+        }
     }
 }
 export const letterDecoder: Decoder<Letter> = object({
@@ -115,9 +164,9 @@ export const letterDecoder: Decoder<Letter> = object({
     subject: string(),
     sendAt: string(),
     kind: oneOf(
-        constant(LetterType.LETTERA_SEMPLICE),
-        constant(LetterType.RACCOMANDATA),
-        constant(LetterType.RACCOMANDATA_AR),
+        constant(LetterKind.LETTERA_SEMPLICE),
+        constant(LetterKind.RACCOMANDATA),
+        constant(LetterKind.RACCOMANDATA_AR),
     ),
     codePdf: string(),
     density: optional(number()),
@@ -151,7 +200,7 @@ export const LetterSchema = new Schema<Letter>({
     },
     kind: {
         type: String,
-        enum: [ LetterType.LETTERA_SEMPLICE, LetterType.RACCOMANDATA, LetterType.RACCOMANDATA_AR ],
+        enum: [ LetterKind.LETTERA_SEMPLICE, LetterKind.RACCOMANDATA, LetterKind.RACCOMANDATA_AR ],
         required: "Letter kind is required.",
     },
     codePdf: {
@@ -173,11 +222,23 @@ export const LetterSchema = new Schema<Letter>({
     },
     postel: {
         type: new Schema({
-            setID: String,
             baseEnvelopeID: Number,
-        }, {
-            _id: false
-        }),
+            set: new Schema({
+                id: String,
+                status: Number,
+                dateUploaded: Date,
+                dateCompleted: Date,
+                envelopes: [
+                    new Schema({
+                        id: Number,
+                        status: Number,
+                        dateUploaded: Date,
+                        dateCompleted: Date,
+                        tracking: String,
+                    }, { _id: false })
+                ]
+            }, { _id: false }),
+        }, { _id: false }),
     },
 });
 

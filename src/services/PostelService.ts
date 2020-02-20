@@ -12,7 +12,7 @@ export interface MpxUploadOptions {
     // Is always true in a test environment
     test: boolean
     // Used to determine the WorkProcessID to use for each envelope
-    letterType: LetterType
+    letterType: LetterKind
     // Unique UUID for this set of envelopes
     setID: string
     // MUST be a progressive number while in production (this is the starting number)
@@ -156,6 +156,8 @@ export interface MpxQueryResponse {
         code: number
         // The ID of the set from where this envelope is coming
         setID?: string
+        // The ID of this specific envelope
+        envelopeID: number
         // The status is related to the job for this envelope:
         // 1 - Approved
         // 2 - Job in progress
@@ -172,7 +174,7 @@ export interface MpxQueryResponse {
     }>
 }
 
-export enum LetterType {
+export enum LetterKind {
     "LETTERA_SEMPLICE" = "LETTERA SEMPLICE",
     "RACCOMANDATA" = "RACCOMANDATA",
     "RACCOMANDATA_AR" = "RACCOMANDATA AR"
@@ -182,6 +184,17 @@ export const WorkProcessID = {
     "RACCOMANDATA": "1089026",
     "RACCOMANDATA AR": "1089024",
 };
+
+export enum PostelStatus {
+    Sconosciuto,
+    Approvato,
+    LavorazioneInCorso,
+    Completato,
+    Offline,
+    DaApprovare,
+    Sospeso,
+    Annullato
+}
 
 // Utility method to convert XML entities that might be an array or an object into a pure array
 const array = (entity: any): Array<any> => !entity ? [] : (entity instanceof Array ? entity : [ entity ]);
@@ -335,6 +348,7 @@ export class PostelService {
                 return {
                     code: parseInt(envelope["Code"] || "-1"),
                     setID: envelope["CustomerSetID"],
+                    envelopeID: envelope["CustomerEnvelopeID"],
                     status: envelope["Status"] ? parseInt(envelope["Status"]) : undefined,
                     dateUploaded: envelope["UploadDate"],
                     dateCompleted: envelope["MailDate"]
