@@ -27,8 +27,6 @@ export class UserRoute extends Route {
              *         in: body
              *         schema:
              *           $ref: "#/definitions/User"
-             *     security:
-             *       - JWT: []
              *     responses:
              *       201:
              *         description: User created (password will be encrypted)
@@ -44,7 +42,7 @@ export class UserRoute extends Route {
             {
                 path: "/register",
                 method: RequestMethod.POST,
-                requiresAuth: true,
+                requiresAuth: false,
                 handler: (req, res) => this.userController.register(req, res)
             },
             /**
@@ -78,6 +76,39 @@ export class UserRoute extends Route {
                 method: RequestMethod.PUT,
                 requiresAuth: true,
                 handler: (req, res) => this.userController.updatePassword(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /user/activate/{id}:
+             *   put:
+             *     tags:
+             *       - Users
+             *     description: Activate an user by id. Only admins can do this!
+             *     produces:
+             *       - application/json
+             *     parameters:
+             *       - name: id
+             *         required: true
+             *         in: path
+             *         type: string
+             *     security:
+             *       - JWT: []
+             *     responses:
+             *       200:
+             *         description: User was activated
+             *         schema:
+             *           $ref: "#/definitions/UserDocument"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/activate/:id",
+                method: RequestMethod.PUT,
+                requiresAuth: true,
+                handler: (req, res) => this.userController.activate(req, res)
             }
         ])
     }

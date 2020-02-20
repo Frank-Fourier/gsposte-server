@@ -63,11 +63,14 @@ export class AuthService {
                 try {
                     const user = await this.userService.findById(payload.userId);
                     if (!user) {
-                        return done({ error: "User by token not found!" }, null);
+                        return done(null, null, { error: "User by token not found!" });
+                    }
+                    if (user && !user.active) {
+                        return done(null, null, { error: "User is not active!" });
                     }
                     return done(null, user);
                 } catch (err) {
-                    return done(err);
+                    return done(null, null, err);
                 }
             })();
         });

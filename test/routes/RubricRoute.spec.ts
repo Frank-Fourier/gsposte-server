@@ -89,7 +89,7 @@ const API = process.env.API_PATH;
     }
 
     @test async "Should query rubrics correctly" () {
-        const giovanni = await this.userService.save(userGiovanni);
+        const giovanni = await this.userService.save({ ...userGiovanni, active: true });
         const otherUser = await this.userService.save(generateMockUser());
         const tokenGiovanni = await this.authService.login({ usernameOrEmail: giovanni.username, password: userGiovanni.password });
 
@@ -107,7 +107,7 @@ const API = process.env.API_PATH;
         for (const mr of mockRubrics) await this.rubricService.save(mr);
 
         let res = await this.http
-            .get(`${API}/rubric`)
+            .post(`${API}/rubric/query`)
             .set("Authorization", tokenGiovanni)
             .send({
                 // Will use default pagination
@@ -129,7 +129,7 @@ const API = process.env.API_PATH;
         res.body.docs[0].recipients.forEach((rec: RecipientDocument) => expect(recipients).to.contain(rec._id));
 
         res = await this.http
-            .get(`${API}/rubric`)
+            .post(`${API}/rubric/query`)
             .set("Authorization", tokenGiovanni)
             .send({
                 // Will use default pagination

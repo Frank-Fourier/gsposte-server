@@ -80,7 +80,7 @@ import faker from "faker/locale/it";
         expect(saved._id.toString()).to.equal(rubric._id.toString());
         expect(saved.name).to.equal(rubric.name);
         // Rubric will have populated recipients
-        rubric.recipients.forEach((rec: RecipientDocument) => expect(recipients).to.contain(rec._id));
+        rubric.recipients.forEach((rec: RecipientDocument) => expect(recipients).to.contain(rec.id));
 
         const other = generateMockRubric(this.system._id);
         other.name = saved.name;

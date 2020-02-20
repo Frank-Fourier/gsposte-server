@@ -18,4 +18,10 @@ export class UserService extends MongoRepository<User, UserDocument> {
         await this.updateById(user._id, { password: passwordUpdate.newPassword });
     }
 
+    public async activate(id: string): Promise<UserDocument> {
+        return await this.updateById(id, {
+            $set: { active: true }
+        });
+    }
+
 }

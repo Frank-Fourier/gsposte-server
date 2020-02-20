@@ -10,6 +10,8 @@ export async function generateSystemUser(): Promise<UserDocument> {
             username: "system",
             email: "system@server",
             password: process.env.SYSTEM_PASS,
+            iva: "42424242424",
+            active: true,
             roles: [ UserRoles.ROLE_USER, UserRoles.ROLE_ADMIN ]
         });
     } catch (err) {

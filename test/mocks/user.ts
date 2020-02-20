@@ -9,12 +9,14 @@ export function generateMockUser(): User {
     return {
         username: faker.internet.userName(),
         email: faker.internet.email(),
-        password: faker.internet.password()
+        password: faker.internet.password(),
+        iva: "06998950726",
     };
 }
 
 export async function saveMockUserAndLogin(): Promise<{ token: string, user: UserDocument }> {
     const mockUser = generateMockUser();
+    mockUser.active = true;
     const user = await ioc.resolve(UserService).save(mockUser);
     const userToken = await ioc.resolve(AuthService).login({ usernameOrEmail: mockUser.email, password: mockUser.password });
     return {
@@ -26,5 +28,6 @@ export async function saveMockUserAndLogin(): Promise<{ token: string, user: Use
 export const userGiovanni: User = {
     username: "GiovanniOr2",
     email: "giovanni.orciuolo1999@gmail.com",
-    password: "Expurosion!!!!"
+    password: "Expurosion!!!!",
+    iva: "06998950726",
 };

@@ -104,7 +104,7 @@ const API = process.env.API_PATH;
     }
 
     @test async "Should query senders correctly" () {
-        const giovanni = await this.userService.save(userGiovanni);
+        const giovanni = await this.userService.save({ ...userGiovanni, active: true });
         const otherUser = await this.userService.save(generateMockUser());
 
         const tokenGiovanni = await this.authService.login({ usernameOrEmail: giovanni.username, password: userGiovanni.password });
@@ -117,7 +117,7 @@ const API = process.env.API_PATH;
         for (const ms of mockSenders) await this.senderService.save(ms);
 
         let res = await this.http
-            .get(`${API}/sender`)
+            .post(`${API}/sender/query`)
             .set("Authorization", tokenGiovanni)
             .send({
                 // Will use default pagination
@@ -133,7 +133,7 @@ const API = process.env.API_PATH;
         expect(res.body.docs[0].cf).to.equal(mockSenders[0].cf);
 
         res = await this.http
-            .get(`${API}/sender`)
+            .post(`${API}/sender/query`)
             .set("Authorization", tokenGiovanni)
             .send({
                 // Will use default pagination

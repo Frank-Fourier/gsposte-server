@@ -17,6 +17,7 @@ export enum UserRoles {
  *     required:
  *       - username
  *       - email
+ *       - iva
  *       - password
  *     properties:
  *       username:
@@ -28,6 +29,13 @@ export enum UserRoles {
  *       password:
  *         type: string
  *         example: OhyaWorstGirl
+ *       iva:
+ *         type: string
+ *         example: 06998950726
+ *       referCode:
+ *         type: string
+ *         description: Referral code (got from someone else)
+ *         example: GSK6UJDIUI
  *       roles:
  *         type: array
  *         example: [ "ROLE_USER" ]
@@ -44,6 +52,10 @@ export enum UserRoles {
  *           _id:
  *             type: string
  *             example: 5c991af86327ba47393f2fb3
+ *           active:
+ *             type: boolean
+ *             description: Will be true when the account is activated
+ *             example: false
  *           createdAt:
  *             type: string
  *             example: 2019-03-25T18:16:24.892Z
@@ -55,6 +67,9 @@ export interface User {
     username: string
     email: string
     password: string
+    iva: string
+    referCode?: string
+    active?: boolean
     roles?: Array<UserRoles>
     isAdmin?: () => boolean;
 }
@@ -64,6 +79,8 @@ export const userDecoder: Decoder<User> = object({
     username: string(),
     email: string(),
     password: string(),
+    iva: string(),
+    referCode: optional(string()),
     roles: optional(array(oneOf(
         constant(UserRoles.ROLE_USER),
         constant(UserRoles.ROLE_ADMIN)
@@ -113,6 +130,18 @@ export const UserSchema = new Schema<User>({
         type: String,
         required: "Password is required.",
         set: (password: string) => encryptPasswordSync(password),
+    },
+    iva: {
+        type: String,
+        required: "IVA is required.",
+        maxlength: 11,
+    },
+    referCode: {
+        type: String,
+    },
+    active: {
+        type: Boolean,
+        default: false,
     },
     roles: {
         type: [ String ],

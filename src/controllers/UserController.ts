@@ -5,6 +5,7 @@ import { UserService } from "@services/UserService";
 import { AuthService } from "@services/AuthService";
 import { User, UserPasswordUpdate, userPasswordUpdateDecoder } from "@models/UserModel";
 import { logger } from "@utils/winston";
+import httpErrors from "http-errors";
 
 @provide(UserController)
 export class UserController {
@@ -13,7 +14,6 @@ export class UserController {
     @inject(AuthService) private authService: AuthService;
 
     public async register(req: Request, res: Response) {
-        await this.authService.adminOnly(req);
         this.userService.validateObject(req.body);
 
         const user = req.body as User;
@@ -27,10 +27,20 @@ export class UserController {
         try { userPasswordUpdateDecoder.runWithException(req.body) } catch (err) { return res.status(400).send(err) }
         const user = await this.authService.getUserFromRequest(req);
 
-        logger.info(`User ${user.username} is updating its password!`);
+        logger.info(`User ${user.username} is trying to update its password!`);
         await this.userService.updatePassword(user, req.body as UserPasswordUpdate);
 
         return res.status(200).send({ message: "Password updated successfully" });
+    }
+
+    public async activate(req: Request, res: Response) {
+        await this.authService.adminOnly(req);
+        if (!req.params.id) {
+            throw new httpErrors.BadRequest("No user id to activate was provided. Please provide one as a path param.")
+        }
+
+        const user = await this.userService.activate(req.params.id);
+        return res.status(200).send(user);
     }
 
 }

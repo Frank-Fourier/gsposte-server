@@ -32,7 +32,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             await this.deleteById(saved.id);
             throw err;
         }
-        return saved;
+        return saved.depopulate("sender recipients");
     }
 
     public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert: boolean = false): Promise<LetterDocument> {

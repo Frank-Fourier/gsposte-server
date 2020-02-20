@@ -4,7 +4,7 @@ import { ioc } from "@ioc";
 import { ExpressServer } from "@server";
 import { generateSystemUser } from "@utils/system";
 import { getSystemUser, loginWithSystem } from "../test_utils";
-import { userGiovanni } from "../mocks/user";
+import { generateMockUser, userGiovanni } from "../mocks/user";
 import { UserService } from "@services/UserService";
 import { cleanTestDB } from "@utils/mongo";
 import { UserRoles } from "@models/UserModel";
@@ -25,18 +25,35 @@ const API = process.env.API_PATH;
     static async before() { await generateSystemUser(); }
     async before() { this.token = await loginWithSystem(); }
 
-    @test async "Should register a new user with admin privileges" () {
+    @test async "Should register a new user" () {
+        const mock = generateMockUser();
         const { body } = await this.http
             .post(`${API}/user/register`)
-            .set("Authorization", this.token)
-            .send(userGiovanni)
+            .send(mock)
             .expect(201);
 
         const user = await this.userService.findById(body._id);
-        expect(user.username).to.equal(userGiovanni.username);
-        expect(user.email).to.equal(userGiovanni.email);
+        expect(user.username).to.equal(mock.username);
+        expect(user.email).to.equal(mock.email.toLowerCase());
         expect(user.roles.length).to.equal(1);
         expect(user.roles[0]).to.equal(UserRoles.ROLE_USER);
+        expect(user.password).not.to.equal(mock.password);
+        expect(user.active).to.equal(false);
+
+        const jwt = await this.authService.login({
+            usernameOrEmail: mock.username,
+            password: mock.password,
+        });
+
+        // This user should not be able to call any authenticated route because he's not active
+        await this.http
+            .put(`${API}/user/update/password`)
+            .set("Authorization", jwt)
+            .send({
+                oldPassword: "gang",
+                newPassword: "ollare"
+            })
+            .expect(401);
     }
 
     @test async "Should not register a duplicate user" () {
@@ -46,35 +63,10 @@ const API = process.env.API_PATH;
             .send({
                 username: "system_duplicate",
                 email: "system@server",
-                password: "MakotoBestGirl2020"
+                password: "MakotoBestGirl2020",
+                iva: "DUPLICATE"
             })
             .expect(409);
-    }
-
-    @test async "Should not register an user without admin privileges" () {
-        await this.http
-            .post(`${API}/user/register`)
-            .send({
-                username: "im_vig",
-                email: "mafioso@claim",
-                password: "ImmaLeaveD1"
-            })
-            .expect(401);
-
-        const userToken = await this.authService.login({
-            usernameOrEmail: userGiovanni.username,
-            password: userGiovanni.password
-        });
-
-        await this.http
-            .post(`${API}/user/register`)
-            .set("Authorization", userToken)
-            .send({
-                username: "bad_user",
-                email: "flex@boy",
-                password: "GallagherFlexBambinoSelvaggio"
-            })
-            .expect(403);
     }
 
     @test async "Should not register with invalid user inputs" () {
