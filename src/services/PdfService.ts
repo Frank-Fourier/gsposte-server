@@ -110,10 +110,6 @@ export class PdfService {
      * @returns Original Base64 returned from the format function
      */
     public async formatAndSavePdf(letter: Letter): Promise<string> {
-        if (process.env.NODE_ENV === "test") {
-            // Skip this function entirely
-            return null;
-        }
         try {
             const base64 = await this.postelFormat(`${pdf_root}${letter.codePdf}.pdf`,
                 letter.sender as SenderDocument,

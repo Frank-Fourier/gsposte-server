@@ -46,7 +46,7 @@ const ENVELOPE_ID = 876457;
             envelopeID: ENVELOPE_ID,
             useSameEnvelopeID: true,
             pdf: {
-                numPages: 1,
+                pages: 3,
                 base64: await this.pdf.toBase64("test/assets/test.pdf")
             }
         };

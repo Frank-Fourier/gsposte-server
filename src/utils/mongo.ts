@@ -13,7 +13,7 @@ export async function cleanTestDB() {
     }
     // Drop the database
     try {
-        logger.info("● Dropping test database...");
+        logger.info("Dropping test database...");
         await connection.db.dropDatabase();
         return { ok: true, message: "Test DB dropped!" };
     } catch (err) {

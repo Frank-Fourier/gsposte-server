@@ -15,6 +15,7 @@ export function generateMockLetter(user: string | UserDocument, sender: string |
         kind: LetterKind.LETTERA_SEMPLICE,
         codePdf: codePdf,
         density: 150,
+        test: true,
         notes: faker.lorem.sentence(),
     };
 }

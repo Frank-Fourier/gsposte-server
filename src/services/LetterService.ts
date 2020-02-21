@@ -23,23 +23,25 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         super(letterModel, letterDecoder);
     }
 
-    public async save(letter: Letter): Promise<LetterDocument> {
+    public async save(letter: Letter, depopulate = true): Promise<LetterDocument> {
         const saved = await (await super.save(letter))
             .populate("sender recipients").execPopulate();
         try {
-            await this.pdf.formatAndSavePdf(saved);
+            if (process.env.NODE_ENV !== "test")
+                await this.pdf.formatAndSavePdf(saved);
         } catch (err) {
             await this.deleteById(saved.id);
             throw err;
         }
-        return saved.depopulate("sender recipients");
+        return depopulate ? saved.depopulate("sender recipients") : saved;
     }
 
     public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert: boolean = false): Promise<LetterDocument> {
         const updated = await (await super.updateById(id, updateBody, upsert))
             .populate("sender recipients").execPopulate();
         try {
-            await this.pdf.formatAndSavePdf(updated);
+            if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
+                await this.pdf.formatAndSavePdf(updated);
         } catch (err) {
             await this.deleteById(updated.id);
             throw err;
@@ -51,7 +53,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         const updated = await (await super.updateOne(query, updateBody, upsert))
             .populate("sender recipients").execPopulate();
         try {
-            await this.pdf.formatAndSavePdf(updated);
+            if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
+                await this.pdf.formatAndSavePdf(updated);
         } catch (err) {
             await this.deleteById(updated.id);
             throw err;
@@ -63,14 +66,19 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      * This function gets all the letters marked as **not sent** and uploads all of them to Postel.
      * It's normally called by its CRON job, but no one stops you from calling it yourself.
      *
-     * @returns Promise resolved when all the letters are sent successfully.
-     * @throws If something goes wrong while attempting to send
+     * @returns Promise resolved with the number of errors when all the letters are sent.
      */
-    public async batchUploadLetters(): Promise<void> {
+    public async batchUploadLetters(): Promise<number> {
         const toSend = (await this.find({ sent: false }, { populate: "sender recipients" }))
-            .filter(l => moment(l.sendAt).isSameOrAfter(moment()));
+            .filter(l => moment(l.sendAt).isSameOrBefore(moment()));
+
+        if (toSend.length === 0) {
+            logger.info(`Upload job has no letters to send! Waiting for the next CRON call...`);
+            return 0;
+        }
 
         logger.info(`Time to send letters! This time I'll send ${toSend.length} letters, using ${process.env.CURRENT_ENVELOPE_ID} as the EnvelopeID base.`);
+        let errors = 0;
 
         for (const letter of toSend) {
             const logFile = createLogFile(`${letter.codePdf}.log`);
@@ -110,14 +118,13 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         setID: uuid,
                         envelopeID: baseEnvelopeID,
                         pdf: {
-                            numPages: pages,
+                            pages: pages,
                             base64: pdfBase64,
                         }
                     }
                 );
-                if (!this.postel.isUploadResponseOk(postelRes)) {
+                if (postelRes.code !== 0 || !this.postel.isUploadResponseOk(postelRes))
                     throw { error: "MpxUpload response is not OK.", response: postelRes };
-                }
 
                 process.env.CURRENT_ENVELOPE_ID = (baseEnvelopeID + letter.recipients.length).toString();
                 logFile.info(`Postel upload API called successfully, got this result: `, postelRes);
@@ -148,12 +155,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             } catch (err) {
                 logger.error(`ARGH! Got an error while trying to send letter '${letter.codePdf}'!`, err);
                 logFile.error(`ARGH! Got an error while sending this letter!`, err);
+                errors++;
             } finally {
                 detachLogFile(logFile);
             }
         }
 
         logger.info(`Done sending letters. Current EnvelopeID is: ${process.env.CURRENT_ENVELOPE_ID}!`);
+        return errors;
     }
 
     /**
@@ -161,10 +170,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      * and updates the stats stored in documents.
      * It's normally called by its CRON job, but no one stops you from calling it yourself.
      *
-     * @returns Promise resolved when all the queries are done successfully.
-     * @throws If something goes wrong while attempting to send
+     * @returns Promise resolved with the number of errors when all the queries are done.
      */
-    public async batchQueryLetters(): Promise<void> {
+    public async batchQueryLetters(): Promise<number> {
         const interestingStatuses = [
             PostelStatus.Approvato,
             PostelStatus.LavorazioneInCorso,
@@ -174,7 +182,13 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         const toQuery = (await this.find({ sent: true }, { populate: "sender recipients" }))
             .filter(l => l.postel.set ? interestingStatuses.includes(l.postel.set.status) : true);
 
+        if (toQuery.length === 0) {
+            logger.info(`Query job has no letters to check! Waiting for the next CRON call...`);
+            return 0;
+        }
+
         logger.info(`Time to query Postel! I'm gonna ask for info about ${toQuery.length} letters.`);
+        let errors = 0;
 
         for (const letter of toQuery) {
             if (!letter.postel) {
@@ -204,10 +218,21 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 set.dateUploaded = res.sets[0].dateUploaded;
                 set.dateCompleted = res.sets[0].dateCompleted;
 
-                if (!res.sets[0].regLetterNote && wantsRLN) {
+                if (wantsRLN && !res.sets[0].regLetterNote) {
                     logger.warn(`Letter '${letter.codePdf}' has kind '${letter.kind}' but I got no response from GetRegLetterNote.`);
                 }
-
+                if (wantsRLN && res.sets[0].regLetterNote.code === 0) {
+                    // Update tracking code
+                    logger.info( `Query for letter '${letter.codePdf}' responded with a RegLetterNote containing ${res.sets[0].regLetterNote.envelopes.length} envelopes! Gathering tracking codes from it...`);
+                    set.envelopes = res.sets[0].regLetterNote.envelopes.map(re => {
+                        return {
+                            id: re.envelopeID,
+                            status: 0,
+                            dateCompleted: re.dateCompleted,
+                            tracking: re.regLetterCode
+                        }
+                    });
+                }
 
                 // Subsequent calls (starting from the 100th envelope) will have 100 max Envelope tags
                 if (set.envelopes.length > 100) {
@@ -234,20 +259,35 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 // Order result envelopes by their CustomerEnvelopeID and update
                 res.envelopes.sort((a, b) => a.envelopeID - b.envelopeID);
                 set.envelopes = res.envelopes.map(e => {
+                    const env = set.envelopes.find(se => se.id === e.envelopeID);
                     return {
-                        id: e.envelopeID,
+                        id: env.id || e.envelopeID,
                         status: e.status,
                         dateUploaded: e.dateUploaded,
-                        dateCompleted: e.dateCompleted,
-                        tracking: 'no' // TODO: Finish this routine
+                        dateCompleted: env.dateCompleted || e.dateCompleted,
+                        tracking: env.tracking, // If present
                     }
                 });
+
+                logger.info(`Query for letter '${letter.codePdf}' is done. Updating its database entry...`);
+                await this.updateById(letter._id, {
+                    $set: {
+                        postel: {
+                            baseEnvelopeID: letter.postel.baseEnvelopeID,
+                            set: set
+                        }
+                    }
+                });
+
+                logger.info("Ok!");
             } catch (err) {
                 logger.error(`ARGH! Got an error while trying to query info about letter '${letter.codePdf}'!`, err);
+                errors++;
             }
         }
 
         logger.info(`Done querying Postel.`);
+        return errors;
     }
 
 }

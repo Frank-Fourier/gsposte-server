@@ -73,6 +73,9 @@ export class LetterController {
         if (letter.user !== user._id && !user.isAdmin()) {
             throw new httpErrors.Forbidden("You are not authorized to delete letters that aren't yours!");
         }
+        if (letter.sent) {
+            throw new httpErrors.BadRequest("You can't delete letters that have already been sent to Postel.");
+        }
 
         const deleted = await this.letterService.deleteById(req.params.id);
         return res.status(200).send(deleted);

@@ -1,4 +1,4 @@
-import { suite, test } from "mocha-typescript";
+import { suite, test, timeout } from "mocha-typescript";
 import { expect } from "chai";
 import { ioc } from "@ioc";
 import { LetterService } from "@services/LetterService";
@@ -7,6 +7,7 @@ import { RecipientService } from "@services/RecipientService";
 import { UserDocument } from "@models/UserModel";
 import { LetterDocument } from "@models/LetterModel";
 import { RecipientDocument } from "@models/RecipientModel";
+import { SenderDocument } from "@models/SenderModel";
 import { generateSystemUser } from "@utils/system";
 import { assertSameLetter, getSystemUser } from "../test_utils";
 import { generateMockLetter } from "../mocks/letter";
@@ -15,7 +16,8 @@ import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
 // @ts-ignore
 import faker from "faker/locale/it";
-import { SenderDocument } from "@models/SenderModel";
+import { logger } from "@utils/winston";
+import { PdfService } from "@services/PdfService";
 
 const CODE_PDF = "format";
 
@@ -24,6 +26,7 @@ const CODE_PDF = "format";
     letterService = ioc.resolve(LetterService);
     senderService = ioc.resolve(SenderService);
     recipientService = ioc.resolve(RecipientService);
+    pdf = ioc.resolve(PdfService);
     system: UserDocument;
 
     static async before() { await generateSystemUser(); }
@@ -243,6 +246,32 @@ const CODE_PDF = "format";
         }
 
         expect(deleted).not.to.exist;
+    }
+
+    @timeout(120000)
+    @test async "Should run the upload batch job correctly" () {
+        logger.transports.forEach(trans => trans.level = "info");
+
+        const letter = await this.letterService.save(generateMockLetter(
+            this.system.id,
+            await this.senderService.save(generateMockSender(this.system.id)), [
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+            ],
+            CODE_PDF
+        ), false);
+        await this.pdf.formatAndSavePdf(letter);
+
+        let errors = 0;
+        try {
+            errors = await this.letterService.batchUploadLetters();
+        } catch (err) {
+            expect(err).not.to.exist;
+        }
+        expect(errors).to.equal(0);
+
+        logger.transports.forEach(trans => trans.level = "error");
     }
 
     static after() { cleanTestDB(); }

@@ -81,3 +81,7 @@ export async function getSystemUser(): Promise<UserDocument> {
         username: "system"
     }))[0];
 }
+
+export async function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}

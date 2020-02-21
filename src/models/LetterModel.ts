@@ -1,5 +1,15 @@
 import { Document, model, Model, Schema } from "mongoose";
-import { Decoder, array, object, optional, string, oneOf, constant, number } from "@mojotech/json-type-validation";
+import {
+    Decoder,
+    array,
+    object,
+    optional,
+    string,
+    oneOf,
+    constant,
+    number,
+    boolean
+} from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
 import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
@@ -53,6 +63,10 @@ import { RecipientDocument } from "@models/RecipientModel";
  *         type: number
  *         description: The DPI to use when converting the source PDF into Postel PDF. Must be between 150 and 300. Default is 150.
  *         example: 150
+ *       test:
+ *         type: boolean
+ *         description: Marks if this letter is a test campaign, meaning that it won't be considered by Postel and deleted after a month.
+ *         example: true
  *       notes:
  *         type: string
  *         example: This is my beautiful campaign!
@@ -136,6 +150,7 @@ export interface Letter {
     kind: LetterKind
     codePdf: string
     density?: number
+    test?: boolean
     notes?: string
 }
 export interface LetterDocument extends Letter, Document {
@@ -170,6 +185,7 @@ export const letterDecoder: Decoder<Letter> = object({
     ),
     codePdf: string(),
     density: optional(number()),
+    test: optional(boolean()),
     notes: optional(string()),
 });
 
@@ -211,6 +227,10 @@ export const LetterSchema = new Schema<Letter>({
         type: Number,
         default: 150,
         min: 150, max: 300
+    },
+    test: {
+        type: Boolean,
+        default: false,
     },
     notes: {
         type: String,

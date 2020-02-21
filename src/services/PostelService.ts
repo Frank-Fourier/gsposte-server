@@ -21,13 +21,27 @@ export interface MpxUploadOptions {
     useSameEnvelopeID?: boolean
     // PDF details
     pdf: {
-        // MUST be equal to the real number of pages of the PDF file
-        numPages: number
+        // MUST be equal to the real number of pages of the FORMATTED PDF file
+        pages: number
         // The *entire* PDF file as Base64
         base64: string
     }
 }
 export interface MpxUploadResponse {
+    // Global result code
+    // 0 - OK
+    // 1 - Internal Server Error on Postel
+    // 2 - XML not formatted correctly
+    // 3 - Missing MPX tag
+    // 4 - Missing Header tag (will never occur)
+    // 5 - Authentication failed (wrong ZCode/Username/Password)
+    // 6 - PDF file is too large
+    // 7 - Platform configuration error
+    // 8 - Cover generation error
+    // 190 - Multiple errors, check messages
+    code: number
+    // The message associated to the global code
+    message: string
     // Contains the response related to the entire Set, with errors (if present)
     set: {
         code: number
@@ -128,7 +142,7 @@ export interface MpxQueryResponse {
             code: number
             envelopes: Array<{
                 // CustomerEnvelopeID value
-                envelopeID: string
+                envelopeID: number
                 // Info about the envelope
                 fullName: string
                 address: Address
@@ -211,7 +225,7 @@ export class PostelService {
      */
     public async upload(sender: SenderDocument, recipients: Array<RecipientDocument>, options: MpxUploadOptions): Promise<MpxUploadResponse> {
         const model = this.createUploadModel(sender, recipients, options);
-        const xml = toXml(model);
+        const xml = toXml(model, { sanitize: true });
 
         // Call Postel
         const res = await this.callPostelApi("Upload", xml);
@@ -224,7 +238,7 @@ export class PostelService {
 
     public async query(options: MpxQueryOptions): Promise<MpxQueryResponse> {
         const model = this.createQueryModel(options);
-        const xml = toXml(model);
+        const xml = toXml(model, { sanitize: true });
 
         // Call Postel
         const res = await this.callPostelApi("MpxQuery", xml);
@@ -236,9 +250,9 @@ export class PostelService {
     }
 
     public isUploadResponseOk(response: MpxUploadResponse): boolean {
-        return (response.set.code === 0 && response.set.errors.length === 0) &&
-               (response.envelopes.every(e => e.code === 0 && e.errors.length === 0)) &&
-               (response.pdf.code === 0 && response.pdf.errors.length === 0);
+        return ((response.set && response.set.code === 0) && (response.set.errors || []).length === 0) &&
+               (response.envelopes && response.envelopes.every(e => e.code === 0 && (e.errors || []).length === 0)) &&
+               ((response.pdf && response.pdf.code === 0) && (response.pdf.errors || []).length === 0);
     }
 
     private callPostelApi(apiName: "Upload" | "MpxQuery", xmlBody: string): Promise<Response> {
@@ -265,6 +279,8 @@ export class PostelService {
         // Extract different sections of the JSON and re-arrange them as an MpxUploadResponse object
         // Sorry for the mess, XMLs fucking suck lol
         return {
+            code: res["MPX"]["Header"]["GlobalCode"],
+            message: res["MPX"]["Header"]["Message"],
             set: res["MPX"]["Set"] ? {
                 code: parseInt(res["MPX"]["Set"]["SetCode"] || "0"),
                 message: res["MPX"]["Set"]["Message"] || "OK",
@@ -363,6 +379,7 @@ export class PostelService {
      */
 
     private createUploadModel(sender: SenderDocument, recipients: Array<RecipientDocument>, options: MpxUploadOptions): Object {
+        const originalPages = Math.ceil(options.pdf.pages / recipients.length);
         return {
             MPX: {
                 Header: {
@@ -380,11 +397,11 @@ export class PostelService {
                     ProvinciaMittente: sender.address.province,
                     NazioneMittente: sender.address.country,
                     Pdf: {
-                        NumPages: options.pdf.numPages * recipients.length,
+                        NumPages: options.pdf.pages,
                         Envelope: recipients.map((recipient, index) => {
                             return {
-                                PageStart: (index * options.pdf.numPages) + 1,
-                                PageEnd: (index * options.pdf.numPages) + options.pdf.numPages,
+                                PageStart: (index * originalPages) + 1,
+                                PageEnd: (index * originalPages) + originalPages,
                                 WorkProcessID: WorkProcessID[options.letterType],
                                 CustomerEnvelopeID: options.envelopeID + (options.useSameEnvelopeID ? 0 : (index + 1)),
                                 Data: {

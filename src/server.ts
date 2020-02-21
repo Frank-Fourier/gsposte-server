@@ -24,6 +24,7 @@ import { logger } from "@utils/winston";
 import { cors } from "@utils/cors";
 import { swaggerUi, serveSwagger } from "@utils/swagger";
 import { generateSystemUser } from "@utils/system";
+import { queryJob, uploadJob } from "@utils/cron";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -50,6 +51,7 @@ export class ExpressServer {
         this.setupPassport();
         this.setupSystemUser();
         this.setupSwagger();
+        this.setupCronJobs();
     }
 
     private setupConfig() {
@@ -104,6 +106,14 @@ export class ExpressServer {
         const spinner = this.makeSpinner("Setting up Swagger documentation!");
         this.app.use("/docs", serveSwagger, swaggerUi);
         spinner && spinner.succeed("Swagger is available at /docs!");
+    }
+
+    private setupCronJobs() {
+        if (process.env.NODE_ENV === "test") return;
+        const spinner = this.makeSpinner("Starting CRON jobs...");
+        uploadJob.start();
+        queryJob.start();
+        spinner && spinner.succeed("CRON jobs are running!");
     }
 
     private makeSpinner(text: string): ora.Ora {
