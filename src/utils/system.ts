@@ -15,7 +15,7 @@ export async function generateSystemUser(): Promise<UserDocument> {
             roles: [ UserRoles.ROLE_USER, UserRoles.ROLE_ADMIN ]
         });
     } catch (err) {
-        spinner.fail(`Failed to create system user! ${err}`);
+        spinner && spinner.fail(`Failed to create system user! ${err}`);
         return;
     } finally { spinner && spinner.succeed("Created system user!"); }
 }

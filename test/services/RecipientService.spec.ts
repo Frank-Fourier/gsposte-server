@@ -10,6 +10,7 @@ import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
 // @ts-ignore
 import faker from "faker/locale/it";
+import fs from "fs";
 
 @suite ("RecipientService") class RecipientServiceTests {
 
@@ -157,6 +158,12 @@ import faker from "faker/locale/it";
         }
 
         expect(deleted).not.to.exist;
+    }
+
+    @test async "Should import recipients from XLSX correctly" () {
+        const xlsx = await fs.promises.readFile("test/assets/import_standard.xlsx");
+        const json = await this.recipientService.importFromXLSX(xlsx, this.system.id);
+        console.log(json);
     }
 
     static after() { cleanTestDB(); }

@@ -2,16 +2,29 @@ import { Request, Response } from "express";
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { UserService } from "@services/UserService";
-import { AuthService } from "@services/AuthService";
 import { User, UserPasswordUpdate, userPasswordUpdateDecoder } from "@models/UserModel";
 import { logger } from "@utils/winston";
 import httpErrors from "http-errors";
+import { CrudController } from "@controllers/CrudController";
 
 @provide(UserController)
-export class UserController {
+export class UserController extends CrudController {
 
-    @inject(UserService) private userService: UserService;
-    @inject(AuthService) private authService: AuthService;
+    constructor(
+        @inject(UserService) private userService: UserService,
+    ) {
+        super(userService, false, true);
+    }
+
+    public async find(req: Request, res: Response) {
+        await this.authService.adminOnly(req);
+        return super.find(req, res);
+    }
+
+    public async findById(req: Request, res: Response) {
+        await this.authService.adminOnly(req);
+        return super.findById(req, res);
+    }
 
     public async register(req: Request, res: Response) {
         this.userService.validateObject(req.body);
@@ -21,6 +34,16 @@ export class UserController {
         const newUser = await this.userService.save(user);
 
         return res.status(201).send(newUser);
+    }
+
+    public async updateMe(req: Request, res: Response) {
+        const user = await this.authService.getUserFromRequest(req);
+        if (req.body.password) {
+            throw new httpErrors.BadRequest("Please use /update/password to update your password.");
+        }
+
+        const updated = await this.userService.updateById(user.id, req.body);
+        return res.status(200).send(updated);
     }
 
     public async updatePassword(req: Request, res: Response) {

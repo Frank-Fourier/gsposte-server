@@ -18,6 +18,7 @@ import { RecipientRoute } from "@routes/RecipientRoute";
 import { RubricRoute } from "@routes/RubricRoute";
 import { LetterRoute } from "@routes/LetterRoute";
 import { PdfRoute } from "@routes/PdfRoute";
+import { MunicipalityRoute } from "@routes/MunicipalityRoute";
 
 import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
@@ -28,6 +29,7 @@ import { queryJob, uploadJob } from "@utils/cron";
 
 @provide(ExpressServer)
 export class ExpressServer {
+
     app: express.Application;
     routes: Route[] = [
         ioc.resolve(AuthRoute),
@@ -37,6 +39,7 @@ export class ExpressServer {
         ioc.resolve(RubricRoute),
         ioc.resolve(LetterRoute),
         ioc.resolve(PdfRoute),
+        ioc.resolve(MunicipalityRoute),
     ];
 
     constructor(

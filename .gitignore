@@ -10,6 +10,7 @@ dist/
 test/assets/*_margins.pdf
 test/assets/*_postel.pdf
 test/assets/*.html
+test/assets/.~lock*
 
 # Log files
 *.log

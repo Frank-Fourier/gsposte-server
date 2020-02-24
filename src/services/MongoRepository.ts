@@ -123,25 +123,34 @@ export class MongoRepository<DTO, Doc extends Document> {
         try {
             return await this.queryMany(query).populate(options.populate || "").select(options.select || "").orFail().exec();
         } catch (err) {
+            if (err.name === "DocumentNotFoundError") {
+                return []; // Instead of DocumentNotFoundError
+            }
             throw this.formatMongoError(err);
         }
     }
 
     public async paginate(query: MongoQuery<DTO & Doc>, pagination: PaginateOptions, realCount = false): Promise<Paginated<Doc>> {
+        const docsCount = realCount
+            ? await this.model.find(query).countDocuments().exec()
+            : await this.model.estimatedDocumentCount();
+
+        let docs: Doc[] = [];
         try {
-            const docsCount = realCount
-                ? await this.model.find(query).countDocuments().exec()
-                : await this.model.estimatedDocumentCount();
-            return {
-                meta: {
-                    total: docsCount,
-                    pages: Math.ceil(docsCount / pagination.pageSize)
-                },
-                docs: await this.queryMany(query || {}, pagination).orFail().exec()
-            };
+            docs = await this.queryMany(query || {}, pagination).orFail().exec();
         } catch (err) {
-            throw this.formatMongoError(err);
+            if (err.name !== "DocumentNotFoundError") {
+                throw this.formatMongoError(err);
+            }
         }
+
+        return {
+            meta: {
+                total: docsCount,
+                pages: Math.ceil(docsCount / pagination.pageSize)
+            },
+            docs: docs
+        };
     }
 
     public async findOne(query: MongoQuery<DTO & Doc>, options: QueryOptions = {}): Promise<Doc> {

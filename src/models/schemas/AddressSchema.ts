@@ -74,17 +74,17 @@ export const AddressSchema = new Schema<Address>({
     zip: {
         type: String,
         required: "Zip code is required.",
-        maxlength: 5
+        minlength: 5, maxlength: 5
     },
     province: {
         type: String,
         required: "Province is required.",
-        maxlength: 2
+        minlength: 2, maxlength: 2
     },
     country: {
         type: String,
         default: "IT",
-        maxlength: 2
+        minlength: 2, maxlength: 2
     }
 }, {
     _id: false
