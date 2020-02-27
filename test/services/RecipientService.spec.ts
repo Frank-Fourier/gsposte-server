@@ -2,6 +2,7 @@ import { suite, test } from "mocha-typescript";
 import { expect } from "chai";
 import { ioc } from "@ioc";
 import { RecipientService } from "@services/RecipientService";
+import { MunicipalityModel } from "@models/MunicipalityModel";
 import { UserDocument } from "@models/UserModel";
 import { RecipientDocument } from "@models/RecipientModel";
 import { generateSystemUser } from "@utils/system";
@@ -161,9 +162,13 @@ import fs from "fs";
     }
 
     @test async "Should import recipients from XLSX correctly" () {
+        // Import municipalities into test database
+        const municipalities = require("../assets/municipalities.json");
+        await MunicipalityModel.insertMany(municipalities);
+
         const xlsx = await fs.promises.readFile("test/assets/import_standard.xlsx");
-        const json = await this.recipientService.importFromXLSX(xlsx, this.system.id);
-        console.log(json);
+        const result = await this.recipientService.importFromXLSX(xlsx, this.system.id);
+        console.log(JSON.stringify(result, null, 2));
     }
 
     static after() { cleanTestDB(); }

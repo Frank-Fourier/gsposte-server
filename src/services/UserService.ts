@@ -8,7 +8,9 @@ import httpErrors from "http-errors";
 export class UserService extends MongoRepository<User, UserDocument> {
 
     constructor(private userModel = UserModel) {
-        super(userModel, userDecoder);
+        super(userModel, userDecoder, [
+            "username", "email", "iva"
+        ]);
     }
 
     public async updatePassword(user: UserDocument, passwordUpdate: UserPasswordUpdate) {

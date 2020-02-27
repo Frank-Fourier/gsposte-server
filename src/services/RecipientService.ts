@@ -9,13 +9,18 @@ import { MunicipalityService } from "@services/MunicipalityService";
 import { MunicipalityDocument } from "@models/MunicipalityModel";
 import { AddressDocument } from "@models/schemas/AddressSchema";
 
+type Validator =  { validate: (value: string) => boolean, error: string };
+
 @provide(RecipientService)
 export class RecipientService extends MongoRepository<Recipient, RecipientDocument> {
 
     @inject(MunicipalityService) private municipalityService: MunicipalityService;
 
     constructor(private recipientModel = RecipientModel) {
-        super(recipientModel, recipientDecoder);
+        super(recipientModel, recipientDecoder, [
+            "fullName", "address.street", "address.secondary", "address.city",
+            "address.zip", "address.province", "address.country", "notes"
+        ]);
     }
 
     public async save(recipient: Recipient): Promise<RecipientDocument> {
@@ -37,6 +42,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
         duplicates: number
     }> {
         logger.info(`Requested an import of recipients from XLSX.`);
+
         const imported: RecipientDocument[] = [];
         const errors: Array<{ row: number, description: string, data?: any }> = [];
         let duplicates = 0;
@@ -47,54 +53,91 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             throw new httpErrors.BadRequest("The XLSX file does not have any valid sheet to read data from.");
         }
 
-        const sheetJson = utils.sheet_to_json(Object.values(wb.Sheets)[0]);
+        const validators = {
+            notEmpty: () => (value: string) => !!value,
+            maxLength: (max: number) => (value: string) => value.length < max,
+        };
+
+        const sheetJson = utils.sheet_to_json(sheet);
         for (let row = 0; row < sheetJson.length; ++row) {
             const value = Object.values(sheetJson[row]);
             // DENOMINAZIONE, INDIRIZZO, CAP, COMUNE, PROVINCIA
-            const rowName = value[0], rowStreet = value[1], rowZip = value[2];
+            const rowName     = String(value[0]),
+                  rowStreet   = String(value[1]),
+                  rowZip      = String(value[2]),
+                  rowCityName = String(value[3]);
+                  // rowProvince = String(value[4]);
 
-            // Validate each possible input
+            const validateRow = (rowVal: string, validators: Validator[]) =>
+                validators.filter(v => !v.validate(rowVal)).map(nv => {
+                    errors.push({ row: row + 2, description: nv.error });
+                    return nv;
+                }).length === 0;
+
+            validateRow(rowName, [{
+                validate: validators.notEmpty(),
+                error: `Non è stato trovato il nome per questa anagrafica.`
+            }]);
+
             if (!rowName) {
                 errors.push({
-                    row: row,
+                    row: row + 2,
                     description: `Non è stato trovato il nome per questa anagrafica.`
                 });
                 continue;
             }
             if (rowName.length > 40) {
                 errors.push({
-                    row: row,
+                    row: row + 2,
                     description: `Il nome di questa anagrafica è troppo lungo. Deve essere minore di 40 caratteri.`
                 });
                 continue;
             }
             if (!rowStreet) {
                 errors.push({
-                    row: row,
+                    row: row + 2,
                     description: `Non è stato trovato l'indirizzo per questa anagrafica.`
                 });
                 continue;
             }
             if (rowStreet.length > 40) {
                 errors.push({
-                    row: row,
+                    row: row + 2,
                     description: `L'indirizzo di questa anagrafica è troppo lungo. Deve essere minore di 40 caratteri.`
                 });
                 continue;
             }
 
-            // Query municipalities to determine real name and province
+            // Query municipality
             let municipality: MunicipalityDocument = null;
             try {
-                municipality = await this.municipalityService.findOne({ zip: rowZip });
+                municipality = await this.municipalityService.findOne({
+                    $text: {
+                        $search: rowCityName,
+                        $language: "none"
+                    },
+                });
             } catch (err) {
-                logger.error(`Got an error while querying for the municipality on row ${row}!`, err);
+                logger.error(`Got an error while querying for the municipality on row ${row + 2}! ${err}`);
                 errors.push({
-                    row: row,
+                    row: row + 2,
                     description: err.status === 404 ?
-                        `Non è stato trovato alcun comune con CAP '${rowZip}'.` :
-                        `Non è stato possibile recuperare il comune corrispondente al CAP '${rowZip}'.`,
-                    data: err
+                        `Non è stato trovato alcun comune di nome '${rowCityName}'. Potrebbe essere necessario richiedere l'inserimento di questo comune nel sistema, tramite l'apposito modulo.` :
+                        `Errore durante la ricerca del comune di nome '${rowCityName}' nel database.`,
+                    data: err.message || err
+                });
+                continue;
+            }
+
+            // Found the municipality in db, check the zip code
+            if (rowZip !== municipality.zip) {
+                errors.push({
+                    row: row + 2,
+                    description: `Il CAP corrispondente al comune riportato (${rowZip} per ${rowCityName}) non corrisponde al CAP registrato nel sistema.`,
+                    data: {
+                        municipality: municipality,
+                        rowZip: rowZip
+                    }
                 });
                 continue;
             }
@@ -102,7 +145,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             // Create the new recipient to import
             const recipient: Recipient = {
                 user: userId,
-                fullName: name,
+                fullName: rowName,
                 address: {
                     street: rowStreet,
                     city: municipality.name,
@@ -123,11 +166,11 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     continue;
                 }
 
-                logger.error(`Got an error while saving a new imported recipient on row ${row}!`, err);
+                logger.error(`Got an error while saving a new imported recipient on row ${row + 2}!`, err);
                 errors.push({
-                    row: row,
+                    row: row + 2,
                     description: `Non è stato possibile salvare la nuova anagrafica.`,
-                    data: err
+                    data: err.message || err
                 });
             }
         }

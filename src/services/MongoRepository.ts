@@ -88,7 +88,8 @@ export class MongoRepository<DTO, Doc extends Document> {
 
     constructor(
         @unmanaged() private model: Model<Doc>,
-        @unmanaged() private decoder: Decoder<DTO>
+        @unmanaged() private decoder: Decoder<DTO>,
+        @unmanaged() private searchFields: string[] = []
     ) {}
 
     public async save(object: DTO): Promise<Doc> {
@@ -130,11 +131,8 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async paginate(query: MongoQuery<DTO & Doc>, pagination: PaginateOptions, realCount = false): Promise<Paginated<Doc>> {
-        const docsCount = realCount
-            ? await this.model.find(query).countDocuments().exec()
-            : await this.model.estimatedDocumentCount();
-
+    public async paginate(query: MongoQuery<DTO & Doc>, pagination: PaginateOptions): Promise<Paginated<Doc>> {
+        const docsCount = await this.model.find(query).countDocuments().exec();
         let docs: Doc[] = [];
         try {
             docs = await this.queryMany(query || {}, pagination).orFail().exec();
@@ -151,6 +149,22 @@ export class MongoRepository<DTO, Doc extends Document> {
             },
             docs: docs
         };
+    }
+
+    public async searchByText(text: string, pagination: PaginateOptions): Promise<Paginated<Doc>> {
+        if (this.searchFields.length === 0) {
+            return { meta: { total: 0, pages: 0 }, docs: [] };
+        }
+        const or = this.searchFields.map(field => {
+            return {
+                [field]: {
+                    $regex: text,
+                    $options: "i"
+                }
+            }
+        });
+        const query = { $or: or };
+        return this.paginate(query, pagination);
     }
 
     public async findOne(query: MongoQuery<DTO & Doc>, options: QueryOptions = {}): Promise<Doc> {

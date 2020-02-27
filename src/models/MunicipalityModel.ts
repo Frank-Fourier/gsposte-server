@@ -72,8 +72,7 @@ export const MunicipalitySchema = new Schema<Municipality>({
     name: {
         type: String,
         required: "Name is required.",
-        maxlength: 33,
-        unique: true
+        maxlength: 40,
     },
     province: {
         type: String,
@@ -84,7 +83,6 @@ export const MunicipalitySchema = new Schema<Municipality>({
         type: String,
         required: "Zip code is required.",
         minlength: 5, maxlength: 5,
-        unique: true
     },
     country: {
         type: String,
@@ -93,7 +91,7 @@ export const MunicipalitySchema = new Schema<Municipality>({
     },
     code: {
         type: String,
-        minlength: 4, maxlength: 4,
+        maxlength: 4,
     },
 });
 

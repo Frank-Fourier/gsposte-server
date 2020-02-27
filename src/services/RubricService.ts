@@ -4,7 +4,9 @@ import { Rubric, rubricDecoder, RubricDocument, RubricModel } from "@models/Rubr
 export class RubricService extends MongoRepository<Rubric, RubricDocument> {
 
     constructor(private rubricModel = RubricModel) {
-        super(rubricModel, rubricDecoder);
+        super(rubricModel, rubricDecoder, [
+            "name", "notes"
+        ]);
     }
 
 }

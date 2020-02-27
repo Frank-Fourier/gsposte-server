@@ -6,7 +6,9 @@ import { provide } from "inversify-binding-decorators";
 export class MunicipalityService extends MongoRepository<Municipality, MunicipalityDocument> {
 
     constructor(private municipalityModel = MunicipalityModel) {
-        super(municipalityModel, municipalityDecoder);
+        super(municipalityModel, municipalityDecoder, [
+            "name", "province", "zip", "country", "code"
+        ]);
     }
 
 }

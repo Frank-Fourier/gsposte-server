@@ -69,7 +69,7 @@ export const AddressSchema = new Schema<Address>({
     city: {
         type: String,
         required: "City is required.",
-        maxlength: 33,
+        maxlength: 40,
     },
     zip: {
         type: String,

@@ -20,7 +20,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     @inject(PostelService) postel: PostelService;
 
     constructor(private letterModel = LetterModel) {
-        super(letterModel, letterDecoder);
+        super(letterModel, letterDecoder, [
+            "subject", "kind", "codePdf", "sendAt", "notes"
+        ]);
     }
 
     public async save(letter: Letter, depopulate = true): Promise<LetterDocument> {
@@ -177,6 +179,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             PostelStatus.Approvato,
             PostelStatus.LavorazioneInCorso,
             PostelStatus.DaApprovare,
+            PostelStatus.Sospeso
         ];
 
         const toQuery = (await this.find({ sent: true }, { populate: "sender recipients" }))
