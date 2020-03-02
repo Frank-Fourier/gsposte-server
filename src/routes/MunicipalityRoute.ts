@@ -2,6 +2,7 @@ import { RequestMethod, Route } from "@routes/Route";
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { MunicipalityController } from "@controllers/MunicipalityController";
+import { jsonUploader } from "@services/MunicipalityService";
 
 @provide(MunicipalityRoute)
 export class MunicipalityRoute extends Route {
@@ -45,6 +46,41 @@ export class MunicipalityRoute extends Route {
                 method: RequestMethod.POST,
                 requiresAuth: true,
                 handler: (req, res) => this.municipalityController.create(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /municipality/import:
+             *   post:
+             *     tags:
+             *       - Municipalities
+             *     description: Import municipalities from JSON file. Only admins can do this!
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: file
+             *         description: JSON file containing municipalities to import. **MUST BE TAKEN FROM https://github.com/matteocontrini/comuni-json**
+             *         required: true
+             *         in: formData
+             *         type: file
+             *     responses:
+             *       201:
+             *         description: Municipalities imported correctly
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             *       403:
+             *         $ref: "#/responses/Forbidden"
+             */
+            {
+                path: "/import",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                middlewares: [ jsonUploader ],
+                handler: (req, res) => this.municipalityController.importFromJson(req, res)
             },
             /**
              * @swagger

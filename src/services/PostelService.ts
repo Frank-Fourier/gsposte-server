@@ -16,8 +16,8 @@ export interface MpxUploadOptions {
     // Unique UUID for this set of envelopes
     setID: string
     // MUST be a progressive number while in production (this is the starting number)
-    envelopeID: number
-    // If true, the same envelopeID will be used across all envelopes (it will not be increased)
+    baseEnvelopeID: number
+    // If true, the same baseEnvelopeID will be used across all envelopes (it will not be increased)
     useSameEnvelopeID?: boolean
     // PDF details
     pdf: {
@@ -279,7 +279,7 @@ export class PostelService {
         // Extract different sections of the JSON and re-arrange them as an MpxUploadResponse object
         // Sorry for the mess, XMLs fucking suck lol
         return {
-            code: res["MPX"]["Header"]["GlobalCode"],
+            code: parseInt(res["MPX"]["Header"]["GlobalCode"] || "0"),
             message: res["MPX"]["Header"]["Message"],
             set: res["MPX"]["Set"] ? {
                 code: parseInt(res["MPX"]["Set"]["SetCode"] || "0"),
@@ -403,7 +403,7 @@ export class PostelService {
                                 PageStart: (index * originalPages) + 1,
                                 PageEnd: (index * originalPages) + originalPages,
                                 WorkProcessID: WorkProcessID[options.letterType],
-                                CustomerEnvelopeID: options.envelopeID + (options.useSameEnvelopeID ? 0 : (index + 1)),
+                                CustomerEnvelopeID: options.baseEnvelopeID + (options.useSameEnvelopeID ? 0 : (index + 1)),
                                 Data: {
                                     AddressLine1: { $t: recipient.fullName },
                                     AddressLine2: { $t: recipient.address.street },

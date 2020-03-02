@@ -4,6 +4,7 @@ import { PDFDocument, PDFName, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { Request, Response } from "express";
 import { Sender, SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
+import { Letter } from "@models/LetterModel";
 import { logger } from "@utils/winston";
 import { executeCommand, spawnCommand } from "@utils/command";
 import { generateRandomCode } from "@utils/random";
@@ -12,7 +13,6 @@ import httpErrors from "http-errors";
 import fs from "fs";
 import fetch from "node-fetch";
 import puppeteer from "puppeteer";
-import { Letter } from "@models/LetterModel";
 
 // Setup PDF upload middleware
 const uploader = multer({
@@ -24,7 +24,7 @@ const uploader = multer({
     }),
     limits: {
         files: 1,
-        fileSize: 10 * 1000 * 1000 // 10MB
+        fileSize: 10 * 1000 * 1000 // ~10MB
     },
     // The file filter will only accept PDF files
     fileFilter(req: Request, file: Express.Multer.File, callback: (error: (Error | null), acceptFile: boolean) => void): void {
@@ -34,27 +34,6 @@ const uploader = multer({
         callback(null, true);
     }
 }).single("file");
-
-export interface PDFMeta {
-    subject?: string
-    author?: string
-    creator?: string
-    producer?: string
-    creationDate?: string
-    updateDate?: string
-    tagged?: boolean
-    userProperties?: boolean
-    suspects?: boolean
-    form?: string
-    javascript?: boolean
-    pages?: number
-    encrypted?: boolean
-    pageSize?: string
-    pageRot?: string
-    fileSize?: string
-    optimized?: boolean
-    version?: string
-}
 
 const pdf_root = process.env.PDF_ROOT || "public/pdf/";
 
@@ -116,8 +95,18 @@ export class PdfService {
                 letter.recipients as Array<RecipientDocument>,
                 letter.density
             );
-            await fs.promises.writeFile(`${pdf_root}${letter.codePdf}_postel.pdf`, Buffer.from(base64, "base64"));
-            return base64;
+            const path = `${pdf_root}${letter.codePdf}_postel.pdf`;
+            await fs.promises.writeFile(path, Buffer.from(base64, "base64"));
+
+            // Use GhostScript command to downgrade the generated 1.7 PDF to 1.6
+            const downgradePath = `${pdf_root}${letter.codePdf}_tmp`;
+            await executeCommand(`gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -o ${downgradePath} ${path}`);
+
+            // Remove the 1.7 file and rename the tmp 1.6 file to become the new saved file
+            await fs.promises.unlink(path);
+            await fs.promises.rename(downgradePath, path);
+
+            return await this.toBase64(path);
         } catch (err) {
             logger.error(`Failed to format PDF for postel! Error: ${err}`);
             throw err;
@@ -424,4 +413,25 @@ export class PdfService {
         });
     }
 
+}
+
+export interface PDFMeta {
+    subject?: string
+    author?: string
+    creator?: string
+    producer?: string
+    creationDate?: string
+    updateDate?: string
+    tagged?: boolean
+    userProperties?: boolean
+    suspects?: boolean
+    form?: string
+    javascript?: boolean
+    pages?: number
+    encrypted?: boolean
+    pageSize?: string
+    pageRot?: string
+    fileSize?: string
+    optimized?: boolean
+    version?: string
 }

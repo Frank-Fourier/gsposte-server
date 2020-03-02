@@ -38,7 +38,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         return depopulate ? saved.depopulate("sender recipients") : saved;
     }
 
-    public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert: boolean = false): Promise<LetterDocument> {
+    public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert = false): Promise<LetterDocument> {
         const updated = await (await super.updateById(id, updateBody, upsert))
             .populate("sender recipients").execPopulate();
         try {
@@ -118,7 +118,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         test: process.env.NODE_ENV !== "production",
                         letterType: letter.kind,
                         setID: uuid,
-                        envelopeID: baseEnvelopeID,
+                        baseEnvelopeID: baseEnvelopeID,
                         pdf: {
                             pages: pages,
                             base64: pdfBase64,
@@ -134,19 +134,17 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 logFile.info(`Current EnvelopeID is ${process.env.CURRENT_ENVELOPE_ID}. Updating MongoDB entry for this letter...`);
                 const updated = await this.updateById(letter._id, {
                     $set: {
-                        sent: true,
-                        postel: {
-                            baseEnvelopeID: baseEnvelopeID,
-                            set: {
-                                id: uuid,
-                                status: 0,
-                                envelopes: letter.recipients.map((r: RecipientDocument, index) => {
-                                    return {
-                                        id: baseEnvelopeID + index,
-                                        status: 0
-                                    }
-                                }).sort((a, b) => a.id - b.id)
-                            }
+                        "sent": true,
+                        "postel.baseEnvelopeID": baseEnvelopeID,
+                        "postel.set": {
+                            id: uuid,
+                            status: 0,
+                            envelopes: letter.recipients.map((r: RecipientDocument, index) => {
+                                return {
+                                    id: baseEnvelopeID + index,
+                                    status: 0
+                                }
+                            }).sort((a, b) => a.id - b.id)
                         }
                     }
                 });

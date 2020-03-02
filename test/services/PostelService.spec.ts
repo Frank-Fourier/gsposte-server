@@ -43,7 +43,7 @@ const ENVELOPE_ID = 876457;
             test: true,
             letterType: LetterKind.LETTERA_SEMPLICE,
             setID: `GSTEST_${generateUUID()}`,
-            envelopeID: ENVELOPE_ID,
+            baseEnvelopeID: ENVELOPE_ID,
             useSameEnvelopeID: true,
             pdf: {
                 pages: 3,

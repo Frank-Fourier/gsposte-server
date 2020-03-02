@@ -17,7 +17,7 @@ export interface RouteInfo {
     method: RequestMethod
     requiresAuth: boolean
     handler: ExpressMiddleware
-    middleware?: ExpressMiddleware
+    middlewares?: Array<ExpressMiddleware>
 }
 
 /**
@@ -45,19 +45,13 @@ export class Route {
         this.routes.forEach(route => {
             const path = `${process.env.API_PATH}${this.path}${route.path || ""}`;
 
-            const routeHandler = async (req: Request, res: Response) => {
+            const handler = async (req: Request, res: Response) => {
                 route.handler(req, res).catch(err => res.status(err.statusCode || 500).send(err));
             };
-
-            route.requiresAuth ?
-                app.route(path)[route.method](
-                    authenticate("jwt", { session: false }),
-                    (req, res) => routeHandler(req, res)
-                ) :
-                app.route(path)[route.method](
-                    (req, res, next) => route.middleware ? route.middleware(req, res, next) : next(),
-                    (req, res) => routeHandler(req, res)
-                );
+            app.route(path)[route.method]([
+                ...(route.requiresAuth ? [ authenticate("jwt", { session: false }) ] : []),
+                ...(route.middlewares || []),
+            ], handler);
         });
     }
 

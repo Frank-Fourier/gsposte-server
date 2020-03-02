@@ -130,10 +130,10 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             }
 
             // Found the municipality in db, check the zip code
-            if (rowZip !== municipality.zip) {
+            if (!municipality.zip.includes(rowZip)) {
                 errors.push({
                     row: row + 2,
-                    description: `Il CAP corrispondente al comune riportato (${rowZip} per ${rowCityName}) non corrisponde al CAP registrato nel sistema.`,
+                    description: `Il CAP corrispondente al comune riportato (${rowZip} per ${rowCityName}) non corrisponde ad alcun CAP registrato nel sistema per il comune.`,
                     data: {
                         municipality: municipality,
                         rowZip: rowZip
