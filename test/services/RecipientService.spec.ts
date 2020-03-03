@@ -2,7 +2,7 @@ import { suite, test } from "mocha-typescript";
 import { expect } from "chai";
 import { ioc } from "@ioc";
 import { RecipientService } from "@services/RecipientService";
-import { MunicipalityModel } from "@models/MunicipalityModel";
+import { MunicipalityService } from "@services/MunicipalityService";
 import { UserDocument } from "@models/UserModel";
 import { RecipientDocument } from "@models/RecipientModel";
 import { generateSystemUser } from "@utils/system";
@@ -16,6 +16,7 @@ import fs from "fs";
 @suite ("RecipientService") class RecipientServiceTests {
 
     recipientService = ioc.resolve(RecipientService);
+    municipalityService = ioc.resolve(MunicipalityService);
     system: UserDocument;
 
     static async before() { await generateSystemUser(); }
@@ -163,12 +164,48 @@ import fs from "fs";
 
     @test async "Should import recipients from XLSX correctly" () {
         // Import municipalities into test database
-        const municipalities = require("../assets/municipalities.json");
-        await MunicipalityModel.insertMany(municipalities);
+        await this.municipalityService.importFromJSON(await fs.promises.readFile("test/assets/municipalities.json"));
 
-        const xlsx = await fs.promises.readFile("test/assets/import_standard.xlsx");
-        const result = await this.recipientService.importFromXLSX(xlsx, this.system.id);
-        console.log(JSON.stringify(result, null, 2));
+        const xlsx_standard = await fs.promises.readFile("test/assets/import_standard.xlsx");
+        let res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id);
+
+        expect(res.imported.length).to.equal(2);
+
+        expect(res.imported[0].fullName).to.equal("Carmine Conversano");
+        expect(res.imported[0].user.toString()).to.equal(this.system.id);
+        expect(res.imported[0].address.toObject()).to.eql({
+            street: "Via Duca degli Abruzzi 24",
+            city: "Andria",
+            zip: "76123",
+            province: "BT",
+            country: "IT"
+        });
+        expect(res.imported[0].notes).to.equal("Contatto importato da Excel.");
+
+        expect(res.imported[1].fullName).to.equal("Silvio Troia");
+        expect(res.imported[1].user.toString()).to.equal(this.system.id);
+        expect(res.imported[1].address.toObject()).to.eql({
+            street: "Via Sebastiano 52",
+            city: "Acerno",
+            zip: "84042",
+            province: "SA",
+            country: "IT"
+        });
+        expect(res.imported[1].notes).to.equal("Contatto importato da Excel.");
+
+        expect(res.errors.length).to.equal(2);
+        expect(res.errors[0].row).to.equal(4);
+        expect(res.errors[0].description).to.equal("Il CAP 70031 per Andria non corrisponde ad alcun CAP registrato per questo comune.");
+        expect(res.errors[1].row).to.equal(5);
+        expect(res.errors[1].description).to.equal("Il campo 'Comune' è obbligatorio");
+
+        const xlsx_errors = await fs.promises.readFile("test/assets/import_errors.xlsx");
+        res = await this.recipientService.importFromXLSX(xlsx_errors, this.system.id);
+
+        console.log(JSON.stringify(res, null, 2));
+        expect(res.imported.length).to.equal(1);
+        expect(res.imported[0].fullName).to.equal("Pop☆Step");
+        expect(res.errors.length).to.equal(6);
     }
 
     static after() { cleanTestDB(); }

@@ -47,6 +47,44 @@ export class RecipientRoute extends Route {
             /**
              * @swagger
              *
+             * /recipient/import:
+             *   post:
+             *     tags:
+             *       - Recipients
+             *     description: Import recipients from an XLSX file.
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: file
+             *         description: XLSX file containing the recipients to import.
+             *         required: true
+             *         in: formData
+             *         type: file
+             *     responses:
+             *       201:
+             *         description: Recipients imported correctly, returns the list of imported recipients and the errors that occured during the process.
+             *         schema:
+             *           $ref: "#/definitions/RecipientsImportResponse"
+             *       400:
+             *         description: More than one file was passed to the request, or generic error while uploading.
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             *       406:
+             *         description: Only XLS/XLSX files are acceptable for upload.
+             *       413:
+             *         description: The provided file is too heavy. Only file sizes < 50MB are acceptable for upload.
+             */
+            {
+                path: "/import",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.recipientController.importFromXLSX(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /recipient/query:
              *   post:
              *     tags:

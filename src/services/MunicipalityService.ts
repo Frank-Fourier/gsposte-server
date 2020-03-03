@@ -56,7 +56,7 @@ export class MunicipalityService extends MongoRepository<Municipality, Municipal
      * https://github.com/matteocontrini/comuni-json
      *
      * @param json {Buffer} The whole JSON file as a Buffer object
-     * @returns {Promise<number>>} resolves to number of municipalities imported
+     * @returns {Promise<number>} resolves to number of municipalities imported
      */
     public async importFromJSON(json: Buffer): Promise<number> {
         logger.info("Requested a municipality import.");
