@@ -1,7 +1,7 @@
 import { provide } from "inversify-binding-decorators";
-import { MongoRepository } from "@services/MongoRepository";
+import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { Recipient, recipientDecoder, RecipientDocument, RecipientModel } from "@models/RecipientModel";
-import { read, utils, WorkBook } from "xlsx";
+import { read, write, utils, WorkBook } from "xlsx";
 import { logger } from "@utils/winston";
 import httpErrors from "http-errors";
 import { inject } from "inversify";
@@ -91,8 +91,8 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
      * Utility method to simplify the Multer upload routine
      * Call this directly from Controller with req and res params
      *
-     * @param req Request object
-     * @param res Response object
+     * @param req {Request} Express Request object
+     * @param res {Response} Express Response object
      * @returns Promise resolved with XLSX file name when the upload is done. Throws with status code if the upload fails
      */
     public upload(req: Request, res: Response): Promise<string> {
@@ -129,7 +129,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
     }
 
     /**
-     * Imports a set of recipients from an XLSX file
+     * Import a set of recipients from an XLSX file
      *
      * @param xlsx {Buffer} Entire XLSX document
      * @param userId {string} Owner of the imported recipients
@@ -247,6 +247,38 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
 
         logger.info(`Ok! Import job done. I imported ${imported.length} recipient(s), got ${errors.length} error(s). Errors: `, errors);
         return { imported, errors };
+    }
+
+    /**
+     * Export a set of recipients to an XLSX file
+     *
+     * @param query {MongoQuery<RecipientDocument>} Filter recipients to export
+     * @returns {Promise<Buffer>} Promise resolving to exported XLSX file as buffer
+     */
+    public async exportToXLSX(query: MongoQuery<RecipientDocument> | object): Promise<Buffer> {
+        logger.info(`Requested an export of recipients to XLSX.`);
+        const recipients = await this.find(query);
+
+        const workbook = utils.book_new();
+        const worksheet = utils.json_to_sheet(recipients.map(rec => ({
+            DENOMINAZIONE: rec.fullName,
+            INDIRIZZO: rec.address.street,
+            CAP: rec.address.zip,
+            COMUNE: rec.address.city,
+            PROVINCIA: rec.address.province
+        })), {
+            header: [ "DENOMINAZIONE", "INDIRIZZO", "CAP", "COMUNE", "PROVINCIA" ]
+        });
+        worksheet["!cols"] = [ { wch: 20 }, { wch: 30 }, { wch: 10 }, { wch: 20 }, { wch: 10 } ];
+
+        utils.book_append_sheet(workbook, worksheet, "Anagrafiche");
+        const buffer = write(workbook, {
+            type: "buffer",
+            bookType: "xlsx"
+        });
+
+        logger.info(`Ok! Export job done. I exported ${recipients.length} recipient(s).`);
+        return buffer;
     }
 
 }

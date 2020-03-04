@@ -27,4 +27,22 @@ export class RecipientController extends CrudController {
         return res.status(201).send(result);
     }
 
+    public async exportToXLSX(req: Request, res: Response) {
+        const user = await this.authService.getUserFromRequest(req);
+        if (!user.isAdmin()) {
+            // Modify the query so it will always retrieve only documents associated with the requesting user
+            delete req.body.user; // If already present...
+            req.body = {
+                ...req.body,
+                user: user.id
+            }
+        }
+
+        // Start the export job
+        const buffer = await this.recipientService.exportToXLSX(req.body);
+
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        return res.send(buffer);
+    }
+
 }

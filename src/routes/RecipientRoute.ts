@@ -85,6 +85,39 @@ export class RecipientRoute extends Route {
             /**
              * @swagger
              *
+             * /recipient/export:
+             *   post:
+             *     tags:
+             *       - Recipients
+             *     description: Find recipients associated with the user requesting, then it exports them in XLSX format. If admin, it ignores the association, you can export all of them.
+             *     produces:
+             *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: Query model
+             *         required: true
+             *         in: body
+             *         type: object
+             *     responses:
+             *       200:
+             *         description: XLSX file containing the requested recipients
+             *         schema:
+             *           type: file
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/export",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.recipientController.exportToXLSX(req, res),
+            },
+            /**
+             * @swagger
+             *
              * /recipient/query:
              *   post:
              *     tags:

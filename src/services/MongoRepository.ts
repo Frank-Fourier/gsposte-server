@@ -81,7 +81,7 @@ export interface Paginated<T extends Document> {
  *         type: object
  *         description: Query object following the Mongoose query notation
  */
-export type MongoQuery<T> = Partial<T> | Object;
+export type MongoQuery<T> = Partial<T> | object;
 
 @injectable()
 export class MongoRepository<DTO, Doc extends Document> {
