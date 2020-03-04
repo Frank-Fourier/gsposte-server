@@ -14,12 +14,14 @@ import fs from "fs";
 import fetch from "node-fetch";
 import puppeteer from "puppeteer";
 
+export const PDF_ROOT = process.env.PDF_ROOT || "public/pdf/";
+
 // Setup PDF upload middleware
 const uploader = multer({
     storage: diskStorage({
-        destination: process.env.PDF_ROOT || "public/pdf/",
+        destination: `${PDF_ROOT}GS${generateRandomCode()}/`,
         filename(req: Request, file: Express.Multer.File, callback: (error: (Error | null), filename: string) => void): void {
-            callback(null, `GS${generateRandomCode()}.pdf`);
+            callback(null, "original.pdf");
         }
     }),
     limits: {
@@ -34,8 +36,6 @@ const uploader = multer({
         callback(null, true);
     }
 }).single("file");
-
-const pdf_root = process.env.PDF_ROOT || "public/pdf/";
 
 @provide(PdfService)
 export class PdfService {
@@ -75,7 +75,7 @@ export class PdfService {
                 }
 
                 // Everything went fine
-                const code = req.file.filename.replace(".pdf", "");
+                const code = req.file.destination.replace(PDF_ROOT, "").replace("/", "");
                 logger.info(`A new PDF was uploaded with code '${code}'.`);
                 return resolve(code);
             });
@@ -90,16 +90,16 @@ export class PdfService {
      */
     public async formatAndSavePdf(letter: Letter): Promise<string> {
         try {
-            const base64 = await this.postelFormat(`${pdf_root}${letter.codePdf}.pdf`,
+            const base64 = await this.postelFormat(`${PDF_ROOT}${letter.codePdf}/original.pdf`,
                 letter.sender as SenderDocument,
                 letter.recipients as Array<RecipientDocument>,
                 letter.density
             );
-            const path = `${pdf_root}${letter.codePdf}_postel.pdf`;
+            const path = `${PDF_ROOT}${letter.codePdf}/postel.pdf`;
             await fs.promises.writeFile(path, Buffer.from(base64, "base64"));
 
             // Use GhostScript command to downgrade the generated 1.7 PDF to 1.6
-            const downgradePath = `${pdf_root}${letter.codePdf}_tmp`;
+            const downgradePath = `${PDF_ROOT}${letter.codePdf}/postel_downgrade`;
             await executeCommand(`gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -o ${downgradePath} ${path}`);
 
             // Remove the 1.7 file and rename the tmp 1.6 file to become the new saved file

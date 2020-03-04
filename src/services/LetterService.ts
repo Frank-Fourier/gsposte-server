@@ -89,7 +89,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
                 let pdfBase64 = "";
 
-                const pdf_postel_path = `${pdf_root}${letter.codePdf}_postel.pdf`;
+                const pdf_postel_path = `${pdf_root}${letter.codePdf}/postel.pdf`;
                 const pdf_postel_exists: boolean = !!(await fs.promises.stat(pdf_postel_path).catch(() => false));
 
                 if (!pdf_postel_exists) {
