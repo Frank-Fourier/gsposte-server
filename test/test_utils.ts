@@ -8,6 +8,7 @@ import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { Rubric, RubricDocument } from "@models/RubricModel";
 import { Address, AddressDocument } from "@models/schemas/AddressSchema";
 import { Letter, LetterDocument } from "@models/LetterModel";
+import { Price, PriceDocument } from "@models/PriceModel";
 
 export function assertSameUser(original: UserDocument, candidate: UserDocument) {
     expect(candidate).to.exist;
@@ -65,6 +66,15 @@ export function assertSameLetter(original: Letter | LetterDocument, candidate: L
     expect(candidate.codePdf).to.equal(original.codePdf);
     expect(candidate.density).to.equal(original.density);
     expect(candidate.notes).to.equal(original.notes);
+}
+
+export function assertSamePrice(original: Price | PriceDocument, candidate: PriceDocument) {
+    expect(candidate).to.exist;
+    expect(candidate.price).to.equal(original.price);
+    expect(candidate.minWeight).to.equal(original.minWeight);
+    expect(candidate.maxWeight).to.equal(original.maxWeight);
+    expect(candidate.kind).to.equal(original.kind);
+    expect(candidate.extra).to.equal(original.extra);
 }
 
 export async function loginWithSystem(): Promise<string> {

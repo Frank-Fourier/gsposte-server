@@ -12,7 +12,7 @@ import path from "path";
 import httpErrors from "http-errors";
 import fs from "fs";
 import fetch from "node-fetch";
-import puppeteer from "puppeteer";
+import puppeteer, { PDFOptions } from "puppeteer";
 
 export const PDF_ROOT = process.env.PDF_ROOT || "public/pdf/";
 
@@ -245,29 +245,40 @@ export class PdfService {
         `.trim();
 
         try {
-            // Use Puppeteer to create a new PDF from this HTML file
-            const browser = await puppeteer.launch({
-                headless: true,
-                // On Docker I need to disable the usage of /dev/shm to store shared memory
-                // Otherwise it will just crash on launch...
-                args: process.env.NODE_ENV === "production" ? ['--disable-dev-shm-usage'] : [],
-                // On Docker I need to specify that I want to use my own Chromium
-                executablePath: process.env.NODE_ENV === "production" ? "/usr/bin/chromium-browser" : undefined
-            });
-            const page = await browser.newPage();
-            await page.setContent(html, {
-                // Consider navigation to be finished when the DOMContentLoaded event is fired
-                waitUntil: "domcontentloaded"
-            });
-
-            const pdf = await page.pdf({ format: "A4" });
-            await browser.close();
-
-            return pdf;
+            return await this.htmlToPdf(html);
         } catch (err) {
             logger.error(`Error while creating new PDF file with Puppeteer from margins HTML.`, err);
             throw new httpErrors.InternalServerError(`Error while creating new PDF file with Puppeteer from margins HTML. ${err}`);
         }
+    }
+
+    /**
+     * Convert HTML to PDF. Returns the PDF file as Buffer, throws in case of error.
+     *
+     * @param html {string} The whole HTML to convert
+     * @param options {PDFOptions} Options to apply on conversion
+     * @returns {Buffer} The whole converted file as Buffer
+     */
+    public async htmlToPdf(html: string, options?: PDFOptions): Promise<Buffer> {
+        // Use Puppeteer to create a new PDF from this HTML file
+        const browser = await puppeteer.launch({
+            headless: true,
+            // On Docker I need to disable the usage of /dev/shm to store shared memory
+            // Otherwise it will just crash on launch...
+            args: process.env.NODE_ENV === "production" ? [ "--disable-dev-shm-usage" ] : [],
+            // On Docker I need to specify that I want to use my own Chromium
+            ...(process.env.NODE_ENV === "production" ? { executablePath: "/usr/bin/chromium-browser" } : {})
+        });
+        const page = await browser.newPage();
+        await page.setContent(html, {
+            // Consider navigation to be finished when the DOMContentLoaded event is fired
+            waitUntil: "domcontentloaded"
+        });
+
+        const pdf = await page.pdf(options || { format: "A4" });
+        await browser.close();
+
+        return pdf;
     }
 
     /**
@@ -286,8 +297,9 @@ export class PdfService {
 
             // Execute the convert command for each page
             for (let page = 0; page < pages; ++page) {
-                const base64 = await spawnCommand(`convert`,
-                    "-quality", "90", "-density", density.toString(), "-flatten", "-trim", `${pdf_path}[${page}]`, "-quiet", "INLINE:JPG:",
+                const base64 = await spawnCommand("convert",
+                    "-quality", "90", "-density", density.toString(), "-flatten",
+                    "-trim", `${pdf_path}[${page}]`, "-quiet", "INLINE:JPG:",
                 );
                 images.push(base64);
             }

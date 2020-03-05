@@ -19,6 +19,7 @@ import { RubricRoute } from "@routes/RubricRoute";
 import { LetterRoute } from "@routes/LetterRoute";
 import { PdfRoute } from "@routes/PdfRoute";
 import { MunicipalityRoute } from "@routes/MunicipalityRoute";
+import { PriceRoute } from "@routes/PriceRoute";
 
 import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
@@ -40,6 +41,7 @@ export class ExpressServer {
         ioc.resolve(LetterRoute),
         ioc.resolve(PdfRoute),
         ioc.resolve(MunicipalityRoute),
+        ioc.resolve(PriceRoute),
     ];
 
     constructor(

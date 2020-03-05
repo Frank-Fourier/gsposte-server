@@ -1,6 +1,6 @@
 import { provide } from "inversify-binding-decorators";
 import { MongoQuery, MongoRepository } from "@services/MongoRepository";
-import { PdfService } from "@services/PdfService";
+import { PDF_ROOT, PdfService } from "@services/PdfService";
 import { LetterKind, PostelService, PostelStatus } from "@services/PostelService";
 import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
@@ -10,8 +10,6 @@ import { generateUUID } from "@utils/random";
 import { createLogFile, detachLogFile, logger } from "@utils/winston";
 import moment from "moment";
 import fs from "fs";
-
-const pdf_root = process.env.PDF_ROOT || "public/pdf/";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -89,7 +87,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
                 let pdfBase64 = "";
 
-                const pdf_postel_path = `${pdf_root}${letter.codePdf}/postel.pdf`;
+                const pdf_postel_path = `${PDF_ROOT}${letter.codePdf}/postel.pdf`;
                 const pdf_postel_exists: boolean = !!(await fs.promises.stat(pdf_postel_path).catch(() => false));
 
                 if (!pdf_postel_exists) {

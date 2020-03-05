@@ -1,0 +1,19 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="PostelService Suite" type="mocha-javascript-test-runner">
+    <node-interpreter>project</node-interpreter>
+    <node-options />
+    <mocha-package>$PROJECT_DIR$/node_modules/mocha</mocha-package>
+    <working-directory>$PROJECT_DIR$</working-directory>
+    <pass-parent-env>true</pass-parent-env>
+    <ui>mocha-typescript</ui>
+    <extra-mocha-options />
+    <test-kind>SUITE</test-kind>
+    <test-file>$PROJECT_DIR$/test/services/PostelService.spec.ts</test-file>
+    <test-names>
+      <name value="PostelService" />
+    </test-names>
+    <method v="2">
+      <option name="TypeScript.Before.Run" enabled="true" FAIL_ON_ERROR="true" CONFIG_PATH="$PROJECT_DIR$/tsconfig.json" />
+    </method>
+  </configuration>
+</component>

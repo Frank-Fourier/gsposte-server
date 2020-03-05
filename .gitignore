@@ -17,3 +17,5 @@ test/assets/.~lock*
 
 # PDF files
 public/pdf/
+
+!.idea/
