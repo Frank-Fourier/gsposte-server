@@ -13,7 +13,7 @@ import {
 import { UserDocument } from "@models/UserModel";
 import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
-import { RecipientDocument } from "@models/RecipientModel";
+import { Recipient, RecipientDocument, RecipientSchema } from "@models/RecipientModel";
 
 /**
  * @swagger
@@ -83,57 +83,55 @@ import { RecipientDocument } from "@models/RecipientModel";
  *             example: 5e14af210d3e883e729c3dd2
  *           sent:
  *             type: boolean
- *             description: This gets updated to true when the campaign is sent from the CRON. **Do not update this manually!!!**
+ *             description: This gets updated to true when the campaign is sent from the CRON. You can't update this field manually.
  *             example: false
- *           postel:
+ *           uuid:
+ *             type: string
+ *             description: CustomerSetID passed to Postel on upload. You can't update this field manually.
+ *             example: B887A8D3-2533-4AA7-9112-43ED8144BA96
+ *           price:
+ *             type: number
+ *             description: Price of a single envelope. This is calculated by the server, you can't update this field manually.
+ *             example: 6.55
+ *           stats:
  *             type: object
- *             description: These values are used within Postel and updated by the Postel API. **Do not update these manually!!!**
+ *             description: Stats about this letter. Gets filled by the Query CRON. You can't update this field or its children manually.
  *             properties:
- *               baseEnvelopeID:
+ *               status:
  *                 type: number
- *                 description: The current value of CustomerEnvelopeID when the sending was done. Used to keep track of values.
- *                 example: 874979
- *               set:
- *                 type: object
- *                 description: The object describing the Set as viewed from Postel
- *                 properties:
- *                   id:
- *                     type: string
- *                     description: CustomerSetID passed to Postel on upload
- *                     example: B887A8D3-2533-4AA7-9112-43ED8144BA96
- *                   status:
- *                     type: number
- *                     description: Postel Status Code. 1 = Approvato. 2 = Lavorazione in corso. 3 = Completato. 4 = Offline. 5 = Da Approvare. 6 = Sospeso. 7 = Annullato.
- *                     example: 1
- *                   dateUploaded:
- *                     type: string
- *                     description: Upload date of this Set (YYYY-MM-DD HH:MM:SS format)
- *                   dateCompleted:
- *                     type: string
- *                     description: Completion date of this Set (YYYY-MM-DD HH:MM:SS format)
- *                   envelopes:
- *                     type: array
- *                     items:
- *                       type: object
- *                       description: Envelopes associated to this Set as viewed from Postel (each Recipient has its Envelope)
- *                       properties:
- *                         id:
- *                           type: number
- *                           description: CustomerEnvelopeID of this Envelope (will be a progressive)
- *                           example: 874979
- *                         status:
- *                           type: number
- *                           description: Postel Status Code. 1 = Approvato. 2 = Lavorazione in corso. 3 = Completato. 4 = Offline. 5 = Da Approvare. 6 = Sospeso. 7 = Annullato.
- *                           example: 1
- *                         dateUploaded:
- *                           type: string
- *                           description: Upload date of this Envelope (YYYY-MM-DD HH:MM:SS format)
- *                         dateCompleted:
- *                           type: string
- *                           description: Completion date of this Envelope (YYYY-MM-DD HH:MM:SS format)
- *                         tracking:
- *                           type: string
- *                           description: Queried and available when the letter kind is "Raccomandata" or "Raccomandata AR". It's used to track the ship status of an Envelope.
+ *                 description: Postel Status Code. 1 = Approvato. 2 = Lavorazione in corso. 3 = Completato. 4 = Offline. 5 = Da Approvare. 6 = Sospeso. 7 = Annullato.
+ *                 example: 1
+ *               dateUploaded:
+ *                 type: string
+ *                 description: Upload date of this Set (YYYY-MM-DD HH:MM:SS format)
+ *               dateCompleted:
+ *                 type: string
+ *                 description: Completion date of this Set (YYYY-MM-DD HH:MM:SS format)
+ *               envelopes:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   description: Envelopes associated to this Set as viewed from Postel (each Recipient has its Envelope)
+ *                   properties:
+ *                     recipient:
+ *                       $ref: "#/definitions/RecipientDocument"
+ *                     id:
+ *                       type: number
+ *                       description: CustomerEnvelopeID of this Envelope (will be a progressive)
+ *                       example: 874979
+ *                     status:
+ *                       type: number
+ *                       description: Postel Status Code. 1 = Approvato. 2 = Lavorazione in corso. 3 = Completato. 4 = Offline. 5 = Da Approvare. 6 = Sospeso. 7 = Annullato.
+ *                       example: 1
+ *                     dateUploaded:
+ *                       type: string
+ *                       description: Upload date of this Envelope (YYYY-MM-DD HH:MM:SS format)
+ *                     dateCompleted:
+ *                       type: string
+ *                       description: Completion date of this Envelope (YYYY-MM-DD HH:MM:SS format)
+ *                     tracking:
+ *                       type: string
+ *                       description: Queried and available when the letter kind is "Raccomandata" or "Raccomandata AR". It's used to track the ship status of an Envelope.
  *           createdAt:
  *             type: string
  *             example: 2019-03-25T18:16:24.892Z
@@ -155,21 +153,20 @@ export interface Letter {
 }
 export interface LetterDocument extends Letter, Document {
     sent: boolean
-    postel?: {
-        baseEnvelopeID: number
-        set: {
-            id: string
+    uuid?: string
+    price?: number
+    stats?: {
+        status: number
+        dateUploaded?: Date | string
+        dateCompleted?: Date | string
+        envelopes: Array<{
+            recipient: Partial<RecipientDocument>
+            id: number
             status: number
             dateUploaded?: Date | string
             dateCompleted?: Date | string
-            envelopes: Array<{
-                id: number
-                status: number
-                dateUploaded?: Date | string
-                dateCompleted?: Date | string
-                tracking?: string
-            }>
-        }
+            tracking?: string
+        }>
     }
 }
 export const letterDecoder: Decoder<Letter> = object({
@@ -240,26 +237,28 @@ export const LetterSchema = new Schema<Letter>({
         type: Boolean,
         default: false,
     },
-    postel: {
-        type: new Schema({
-            baseEnvelopeID: Number,
-            set: new Schema({
-                id: String,
+    uuid: {
+        type: String,
+    },
+    price: {
+        type: Number,
+        min: 0,
+    },
+    stats: new Schema({
+        status: Number,
+        dateUploaded: Date,
+        dateCompleted: Date,
+        envelopes: [
+            new Schema({
+                recipient: RecipientSchema,
+                id: Number,
                 status: Number,
                 dateUploaded: Date,
                 dateCompleted: Date,
-                envelopes: [
-                    new Schema({
-                        id: Number,
-                        status: Number,
-                        dateUploaded: Date,
-                        dateCompleted: Date,
-                        tracking: String,
-                    }, { _id: false })
-                ]
-            }, { _id: false }),
-        }, { _id: false }),
-    },
+                tracking: String,
+            }, { _id: false })
+        ]
+    }, { _id: false }),
 });
 
 export const LetterModel: Model<LetterDocument> = model("Letter", LetterSchema);

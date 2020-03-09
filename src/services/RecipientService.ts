@@ -44,7 +44,7 @@ type Validator = (value: string, ...params: any[]) => { valid: boolean, error: s
 // Setup XLSX upload middleware
 const xlsxUploader = multer({
     storage: diskStorage({
-        destination: process.env.XLSX_ROOT || "public/xlsx/",
+        destination: process.env.XLSX_ROOT || "public/xlsx",
         filename(req: Request, file: Express.Multer.File, callback: (error: (Error | null), filename: string) => void): void {
             callback(null, `${file.originalname.substr(0, file.originalname.lastIndexOf("."))}_${+new Date()}.${file.originalname.substr(file.originalname.lastIndexOf(".") + 1)}`);
         }

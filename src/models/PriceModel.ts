@@ -21,11 +21,11 @@ import { Document, model, Model, Schema } from "mongoose";
  *       minWeight:
  *         type: number
  *         example: 351
- *         description: Min weight (must be > 0)
+ *         description: Min weight (must be > 0) [grams]
  *       maxWeight:
  *         type: number
  *         example: 1000
- *         description: Max weight (must be > 0 and should be > minWeight)
+ *         description: Max weight (must be > 0 and should be > minWeight) [grams]
  *       kind:
  *         type: string
  *         description: The letter kind of this price range. Can be "LETTERA SEMPLICE", "RACCOMANDATA" or "RACCOMANDATA AR".

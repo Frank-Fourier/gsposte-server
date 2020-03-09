@@ -1,0 +1,67 @@
+html(lang="it")
+    head
+        title Distinta #{codePdf}
+        style(type="text/css").
+            body { margin: 2mm 10mm 10mm; }
+            .header {}
+            .sender {
+                font-size: 18px;
+                padding-bottom: 20px;
+            }
+            .invoice-info {
+                padding: 15px 0 15px 0;
+                font-size: 18px;
+                border-top: 1px solid #8A8A8A;
+                border-bottom: 1px solid #8A8A8A;
+                margin-bottom: 40px;
+            }
+            .recipients-table {
+                margin-top: 20px;
+                font-size: 18px;
+            }
+            table {
+                border-collapse: collapse;
+            }
+            td {
+                text-align: left;
+                padding: 5px 5px 5px 0;
+                border-bottom: 1px dashed #8A8A8A;
+            }
+            th {
+                text-align: left;
+                border-bottom: 2px solid black;
+            }
+            td:last-child { text-align: right }
+    body
+        div(class="header")
+            img(src="/images/logo.png")
+        h2 Spett.
+        p(class="sender") #{sender.name.toUpperCase()}
+            br
+            | #{sender.address.street.toUpperCase()}
+            br
+            | #{sender.address.zip} #{sender.address.city.toUpperCase()} (#{sender.address.province.toUpperCase()})
+        p(class="invoice-info") Distinta #{partial ? "parziale" : ""} #{codePdf} #{dateSent ? `del ${dateSent}` : ""}
+        table(class="recipients-table")
+            thead
+                th #
+                th Data
+                th Destinatario
+                th CAP
+                th Città
+                th Prov.
+                th Tracking
+                th Impon.
+            tbody
+                each envelope, index in stats.envelopes
+                    tr
+                        td(width="5%") #{index + 1}
+                        td(width="12.5%") #{envelope.dateUploaded || "-"}
+                        td(width="40%") #{envelope.recipient.fullName.toUpperCase()}
+                            br
+                            | #{envelope.recipient.address.street}
+                        td(width="8.5%") #{envelope.recipient.address.zip}
+                        td(width="8.5%") #{envelope.recipient.address.city.toUpperCase()}
+                        td(width="8.5%") #{envelope.recipient.address.province.toUpperCase()}
+                        td(width="8.5%") #{envelope.tracking || "-"}
+                        td(width="8.5%") #{price || "-"} €

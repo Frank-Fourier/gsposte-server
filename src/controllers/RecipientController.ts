@@ -17,13 +17,13 @@ export class RecipientController extends CrudController {
 
         // Save the document on filesystem
         const file = await this.recipientService.upload(req, res);
-        const xlsx = await fs.promises.readFile(`${process.env.XLSX_ROOT}${file}`);
+        const xlsx = await fs.promises.readFile(`${process.env.XLSX_ROOT}/${file}`);
 
         // Start the import process
         const result = await this.recipientService.importFromXLSX(xlsx, user.id);
 
         // If it went good, delete the file from the system and return
-        await fs.promises.unlink(`${process.env.XLSX_ROOT}${file}`);
+        await fs.promises.unlink(`${process.env.XLSX_ROOT}/${file}`);
         return res.status(201).send(result);
     }
 

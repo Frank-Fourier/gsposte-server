@@ -14,12 +14,14 @@ import fs from "fs";
 import fetch from "node-fetch";
 import puppeteer, { PDFOptions } from "puppeteer";
 
-export const PDF_ROOT = process.env.PDF_ROOT || "public/pdf/";
+export const PDF_ROOT = process.env.PDF_ROOT || "public/pdf";
 
 // Setup PDF upload middleware
 const uploader = multer({
     storage: diskStorage({
-        destination: `${PDF_ROOT}GS${generateRandomCode()}/`,
+        destination: (req: Request, file: Express.Multer.File, callback: (error: (Error | null), destination: string) => void) => {
+            callback(null, `${PDF_ROOT}/GS${generateRandomCode()}/`);
+        },
         filename(req: Request, file: Express.Multer.File, callback: (error: (Error | null), filename: string) => void): void {
             callback(null, "original.pdf");
         }
@@ -75,7 +77,7 @@ export class PdfService {
                 }
 
                 // Everything went fine
-                const code = req.file.destination.replace(PDF_ROOT, "").replace("/", "");
+                const code = req.file.destination.replace(`${PDF_ROOT}/`, "").replace("/", "");
                 logger.info(`A new PDF was uploaded with code '${code}'.`);
                 return resolve(code);
             });
@@ -90,16 +92,16 @@ export class PdfService {
      */
     public async formatAndSavePdf(letter: Letter): Promise<string> {
         try {
-            const base64 = await this.postelFormat(`${PDF_ROOT}${letter.codePdf}/original.pdf`,
+            const base64 = await this.postelFormat(`${PDF_ROOT}/${letter.codePdf}/original.pdf`,
                 letter.sender as SenderDocument,
                 letter.recipients as Array<RecipientDocument>,
                 letter.density
             );
-            const path = `${PDF_ROOT}${letter.codePdf}/postel.pdf`;
+            const path = `${PDF_ROOT}/${letter.codePdf}/postel.pdf`;
             await fs.promises.writeFile(path, Buffer.from(base64, "base64"));
 
             // Use GhostScript command to downgrade the generated 1.7 PDF to 1.6
-            const downgradePath = `${PDF_ROOT}${letter.codePdf}/postel_downgrade`;
+            const downgradePath = `${PDF_ROOT}/${letter.codePdf}/postel_downgrade`;
             await executeCommand(`gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -o ${downgradePath} ${path}`);
 
             // Remove the 1.7 file and rename the tmp 1.6 file to become the new saved file
@@ -306,7 +308,7 @@ export class PdfService {
 
             return images;
         } catch (err) {
-            logger.error(`Error while converting PDF pages to images.`, { error: err.error });
+            logger.error(`Error while converting PDF pages to images.`, err || err.error || "Unknown");
             throw new httpErrors.InternalServerError(`Error while converting PDF pages to images.`);
         }
     }

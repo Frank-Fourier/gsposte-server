@@ -6,7 +6,7 @@ import { MunicipalityService } from "@services/MunicipalityService";
 import { UserDocument } from "@models/UserModel";
 import { RecipientDocument } from "@models/RecipientModel";
 import { generateSystemUser } from "@utils/system";
-import { assertSameRecipient, getSystemUser } from "../test_utils";
+import { assertSameRecipient, getSystemUser, importMunicipalities } from "../test_utils";
 import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
 // @ts-ignore
@@ -164,7 +164,7 @@ import fs from "fs";
 
     @test async "Should import recipients from XLSX correctly" () {
         // Import municipalities into test database
-        await this.municipalityService.importFromJSON(await fs.promises.readFile("test/assets/municipalities.json"));
+        await importMunicipalities();
 
         const xlsx_standard = await fs.promises.readFile("test/assets/import_standard.xlsx");
         let res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id);

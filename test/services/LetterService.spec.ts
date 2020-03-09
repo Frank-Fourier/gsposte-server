@@ -19,7 +19,7 @@ import faker from "faker/locale/it";
 import { logger } from "@utils/winston";
 import { PdfService } from "@services/PdfService";
 
-const CODE_PDF = "format";
+const CODE_PDF = "GSTESTPDF2121";
 
 @suite ("LetterService") class LetterServiceTests {
 

@@ -152,19 +152,17 @@ export class MongoRepository<DTO, Doc extends Document> {
     }
 
     public async searchByText(text: string, pagination: PaginateOptions): Promise<Paginated<Doc>> {
-        if (this.searchFields.length === 0) {
+        if (!this.searchFields || this.searchFields.length === 0) {
             return { meta: { total: 0, pages: 0 }, docs: [] };
         }
-        const or = this.searchFields.map(field => {
-            return {
+        return this.paginate({
+            $or: this.searchFields.map(field => ({
                 [field]: {
                     $regex: text,
                     $options: "i"
                 }
-            }
-        });
-        const query = { $or: or };
-        return this.paginate(query, pagination);
+            }))
+        }, pagination);
     }
 
     public async findOne(query: MongoQuery<DTO & Doc>, options: QueryOptions = {}): Promise<Doc> {
@@ -175,12 +173,12 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async updateById(id: string, updateBody: (Partial<DTO> | any), upsert: boolean = false): Promise<Doc> {
+    public async updateById(id: string, updateBody: (Partial<DTO> | any), upsert = false, runValidators = true): Promise<Doc> {
         this.checkValidObjectId(id);
         try {
             return await this.model.findByIdAndUpdate(id, updateBody, {
                 new: true,
-                runValidators: true,
+                runValidators: runValidators,
                 upsert: upsert,
                 setDefaultsOnInsert: true,
                 context: "query"
@@ -190,11 +188,11 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async updateOne(query: MongoQuery<DTO & Doc>, updateBody: (Partial<DTO> | any), upsert: boolean = false): Promise<Doc> {
+    public async updateOne(query: MongoQuery<DTO & Doc>, updateBody: (Partial<DTO> | any), upsert = false, runValidators = true): Promise<Doc> {
         try {
             return await this.model.findOneAndUpdate(query, updateBody, {
                 new: true,
-                runValidators: true,
+                runValidators: runValidators,
                 upsert: upsert,
                 setDefaultsOnInsert: true,
                 context: "query"

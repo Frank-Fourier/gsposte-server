@@ -8,7 +8,7 @@ export const createLogFile = (filename: string, level = "info") => {
     const l = winston.createLogger();
     l.add(new winston.transports.File({
         level: level,
-        dirname: process.env.LOG_ROOT || "public/logs/",
+        dirname: process.env.LOG_ROOT || "public/logs",
         filename: filename,
         format: combine(
             timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSS" }),

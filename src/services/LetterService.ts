@@ -2,6 +2,7 @@ import { provide } from "inversify-binding-decorators";
 import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { PDF_ROOT, PdfService } from "@services/PdfService";
 import { LetterKind, PostelService, PostelStatus } from "@services/PostelService";
+import { PriceService } from "@services/PriceService";
 import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
 import { SenderDocument } from "@models/SenderModel";
@@ -16,6 +17,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     @inject(PdfService) pdf: PdfService;
     @inject(PostelService) postel: PostelService;
+    @inject(PriceService) priceService: PriceService;
 
     constructor(private letterModel = LetterModel) {
         super(letterModel, letterDecoder, [
@@ -36,8 +38,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         return depopulate ? saved.depopulate("sender recipients") : saved;
     }
 
-    public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert = false): Promise<LetterDocument> {
-        const updated = await (await super.updateById(id, updateBody, upsert))
+    public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
+        const updated = await (await super.updateById(id, updateBody, upsert, runValidators))
             .populate("sender recipients").execPopulate();
         try {
             if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
@@ -49,8 +51,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         return updated;
     }
 
-    public async updateOne(query: MongoQuery<Letter & LetterDocument>, updateBody: (Partial<Letter> | any), upsert: boolean = false): Promise<LetterDocument> {
-        const updated = await (await super.updateOne(query, updateBody, upsert))
+    public async updateOne(query: MongoQuery<Letter & LetterDocument>, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
+        const updated = await (await super.updateOne(query, updateBody, upsert, runValidators))
             .populate("sender recipients").execPopulate();
         try {
             if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
@@ -87,7 +89,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
                 let pdfBase64 = "";
 
-                const pdf_postel_path = `${PDF_ROOT}${letter.codePdf}/postel.pdf`;
+                const pdf_postel_path = `${PDF_ROOT}/${letter.codePdf}/postel.pdf`;
                 const pdf_postel_exists: boolean = !!(await fs.promises.stat(pdf_postel_path).catch(() => false));
 
                 if (!pdf_postel_exists) {
@@ -113,7 +115,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 const postelRes = await this.postel.upload(
                     letter.sender as SenderDocument,
                     letter.recipients as Array<RecipientDocument>, {
-                        test: process.env.NODE_ENV !== "production",
+                        test: process.env.NODE_ENV !== "production" ? true : letter.test,
                         letterType: letter.kind,
                         setID: uuid,
                         baseEnvelopeID: baseEnvelopeID,
@@ -129,16 +131,19 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 process.env.CURRENT_ENVELOPE_ID = (baseEnvelopeID + letter.recipients.length).toString();
                 logFile.info(`Postel upload API called successfully, got this result: `, postelRes);
 
-                logFile.info(`Current EnvelopeID is ${process.env.CURRENT_ENVELOPE_ID}. Updating MongoDB entry for this letter...`);
+                const price = await this.priceService.calculatePrice(letter);
+                logFile.info(`Current EnvelopeID is ${process.env.CURRENT_ENVELOPE_ID}. Calculated price for each letter is ${price} €. Updating MongoDB entry for this letter...`);
+
                 const updated = await this.updateById(letter._id, {
                     $set: {
-                        "sent": true,
-                        "postel.baseEnvelopeID": baseEnvelopeID,
-                        "postel.set": {
-                            id: uuid,
+                        sent: true,
+                        uuid: uuid,
+                        price: price,
+                        stats: {
                             status: 0,
                             envelopes: letter.recipients.map((r: RecipientDocument, index) => {
                                 return {
+                                    recipient: r.toObject(),
                                     id: baseEnvelopeID + index,
                                     status: 0
                                 }
@@ -146,7 +151,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         }
                     }
                 });
-                logFile.info(`MongoDB entry for this letter was updated successfully.`, updated);
+                logFile.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
 
                 logFile.info("That's all folks!");
                 logger.info("Ok!");
@@ -179,7 +184,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         ];
 
         const toQuery = (await this.find({ sent: true }, { populate: "sender recipients" }))
-            .filter(l => l.postel.set ? interestingStatuses.includes(l.postel.set.status) : true);
+            .filter(l => l.stats ? interestingStatuses.includes(l.stats.status) : true);
 
         if (toQuery.length === 0) {
             logger.info(`Query job has no letters to check! Waiting for the next CRON call...`);
@@ -190,21 +195,21 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         let errors = 0;
 
         for (const letter of toQuery) {
-            if (!letter.postel) {
-                logger.warn(`Letter '${letter.codePdf}' has no 'postel' field, but should have one since it was sent. Skipping it, but please check!`);
+            if (!letter.stats) {
+                logger.warn(`Letter '${letter.codePdf}' has no 'stats' field, but should have one since it was sent. Skipping it, but please check!`);
                 continue;
             }
-            const { set } = letter.postel;
+            const stats = letter.stats;
             const wantsRLN = letter.kind !== LetterKind.LETTERA_SEMPLICE;
 
             try {
                 // First call with 1 Set tag and 99 Envelope tags
                 const res = await this.postel.query({
                     sets: [{
-                        id: set.id,
+                        id: letter.uuid,
                         wantsRLN: wantsRLN
                     }],
-                    envelopes: set.envelopes.slice(0, 99).map(e => e.id),
+                    envelopes: stats.envelopes.slice(0, 99).map(e => e.id),
                 });
                 if (res.globalCode !== 0)
                     throw { message: `MpxQuery API call returned a bad GlobalCode [${res.globalCode}]`, response: res };
@@ -213,9 +218,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 if (res.sets[0].code !== 0)
                     throw { message: `Expected SetCode from query to be 0 (OK), was ${res.sets[0].code}`, response: res };
 
-                set.status = res.sets[0].status || 0;
-                set.dateUploaded = res.sets[0].dateUploaded;
-                set.dateCompleted = res.sets[0].dateCompleted;
+                stats.status = res.sets[0].status || 0;
+                stats.dateUploaded = res.sets[0].dateUploaded;
+                stats.dateCompleted = res.sets[0].dateCompleted;
 
                 if (wantsRLN && !res.sets[0].regLetterNote) {
                     logger.warn(`Letter '${letter.codePdf}' has kind '${letter.kind}' but I got no response from GetRegLetterNote.`);
@@ -223,8 +228,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 if (wantsRLN && res.sets[0].regLetterNote.code === 0) {
                     // Update tracking code
                     logger.info( `Query for letter '${letter.codePdf}' responded with a RegLetterNote containing ${res.sets[0].regLetterNote.envelopes.length} envelopes! Gathering tracking codes from it...`);
-                    set.envelopes = res.sets[0].regLetterNote.envelopes.map(re => {
+                    stats.envelopes = res.sets[0].regLetterNote.envelopes.map(re => {
                         return {
+                            recipient: stats.envelopes.find(se => se.id === re.envelopeID).recipient,
                             id: re.envelopeID,
                             status: 0,
                             dateCompleted: re.dateCompleted,
@@ -234,11 +240,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 }
 
                 // Subsequent calls (starting from the 100th envelope) will have 100 max Envelope tags
-                if (set.envelopes.length > 100) {
+                if (stats.envelopes.length > 100) {
                     const paginate = (array: Array<any>, page_size: number, page_number: number): Array<any> =>
                         array.slice(page_number * page_size, (page_number + 1) * page_size);
 
-                    const remainingEnvelopes = set.envelopes.slice(100);
+                    const remainingEnvelopes = stats.envelopes.slice(100);
                     const numPages = Math.ceil(remainingEnvelopes.length / 100);
 
                     for (let page = 0; page < numPages; ++page) {
@@ -257,25 +263,21 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
                 // Order result envelopes by their CustomerEnvelopeID and update
                 res.envelopes.sort((a, b) => a.envelopeID - b.envelopeID);
-                set.envelopes = res.envelopes.map(e => {
-                    const env = set.envelopes.find(se => se.id === e.envelopeID);
+                stats.envelopes = res.envelopes.map(e => {
+                    const envelope = stats.envelopes.find(se => se.id === e.envelopeID);
                     return {
-                        id: env.id || e.envelopeID,
+                        recipient: envelope.recipient,
+                        id: envelope.id || e.envelopeID,
                         status: e.status,
                         dateUploaded: e.dateUploaded,
-                        dateCompleted: env.dateCompleted || e.dateCompleted,
-                        tracking: env.tracking, // If present
+                        dateCompleted: envelope.dateCompleted || e.dateCompleted,
+                        tracking: envelope.tracking, // If present
                     }
                 });
 
                 logger.info(`Query for letter '${letter.codePdf}' is done. Updating its database entry...`);
                 await this.updateById(letter._id, {
-                    $set: {
-                        postel: {
-                            baseEnvelopeID: letter.postel.baseEnvelopeID,
-                            set: set
-                        }
-                    }
+                    $set: { stats: stats }
                 });
 
                 logger.info("Ok!");

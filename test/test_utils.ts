@@ -8,7 +8,10 @@ import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { Rubric, RubricDocument } from "@models/RubricModel";
 import { Address, AddressDocument } from "@models/schemas/AddressSchema";
 import { Letter, LetterDocument } from "@models/LetterModel";
-import { Price, PriceDocument } from "@models/PriceModel";
+import { Price, PriceDocument, PriceModel } from "@models/PriceModel";
+import { MunicipalityService } from "@services/MunicipalityService";
+import fs from "fs";
+import prices from "../test/assets/json/prices.json";
 
 export function assertSameUser(original: UserDocument, candidate: UserDocument) {
     expect(candidate).to.exist;
@@ -94,4 +97,11 @@ export async function getSystemUser(): Promise<UserDocument> {
 
 export async function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function importMunicipalities(): Promise<void> {
+    await ioc.resolve(MunicipalityService).importFromJSON(await fs.promises.readFile("test/assets/json/municipalities.json"));
+}
+export async function importPrices(): Promise<void> {
+    await PriceModel.insertMany(prices);
 }
