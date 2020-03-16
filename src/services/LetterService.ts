@@ -11,6 +11,7 @@ import { generateUUID } from "@utils/random";
 import { createLogFile, detachLogFile, logger } from "@utils/winston";
 import moment from "moment";
 import fs from "fs";
+import { InvoiceService } from "@services/InvoiceService";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -18,6 +19,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     @inject(PdfService) pdf: PdfService;
     @inject(PostelService) postel: PostelService;
     @inject(PriceService) priceService: PriceService;
+    @inject(InvoiceService) invoiceService: InvoiceService;
 
     constructor(private letterModel = LetterModel) {
         super(letterModel, letterDecoder, [
@@ -279,6 +281,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 await this.updateById(letter._id, {
                     $set: { stats: stats }
                 });
+
+                logger.info(`Generating a new invoice for this letter...`);
+                await this.invoiceService.generateInvoice(letter);
 
                 logger.info("Ok!");
             } catch (err) {

@@ -6,15 +6,15 @@ import { RecipientService } from "@services/RecipientService";
 import { SenderService } from "@services/SenderService";
 import { PriceService } from "@services/PriceService";
 import { generateSystemUser } from "@utils/system";
-import { getSystemUser, importPrices } from "../test_utils";
+import { getSystemUser, importPrices, TEST_CODE_PDF } from "../test_utils";
 import { UserDocument } from "@models/UserModel";
 import { cleanTestDB } from "@utils/mongo";
 import { generateMockLetter } from "../mocks/letter";
 import { generateMockSender } from "../mocks/sender";
 import { generateMockRecipient } from "../mocks/recipient";
-import fs from "fs";
 import { RecipientDocument } from "@models/RecipientModel";
 import { generateUUID } from "@utils/random";
+import fs from "fs";
 
 @suite ("InvoiceService") class InvoiceServiceTests {
 
@@ -25,22 +25,46 @@ import { generateUUID } from "@utils/random";
     priceService = ioc.resolve(PriceService);
     system: UserDocument;
 
-    static async before() { await generateSystemUser(); }
+    static async before() {await generateSystemUser(); await importPrices(); }
     async before() { this.system = await getSystemUser(); }
 
     @timeout(60000)
     @test async "Should generate an invoice correctly" () {
-        await importPrices();
 
-         const saved = await (await this.letterService.save(generateMockLetter(
+        const saved = await (await this.letterService.save(generateMockLetter(
             this.system.id,
             (await this.senderService.save(generateMockSender(this.system.id))).id,
             [
+                // WHO NEEDS A FOR LOOP AHAHAHAHAAHAHAHAHAAHAHAHAHAHAAHAHAAHAHAHAAHAHAH
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            "GSTESTPDF21"
+            TEST_CODE_PDF
         ))).populate("sender recipients").execPopulate();
 
         // Emulate the final behaviour of batchUploadLetters()
@@ -64,7 +88,7 @@ import { generateUUID } from "@utils/random";
 
         const letter = await this.letterService.findById(saved.id, { populate: "sender recipients" });
         const pdf = await this.invoiceService.generateInvoice(letter);
-        await fs.promises.writeFile("test/assets/pdf/GSTESTPDF21/invoice.pdf", pdf);
+        await fs.promises.writeFile(`test/assets/pdf/${TEST_CODE_PDF}/invoice.pdf`, pdf);
     }
 
     static after() { cleanTestDB(); }

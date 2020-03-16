@@ -2,13 +2,19 @@ import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { CrudController } from "@controllers/CrudController";
 import { LetterService } from "@services/LetterService";
+import { InvoiceService } from "@services/InvoiceService";
 import { Request, Response } from "express";
+import { PDF_ROOT } from "@services/PdfService";
 import httpErrors from "http-errors";
+import fs from "fs";
 
 @provide(LetterService)
 export class LetterController extends CrudController {
 
-    constructor(@inject(LetterService) private letterService: LetterService) {
+    constructor(
+        @inject(LetterService) private letterService: LetterService,
+        @inject(InvoiceService) private invoiceService: InvoiceService,
+    ) {
         super(letterService, true);
     }
 
@@ -31,6 +37,24 @@ export class LetterController extends CrudController {
 
         // Can proceed with the update call
         return super.updateById(req, res);
+    }
+
+    public async generateInvoice(req: Request, res: Response) {
+        const letter = await this.letterService.findById(req.params.id);
+
+        const user = await this.authService.getUserFromRequest(req);
+        if (!user.isAdmin() && letter.user !== user.id) {
+            throw new httpErrors.Forbidden("You are not authorized to generate invoices for other users!");
+        }
+
+        const pdf = await this.invoiceService.generateInvoice(letter);
+        const path = `${PDF_ROOT}/${letter.codePdf}/invoice.pdf`;
+        await fs.promises.writeFile(path, pdf);
+
+        return res.status(201).send({
+            message: `Invoice created correctly. Available at ${path}`,
+            url: `${process.env.SERVER_HOST}:${process.env.SERVER_PORT}/pdf/${letter.codePdf}/invoice.pdf`
+        });
     }
 
 }

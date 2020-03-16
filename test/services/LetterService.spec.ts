@@ -4,22 +4,20 @@ import { ioc } from "@ioc";
 import { LetterService } from "@services/LetterService";
 import { SenderService } from "@services/SenderService";
 import { RecipientService } from "@services/RecipientService";
+import { PdfService } from "@services/PdfService";
 import { UserDocument } from "@models/UserModel";
 import { LetterDocument } from "@models/LetterModel";
 import { RecipientDocument } from "@models/RecipientModel";
 import { SenderDocument } from "@models/SenderModel";
 import { generateSystemUser } from "@utils/system";
-import { assertSameLetter, getSystemUser } from "../test_utils";
+import { assertSameLetter, getSystemUser, TEST_CODE_PDF } from "../test_utils";
 import { generateMockLetter } from "../mocks/letter";
 import { generateMockSender } from "../mocks/sender";
 import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
+import { logger } from "@utils/winston";
 // @ts-ignore
 import faker from "faker/locale/it";
-import { logger } from "@utils/winston";
-import { PdfService } from "@services/PdfService";
-
-const CODE_PDF = "GSTESTPDF2121";
 
 @suite ("LetterService") class LetterServiceTests {
 
@@ -39,7 +37,7 @@ const CODE_PDF = "GSTESTPDF2121";
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
         ];
-        const mock = generateMockLetter(this.system.id, sender.id, recipients, CODE_PDF);
+        const mock = generateMockLetter(this.system.id, sender.id, recipients, TEST_CODE_PDF);
 
         let letter: LetterDocument;
         try {
@@ -59,7 +57,7 @@ const CODE_PDF = "GSTESTPDF2121";
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            CODE_PDF
+            TEST_CODE_PDF
         );
         delete mock.user; // One of the required params;
 
@@ -92,7 +90,7 @@ const CODE_PDF = "GSTESTPDF2121";
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
         ];
-        const saved = await this.letterService.save(generateMockLetter(this.system.id, sender, recipients, CODE_PDF));
+        const saved = await this.letterService.save(generateMockLetter(this.system.id, sender, recipients, TEST_CODE_PDF));
 
         let letter: LetterDocument;
         try {
@@ -115,7 +113,7 @@ const CODE_PDF = "GSTESTPDF2121";
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            CODE_PDF
+            TEST_CODE_PDF
         );
         other.subject = saved.subject;
         await this.letterService.save(other);
@@ -141,7 +139,7 @@ const CODE_PDF = "GSTESTPDF2121";
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            CODE_PDF
+            TEST_CODE_PDF
         ));
         const newSubject = faker.fake("{{internet.userName}} New Test Letter");
 
@@ -164,7 +162,7 @@ const CODE_PDF = "GSTESTPDF2121";
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            CODE_PDF
+            TEST_CODE_PDF
         ));
 
         let updated: LetterDocument;
@@ -188,7 +186,7 @@ const CODE_PDF = "GSTESTPDF2121";
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            CODE_PDF
+            TEST_CODE_PDF
         ));
         const newSubject = faker.lorem.sentence(500); // Subject max length is 100
 
@@ -212,7 +210,7 @@ const CODE_PDF = "GSTESTPDF2121";
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            CODE_PDF
+            TEST_CODE_PDF
         ));
 
         let deleted: LetterDocument;
@@ -233,7 +231,7 @@ const CODE_PDF = "GSTESTPDF2121";
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            CODE_PDF
+            TEST_CODE_PDF
         ));
 
         let deleted: LetterDocument;
@@ -259,7 +257,7 @@ const CODE_PDF = "GSTESTPDF2121";
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
                 (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             ],
-            CODE_PDF
+            TEST_CODE_PDF
         ), false);
         await this.pdf.formatAndSavePdf(letter);
 

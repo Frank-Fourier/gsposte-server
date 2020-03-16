@@ -13,6 +13,8 @@ import { MunicipalityService } from "@services/MunicipalityService";
 import fs from "fs";
 import prices from "../test/assets/json/prices.json";
 
+export const TEST_CODE_PDF = "GSTESTPDF21";
+
 export function assertSameUser(original: UserDocument, candidate: UserDocument) {
     expect(candidate).to.exist;
     expect(candidate.username).to.equal(original.username);

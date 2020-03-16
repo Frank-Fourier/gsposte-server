@@ -7,6 +7,7 @@ import { generateMockSender } from "../mocks/sender";
 import { Types } from "mongoose";
 import { logger } from "@utils/winston";
 import fs from "fs";
+import { TEST_CODE_PDF } from "../test_utils";
 
 @suite("PdfService") class PdfServiceTests {
 
@@ -23,8 +24,8 @@ import fs from "fs";
                 generateMockRecipient(mockId),
             ];
 
-            const base64 = await this.pdf.postelFormat("test/assets/GSTESTPDF2121/original.pdf", sender, recipients, 150);
-            await fs.promises.writeFile("test/assets/GSTESTPDF2121/postel.pdf", Buffer.from(base64, "base64"));
+            const base64 = await this.pdf.postelFormat(`test/assets/${TEST_CODE_PDF}/original.pdf`, sender, recipients, 150);
+            await fs.promises.writeFile(`test/assets/${TEST_CODE_PDF}/postel.pdf`, Buffer.from(base64, "base64"));
         } catch (err) {
             logger.error(err);
             expect(err).not.to.exist;

@@ -72,7 +72,8 @@ export class ExpressServer {
         this.app.use(cors);
         this.app.use(helmet());
         this.app.disable("x-powered-by");
-        this.app.use("/assets", express.static("public/assets"));
+        this.app.use(express.static("public/assets"));
+        this.app.use(express.static("public/pdf"));
         spinner && spinner.succeed();
     }
 

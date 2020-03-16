@@ -213,7 +213,9 @@ export class MongoRepository<DTO, Doc extends Document> {
 
     public countDocuments(query?: MongoQuery<DTO & Doc>): Promise<number> {
         try {
-            return this.model.countDocuments(query || {}).orFail().exec();
+            return !!query || query === {} ?
+                this.model.estimatedDocumentCount().exec() : // Faster
+                this.model.countDocuments(query || {}).orFail().exec(); // Slower
         } catch (err) {
             throw this.formatMongoError(err);
         }

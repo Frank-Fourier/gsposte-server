@@ -81,6 +81,39 @@ export class LetterRoute extends Route {
             /**
              * @swagger
              *
+             * /letter/invoice/{id}:
+             *   post:
+             *     tags:
+             *       - Letters
+             *     description: Generate an invoice for a specific letter. It overwrites previously generated invoices for the letter.
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: id
+             *         required: true
+             *         in: path
+             *         description: Mongo id of the letter to generate invoice for
+             *     responses:
+             *       201:
+             *         description: Invoice generated, returns the URL to access the resource.
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             *       403:
+             *         description: You are not allowed to generate invoices for other users!
+             */
+            {
+                path: "/invoice/:id",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.letterController.generateInvoice(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /letter/{id}:
              *   get:
              *     tags:

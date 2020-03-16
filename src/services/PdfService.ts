@@ -12,7 +12,7 @@ import path from "path";
 import httpErrors from "http-errors";
 import fs from "fs";
 import fetch from "node-fetch";
-import puppeteer, { PDFOptions } from "puppeteer";
+import puppeteer, { LoadEvent, PDFOptions } from "puppeteer";
 
 export const PDF_ROOT = process.env.PDF_ROOT || "public/pdf";
 
@@ -259,9 +259,10 @@ export class PdfService {
      *
      * @param html {string} The whole HTML to convert
      * @param options {PDFOptions} Options to apply on conversion
+     * @param waitUntil {LoadEvent | LoadEvent[]} When to consider navigation succeeded. Default is "domcontentloaded"
      * @returns {Buffer} The whole converted file as Buffer
      */
-    public async htmlToPdf(html: string, options?: PDFOptions): Promise<Buffer> {
+    public async htmlToPdf(html: string, waitUntil?: LoadEvent | LoadEvent[], options?: PDFOptions): Promise<Buffer> {
         // Use Puppeteer to create a new PDF from this HTML file
         const browser = await puppeteer.launch({
             headless: true,
@@ -269,15 +270,21 @@ export class PdfService {
             // Otherwise it will just crash on launch...
             args: process.env.NODE_ENV === "production" ? [ "--disable-dev-shm-usage" ] : [],
             // On Docker I need to specify that I want to use my own Chromium
-            ...(process.env.NODE_ENV === "production" ? { executablePath: "/usr/bin/chromium-browser" } : {})
+            ...(process.env.NODE_ENV === "production" ? { executablePath: "/usr/bin/chromium-browser" } : {}),
+            // Ignore HTTPS errors in development/test environments
+            ignoreHTTPSErrors: process.env.NODE_ENV !== "production"
         });
+
         const page = await browser.newPage();
         await page.setContent(html, {
             // Consider navigation to be finished when the DOMContentLoaded event is fired
-            waitUntil: "domcontentloaded"
+            waitUntil: waitUntil || "domcontentloaded"
         });
 
-        const pdf = await page.pdf(options || { format: "A4" });
+        const pdf = await page.pdf(options || {
+            format: "A4",
+            printBackground: true,
+        });
         await browser.close();
 
         return pdf;
