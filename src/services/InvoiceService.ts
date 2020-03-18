@@ -1,7 +1,6 @@
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
 import { PdfService } from "@services/PdfService";
-import { LetterService } from "@services/LetterService";
 import { LetterDocument } from "@models/LetterModel";
 import { SenderDocument } from "@models/SenderModel";
 import { LetterKind, PostelStatus } from "@services/PostelService";
@@ -14,7 +13,6 @@ import moment from "moment";
 export class InvoiceService {
 
     @inject(PdfService) pdf: PdfService;
-    @inject(LetterService) letterService: LetterService;
 
     /**
      * Generates an invoice for a letter. If the letter has not completed stats yet, it is a partial invoice.
@@ -23,7 +21,7 @@ export class InvoiceService {
      * @param letter {LetterDocument} Letter to generate invoice from
      * @returns {Promise<Buffer>} Promise resolving to the PDF file as Buffer
      */
-    public async generateInvoice(letter: LetterDocument): Promise<Buffer> {
+    public async generateInvoicePDF(letter: LetterDocument): Promise<Buffer> {
         if (!letter.sent) {
             throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter not yet sent!");
         }

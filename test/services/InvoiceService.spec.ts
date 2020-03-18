@@ -87,7 +87,7 @@ import fs from "fs";
         }, false, false);
 
         const letter = await this.letterService.findById(saved.id, { populate: "sender recipients" });
-        const pdf = await this.invoiceService.generateInvoice(letter);
+        const pdf = await this.invoiceService.generateInvoicePDF(letter);
         await fs.promises.writeFile(`test/assets/pdf/${TEST_CODE_PDF}/invoice.pdf`, pdf);
     }
 

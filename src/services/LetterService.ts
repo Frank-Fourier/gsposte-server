@@ -3,6 +3,7 @@ import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { PDF_ROOT, PdfService } from "@services/PdfService";
 import { LetterKind, PostelService, PostelStatus } from "@services/PostelService";
 import { PriceService } from "@services/PriceService";
+import { InvoiceService } from "@services/InvoiceService";
 import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
 import { SenderDocument } from "@models/SenderModel";
@@ -11,7 +12,6 @@ import { generateUUID } from "@utils/random";
 import { createLogFile, detachLogFile, logger } from "@utils/winston";
 import moment from "moment";
 import fs from "fs";
-import { InvoiceService } from "@services/InvoiceService";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -283,7 +283,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 });
 
                 logger.info(`Generating a new invoice for this letter...`);
-                await this.invoiceService.generateInvoice(letter);
+                await this.invoiceService.generateInvoicePDF(letter);
 
                 logger.info("Ok!");
             } catch (err) {
