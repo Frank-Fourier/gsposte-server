@@ -283,7 +283,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 });
 
                 logger.info(`Generating a new invoice for this letter...`);
-                await this.invoiceService.generateInvoicePDF(letter);
+                await this.invoiceService.generateLetterInvoicePDF(letter);
 
                 logger.info("Ok!");
             } catch (err) {

@@ -74,6 +74,7 @@ export class ExpressServer {
         this.app.disable("x-powered-by");
         this.app.use(express.static("public/assets"));
         this.app.use(express.static("public/pdf"));
+        this.app.use(express.static("public/invoices"));
         spinner && spinner.succeed();
     }
 

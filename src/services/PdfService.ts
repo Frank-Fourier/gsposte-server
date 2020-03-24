@@ -20,7 +20,8 @@ export const PDF_ROOT = process.env.PDF_ROOT || "public/pdf";
 const uploader = multer({
     storage: diskStorage({
         destination: (req: Request, file: Express.Multer.File, callback: (error: (Error | null), destination: string) => void) => {
-            callback(null, `${PDF_ROOT}/GS${generateRandomCode()}/`);
+            const dest = `${PDF_ROOT}/GS${generateRandomCode()}/`;
+            fs.mkdir(dest, () => callback(null, dest));
         },
         filename(req: Request, file: Express.Multer.File, callback: (error: (Error | null), filename: string) => void): void {
             callback(null, "original.pdf");
@@ -53,11 +54,6 @@ export class PdfService {
     public upload(req: Request, res: Response): Promise<string> {
         return new Promise(((resolve, reject) => {
             uploader(req, res, (err: MulterError | any) => {
-                if (!req.file) {
-                    logger.error("A file upload request was not accepted. Only PDF files are acceptable.");
-                    return reject(new httpErrors.NotAcceptable("Only PDF files are acceptable for upload."));
-                }
-
                 // Check if a Multer specific error occured while uploading (likely file did not meet criteria)
                 if (err instanceof MulterError) {
                     logger.error(`Got MulterError while uploading a PDF [${err.code}]: ${err.message}`);
@@ -74,6 +70,11 @@ export class PdfService {
                     // There is an even more generic error!
                     logger.error(`Generic error while uploading a PDF: ${err}`);
                     return reject(new httpErrors.BadRequest(`Generic error while uploading: ${err}`));
+                }
+
+                if (!req.file) {
+                    logger.error("A file upload request was not accepted, because file was not present. Only PDF files are acceptable.");
+                    return reject(new httpErrors.NotAcceptable("No file was passed to the request. Only PDF files are acceptable for upload."));
                 }
 
                 // Everything went fine

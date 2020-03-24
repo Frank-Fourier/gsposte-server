@@ -16,12 +16,15 @@ project
 │   ├── logs
 │   │   ├── errors.log # All errors logged in production
 │   │   └── GSK6RNCXHW.log # Logs about a campaign upload process
+│   ├── invoices
+│   │   └── 5c991af86327ba47393f2fb3.pdf # PDF invoice for 1 or more letters
 │   ├── pdf
 │   │   └── GSK6RNCXHW # PDF documents about this campaign
 │   │       ├── original.pdf # The original uploaded document
 │   │       ├── postel.pdf # The original, formatted with Postel margins and duplicated
 │   │       └── invoice.pdf # The generated invoice file
-│   └── xlsx
+│   ├── xlsx
+│
 ├── src
 │   ├── models
 │   ├── services

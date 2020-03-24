@@ -28,12 +28,12 @@ import httpErrors from "http-errors";
  */
 export interface QueryOptions {
     populate?: string
-    select?: string,
+    select?: string
+    sort?: Object
 }
 export interface PaginateOptions extends QueryOptions {
     pageIndex?: number
     pageSize?: number
-    sort?: Object
 }
 
 /**
@@ -122,7 +122,7 @@ export class MongoRepository<DTO, Doc extends Document> {
 
     public async find(query: MongoQuery<DTO & Doc>, options: QueryOptions = {}): Promise<Doc[]> {
         try {
-            return await this.queryMany(query).populate(options.populate || "").select(options.select || "").orFail().exec();
+            return await this.queryMany(query).sort(options.sort || {}).populate(options.populate || "").select(options.select || "").orFail().exec();
         } catch (err) {
             if (err.name === "DocumentNotFoundError") {
                 return []; // Instead of DocumentNotFoundError

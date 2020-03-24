@@ -47,7 +47,7 @@ export class LetterController extends CrudController {
             throw new httpErrors.Forbidden("You are not authorized to generate invoices for other users!");
         }
 
-        const pdf = await this.invoiceService.generateInvoicePDF(letter);
+        const pdf = await this.invoiceService.generateLetterInvoicePDF(letter);
         const path = `${PDF_ROOT}/${letter.codePdf}/invoice.pdf`;
         await fs.promises.writeFile(path, pdf);
 
