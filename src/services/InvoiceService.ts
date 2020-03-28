@@ -93,7 +93,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         invoice: InvoiceDocument,
         errors: Array<{ letter: LetterDocument, error: Error | any }>
     }>> {
-        const letters = await this.letterService.find({ user: user, paid: false });
+        const letters = await this.letterService.find({ user: user, sent: true, paid: false });
         if (!letters || letters.length === 0) {
             return [];
         }
