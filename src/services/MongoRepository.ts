@@ -131,6 +131,10 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
+    public async findAll(options: QueryOptions = {}): Promise<Doc[]> {
+       return this.find({}, options);
+    }
+
     public async paginate(query: MongoQuery<DTO & Doc>, pagination: PaginateOptions): Promise<Paginated<Doc>> {
         const docsCount = await this.model.find(query).countDocuments().exec();
         let docs: Doc[] = [];
@@ -206,6 +210,14 @@ export class MongoRepository<DTO, Doc extends Document> {
         this.checkValidObjectId(id);
         try {
             return await this.model.findByIdAndDelete(id).orFail().exec();
+        } catch (err) {
+            throw this.formatMongoError(err);
+        }
+    }
+
+    public async deleteAll(): Promise<void> {
+        try {
+            await this.model.deleteMany({}).exec();
         } catch (err) {
             throw this.formatMongoError(err);
         }

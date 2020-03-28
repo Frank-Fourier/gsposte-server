@@ -3,7 +3,6 @@ import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { PDF_ROOT, PdfService } from "@services/PdfService";
 import { LetterKind, PostelService, PostelStatus } from "@services/PostelService";
 import { PriceService } from "@services/PriceService";
-import { InvoiceService } from "@services/InvoiceService";
 import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
 import { SenderDocument } from "@models/SenderModel";
@@ -16,10 +15,9 @@ import fs from "fs";
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
-    @inject(PdfService) pdf: PdfService;
-    @inject(PostelService) postel: PostelService;
-    @inject(PriceService) priceService: PriceService;
-    @inject(InvoiceService) invoiceService: InvoiceService;
+    @inject(PdfService) private pdf: PdfService;
+    @inject(PostelService) private postel: PostelService;
+    @inject(PriceService) private priceService: PriceService;
 
     constructor(private letterModel = LetterModel) {
         super(letterModel, letterDecoder, [
@@ -28,11 +26,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public async save(letter: Letter, depopulate = true): Promise<LetterDocument> {
-        const saved = await (await super.save(letter))
-            .populate("sender recipients").execPopulate();
+        const saved = await (await super.save(letter)).populate("sender recipients").execPopulate();
         try {
-            if (process.env.NODE_ENV !== "test")
-                await this.pdf.formatAndSavePdf(saved);
+            process.env.NODE_ENV !== "test" && await this.pdf.formatAndSavePdf(saved);
         } catch (err) {
             await this.deleteById(saved.id);
             throw err;
@@ -41,8 +37,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
-        const updated = await (await super.updateById(id, updateBody, upsert, runValidators))
-            .populate("sender recipients").execPopulate();
+        const updated = await (await super.updateById(id, updateBody, upsert, runValidators)).populate("sender recipients").execPopulate();
         try {
             if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
                 await this.pdf.formatAndSavePdf(updated);
@@ -54,8 +49,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public async updateOne(query: MongoQuery<Letter & LetterDocument>, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
-        const updated = await (await super.updateOne(query, updateBody, upsert, runValidators))
-            .populate("sender recipients").execPopulate();
+        const updated = await (await super.updateOne(query, updateBody, upsert, runValidators)).populate("sender recipients").execPopulate();
         try {
             if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
                 await this.pdf.formatAndSavePdf(updated);
@@ -282,8 +276,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     $set: { stats: stats }
                 });
 
-                logger.info(`Generating a new invoice for this letter...`);
-                await this.invoiceService.generateLetterInvoicePDF(letter);
+                // logger.info(`Generating a new invoice for this letter...`);
+                // await ioc.resolve(InvoiceService).generateLetterInvoicePDF(letter);
 
                 logger.info("Ok!");
             } catch (err) {

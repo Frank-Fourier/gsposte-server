@@ -78,9 +78,6 @@ import { Recipient, RecipientDocument, RecipientSchema } from "@models/Recipient
  *           _id:
  *             type: string
  *             example: 5c991af86327ba47393f2fb3
- *           user:
- *             type: string
- *             example: 5e14af210d3e883e729c3dd2
  *           sent:
  *             type: boolean
  *             description: This gets updated to true when the campaign is sent from the CRON. You can't update this field manually.
@@ -89,10 +86,10 @@ import { Recipient, RecipientDocument, RecipientSchema } from "@models/Recipient
  *             type: string
  *             description: CustomerSetID passed to Postel on upload. You can't update this field manually.
  *             example: B887A8D3-2533-4AA7-9112-43ED8144BA96
- *           price:
- *             type: number
- *             description: Price of a single envelope. This is calculated by the server, you can't update this field manually.
- *             example: 6.55
+ *           paid:
+ *             type: boolean
+ *             example: false
+ *             description: True if this letter's invoice was paid correctly
  *           stats:
  *             type: object
  *             description: Stats about this letter. Gets filled by the Query CRON. You can't update this field or its children manually.
@@ -154,7 +151,7 @@ export interface Letter {
 export interface LetterDocument extends Letter, Document {
     sent: boolean
     uuid?: string
-    price?: number
+    paid?: boolean
     stats?: {
         status: number
         dateUploaded?: Date | string
@@ -240,9 +237,9 @@ export const LetterSchema = new Schema<Letter>({
     uuid: {
         type: String,
     },
-    price: {
-        type: Number,
-        min: 0,
+    paid: {
+        type: Boolean,
+        default: false,
     },
     stats: new Schema({
         status: Number,

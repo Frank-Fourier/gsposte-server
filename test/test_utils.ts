@@ -12,6 +12,7 @@ import { Price, PriceDocument, PriceModel } from "@models/PriceModel";
 import { MunicipalityService } from "@services/MunicipalityService";
 import fs from "fs";
 import prices from "../test/assets/json/prices.json";
+import { Invoice, InvoiceDocument } from "@models/InvoiceModel";
 
 export const TEST_CODE_PDF = "GSTESTPDF21";
 
@@ -80,6 +81,18 @@ export function assertSamePrice(original: Price | PriceDocument, candidate: Pric
     expect(candidate.maxWeight).to.equal(original.maxWeight);
     expect(candidate.kind).to.equal(original.kind);
     expect(candidate.extra).to.equal(original.extra);
+}
+
+export function assertSameInvoice(original: Invoice | InvoiceDocument, candidate: InvoiceDocument) {
+    expect(candidate).to.exist;
+    expect(String(candidate.user)).to.equal(String(original.user));
+    expect(String(candidate.sender)).to.equal(String(original.sender));
+    expect(candidate.number).to.equal(original.number);
+    expect(candidate.taxable).to.equal(original.taxable);
+    expect(candidate.iva).to.equal(original.iva);
+    expect(candidate.total).to.equal(original.total);
+    expect(candidate.paid).to.equal('paid' in original ? original.paid : false);
+    expect(candidate.paymentDate).to.equal('paymentDate' in original ? original.paymentDate : undefined);
 }
 
 export async function loginWithSystem(): Promise<string> {

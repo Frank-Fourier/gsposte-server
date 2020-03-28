@@ -17,3 +17,4 @@ test/assets/.~lock*
 # PDF and XLSX files
 public/pdf/
 public/xlsx/
+public/invoices/

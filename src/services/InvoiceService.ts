@@ -6,6 +6,8 @@ import { SenderDocument } from "@models/SenderModel";
 import { Invoice, invoiceDecoder, InvoiceDocument, InvoiceModel } from "@models/InvoiceModel";
 import { LetterKind, PostelStatus } from "@services/PostelService";
 import { PriceService } from "@services/PriceService";
+import { LetterService } from "@services/LetterService";
+import { UserService } from "@services/UserService";
 import { compileFile } from "pug";
 import { Document } from "mongoose";
 import { MongoRepository } from "@services/MongoRepository";
@@ -15,17 +17,143 @@ import moment from "moment";
 @provide(InvoiceService)
 export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
-    @inject(PdfService) pdf: PdfService;
-    @inject(PriceService) priceService: PriceService;
+    @inject(PdfService) private pdf: PdfService;
+    @inject(PriceService) private priceService: PriceService;
+    @inject(UserService) private userService: UserService;
+    @inject(LetterService) private letterService: LetterService;
 
     constructor(private invoiceModel = InvoiceModel) {
         super(invoiceModel, invoiceDecoder, [ "number" ]);
     }
 
+    /**
+     * Generate an invoice for a set of letters. The letters array must not be empty,
+     * and all the letters must have the same sender.
+     *
+     * @param letters {Array<LetterDocument>} Letters to generate an invoice from
+     * @param number {number} Optional invoice number. Will use the latest number + 1 if not passed
+     * @returns Promise resolving to the invoice created and any errors that occured during the process
+     */
+    public async generateSingleInvoice(letters: Array<LetterDocument>, number?: number): Promise<{
+        invoice: InvoiceDocument,
+        errors: Array<{ letter: LetterDocument, error: Error | any }>
+    }> {
+        if (letters.length === 0) {
+            throw new httpErrors.BadRequest("Letters array is empty! Can't generate invoice.");
+        }
+
+        const errors: Array<{ letter: LetterDocument, error: Error | any }> = [];
+        let taxableSum = 0;
+
+        for (const letter of letters) {
+            await letter.depopulate("sender user");
+            if (letter.sender.toString() !== letters[0].sender.toString()) {
+                throw new httpErrors.BadRequest("Letters to generate an invoice from must all have the same sender!");
+            }
+            try {
+                if (!letter.sent) {
+                    throw `This letter is not sent so I won't include it in the invoice.`;
+                }
+                const taxable = await this.priceService.calculatePrice(letter);
+                if (taxable <= 0) {
+                    throw new httpErrors.BadRequest("Can't create an invoice for a letter without a price!");
+                }
+                taxableSum += taxable;
+            } catch (err) {
+                errors.push({ letter: letter, error: err });
+            }
+        }
+
+        const iva = (taxableSum * 22) / 100;
+        const total = taxableSum + iva;
+        const invoice = await this.save({
+            user: letters[0].user,
+            sender: letters[0].sender,
+            letters: letters.filter(l => l.sent),
+            number: number || (await this.getLatestInvoiceNumber() + 1),
+            taxable: parseFloat(taxableSum.toFixed(5)),
+            iva: parseFloat(iva.toPrecision(5)),
+            total: parseFloat(total.toFixed(5)),
+        });
+
+        return {
+            invoice: invoice,
+            errors: errors
+        };
+    }
+
+    /**
+     * Generate N invoices for a user, aggregating the letters not yet paid with the same senders.
+     * Basically performs the aggregation and then calls the generateSingleInvoice function for each array.
+     *
+     * @param user {string} User id to search letters for
+     * @returns Array of results of generateSingleInvoice, one for each letter
+     */
+    public async generateInvoicesForUser(user: string): Promise<Array<{
+        invoice: InvoiceDocument,
+        errors: Array<{ letter: LetterDocument, error: Error | any }>
+    }>> {
+        const letters = await this.letterService.find({ user: user, paid: false });
+        if (!letters || letters.length === 0) {
+            return [];
+        }
+
+        const groupBy = <T>(array: Array<T>, property: (x: T) => string): { [key: string]: Array<T> } =>
+            array.reduce((memo: { [key: string]: Array<T> }, x: T) => {
+                if (!memo[property(x)]) memo[property(x)] = [];
+                memo[property(x)].push(x);
+                return memo;
+            }, {});
+
+        const aggregated = groupBy<LetterDocument>(letters, letter => letter.sender as string);
+        const results: Array<{
+            invoice: InvoiceDocument,
+            errors: Array<{ letter: LetterDocument, error: Error | any }>
+        }> = [];
+
+        for (const letter of Object.values(aggregated)) {
+            results.push(await this.generateSingleInvoice(letter));
+        }
+
+        return results;
+    }
+
+    /**
+     * The most generic flavor of generateSingleInvoice, generates all the possible invoices, for every single user!
+     *
+     * @returns Key-value where each key is the user id, and each value is the array of results
+     */
+    public async generateInvoices(): Promise<{
+        [key: string]: Array<{
+            invoice: InvoiceDocument,
+            errors: Array<{ letter: LetterDocument, error: Error | any }>
+        }>
+    }> {
+        const users = await this.userService.findAll();
+        const results: {
+            [key: string]: Array<{
+                invoice: InvoiceDocument,
+                errors: Array<{ letter: LetterDocument, error: Error | any }>
+            }>
+        } = {};
+
+        for (const user of users) {
+            const res = await this.generateInvoicesForUser(user.id);
+            if (res.length > 0) {
+                results[user.id] = res;
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Fetchs the latest invoice number from the latest created invoice in the database
+     *
+     * @returns {Promise<number>} Promise resolving to the latest invoice number
+     */
     public async getLatestInvoiceNumber(): Promise<number> {
-        const invoices = (await this.find({}, {
-            sort: { "createdAt": 1 }
-        }));
+        const invoices = (await this.findAll({ sort: { "createdAt": 1 } }));
         if (!invoices || invoices.length === 0) {
             return 0;
         }
@@ -33,57 +161,25 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         return invoices[0].number;
     }
 
-    public async createInvoicesForLetters(letters: Array<LetterDocument>, reqUser: string, number?: number): Promise<{
-        invoice: InvoiceDocument,
-        errors: Array<{
-            letter: LetterDocument
-            error: any
-        }>
-    }> {
-        if (letters.length === 0) {
-            throw new httpErrors.BadRequest("Letters array is empty! Can't calculate invoice.");
-        }
-        const errors: Array<{
-            letter: LetterDocument,
-            error: any
-        }> = [];
-        let taxables = 0;
-
-        for (const letter of letters) {
-            try {
-                // Calculate prices
-                const taxable = await this.priceService.calculatePrice(letter);
-                if (taxable <= 0) {
-                    throw new httpErrors.BadRequest("Can't create an invoice for a letter without a price!");
-                }
-
-                taxables += taxable;
-            } catch (err) {
-                errors.push({
-                    letter: letter,
-                    error: err
-                });
-            }
-        }
-
-        // Generate PDF
-
-        // Create invoice
-        const iva = (taxables * 22) / 100;
-        const total = taxables + iva;
-        const invoice = await this.save({
-            user: reqUser,
-            letters: letters,
-            number: number || await this.getLatestInvoiceNumber(),
-            taxable: taxables,
-            iva: iva,
-            total: total
+    /**
+     * Marks an invoice as paid. This means that its 'paid' property becomes true, as well as all the
+     * 'paid' properties of the letters associated with this invoice.
+     *
+     * @param invoice {InvoiceDocument} Invoice to mark as paid
+     * @returns {Promise<InvoiceDocument>} Promise resolving to the updated invoice document
+     */
+    public async markInvoiceAsPaid(invoice: InvoiceDocument): Promise<InvoiceDocument> {
+        invoice = await invoice.populate("letters").execPopulate();
+        await Promise.all(
+            invoice.letters.map(letter =>
+                this.letterService.updateById((letter as LetterDocument).id, {
+                    $set: { paid: true }
+                })
+            )
+        );
+        return await this.updateById(invoice.id, {
+            $set: { paid: true, paymentDate: Date.now() }
         });
-
-        return {
-            invoice: invoice,
-            errors: errors
-        };
     }
 
     /**
@@ -100,10 +196,11 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
         await letter.populate("sender recipients").execPopulate();
 
-        const { sender, codePdf, stats, kind, sendAt, price } = letter;
+        const { stats } = letter;
+        const price = await this.priceService.calculatePrice(letter);
         const partial = !stats ? true :
             stats.envelopes.some(envelope => envelope.status !== PostelStatus.Completato && (
-                kind === LetterKind.LETTERA_SEMPLICE ? true : !!envelope.tracking
+                letter.kind === LetterKind.LETTERA_SEMPLICE ? true : !!envelope.tracking
             ));
 
         // Format envelopes dates
@@ -114,12 +211,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }));
 
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({
-            sender: (sender as SenderDocument).toObject(),
+            sender: (letter.sender as SenderDocument).toObject(),
             stats: (stats as Partial<Document>).toObject(),
-            dateSent: sendAt ? moment(sendAt).format("DD/MM/YYYY") : null,
+            dateSent: letter.sendAt ? moment(letter.sendAt).format("DD/MM/YYYY") : null,
             partial: partial,
-            codePdf: codePdf,
-            kind: kind,
+            codePdf: letter.codePdf,
+            kind: letter.kind,
             price: this.formatCurrency(price),
             total: this.formatCurrency(price * stats.envelopes.length),
         });

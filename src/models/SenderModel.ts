@@ -13,6 +13,8 @@ import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models
  *       - name
  *       - description
  *       - address
+ *       - businessName
+ *       - invoiceCode
  *     properties:
  *       user:
  *         type: string
@@ -25,6 +27,13 @@ import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models
  *         example: One of your school teachers, later discovered to have a part-time maid job. She embodies the Temperance arcana.
  *       address:
  *         $ref: "#/definitions/Address"
+ *       businessName:
+ *         type: string
+ *         example: Le Mie Palle SRL
+ *       invoiceCode:
+ *         type: string
+ *         example: FSK4L
+ *         description: 5-letter code for invoices
  *       iva:
  *         type: string
  *         example: 06998950726
@@ -60,6 +69,8 @@ export interface Sender {
     name: string
     description: string
     address: Address
+    businessName: string
+    invoiceCode: string
     iva?: string
     cf?: string
     email?: string
@@ -73,6 +84,8 @@ export const senderDecoder: Decoder<Sender> = object({
     name: string(),
     description: string(),
     address: addressDecoder,
+    businessName: string(),
+    invoiceCode: string(),
     iva: optional(string()),
     cf: optional(string()),
     email: optional(string()),
