@@ -112,6 +112,14 @@ export const SenderSchema = new Schema<Sender>({
         type: AddressSchema,
         required: "Address is required."
     },
+    businessName: {
+        type: String,
+        required: "Business name is required",
+    },
+    invoiceCode: {
+        type: String,
+        required: "Invoice code is required",
+    },
     iva: {
         type: String,
         maxlength: 11,

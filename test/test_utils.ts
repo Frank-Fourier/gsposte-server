@@ -29,6 +29,8 @@ export function assertSameSender(original: Sender | SenderDocument, candidate: S
     expect(candidate.user.toString()).to.equal(original.user.toString());
     expect(candidate.name).to.equal(original.name);
     expect(candidate.description).to.equal(original.description);
+    expect(candidate.businessName).to.equal(original.businessName);
+    expect(candidate.invoiceCode).to.equal(original.invoiceCode);
     expect(candidate.iva).to.equal(original.iva);
     expect(candidate.cf).to.equal(original.cf);
     expect(candidate.email).to.equal(original.email.trim().toLowerCase());
