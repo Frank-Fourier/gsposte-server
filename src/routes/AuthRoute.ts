@@ -42,6 +42,35 @@ export class AuthRoute extends Route {
             /**
              * @swagger
              *
+             * /auth/tv/login:
+             *   post:
+             *     tags:
+             *       - Authentication
+             *     description: Login into the TV application as a TV user
+             *     produces:
+             *       - text/plain
+             *     parameters:
+             *       - name: Payload
+             *         description: Login payload
+             *         required: true
+             *         in: body
+             *         schema:
+             *           $ref: "#/definitions/LoginPayload"
+             *     responses:
+             *       200:
+             *         description: Login successful, returns encoded JWT token
+             *       401:
+             *         description: Login failed. Invalid username/email or password
+             */
+            {
+                path: "/tv/login",
+                method: RequestMethod.POST,
+                requiresAuth: false,
+                handler: (req, res) => this.authController.tvLogin(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /auth/me:
              *   get:
              *     tags:

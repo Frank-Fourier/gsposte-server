@@ -4,6 +4,7 @@ import { MongoRepository } from "@services/MongoRepository";
 import { AuthService } from "@services/AuthService";
 import httpErrors from "http-errors";
 import { Document } from "mongoose";
+import { UserRoles } from "@models/UserModel";
 
 @injectable()
 export class CrudController {
@@ -14,9 +15,11 @@ export class CrudController {
         @unmanaged() private service: MongoRepository<object, Document>,
         @unmanaged() protected userBased: boolean = false,
         @unmanaged() protected readOnly: boolean = false, // If true, only admins can create/update/delete
+        @unmanaged() protected accessRole: UserRoles = UserRoles.ROLE_USER,
     ) {}
 
     public async create(req: Request, res: Response) {
+        await this.authService.roleOnly(req, this.accessRole);
         if (this.readOnly) {
             await this.authService.adminOnly(req);
         }
@@ -28,7 +31,7 @@ export class CrudController {
             const user = await this.authService.getUserFromRequest(req);
             if (!object.user || (object.user && !user.isAdmin())) {
                 // Force the associated user to be the request user
-                object.user = user._id;
+                object.user = user.id;
             }
         }
 
@@ -37,6 +40,7 @@ export class CrudController {
     }
 
     public async find(req: Request, res: Response) {
+        await this.authService.roleOnly(req, this.accessRole);
         const pagination = this.service.paginateOptionsFromObject(req.body.pagination);
 
         if (this.userBased) {
@@ -46,7 +50,7 @@ export class CrudController {
                 delete req.body.query.user; // If already present...
                 req.body.query = {
                     ...req.body.query,
-                    user: user._id
+                    user: user.id
                 }
             }
         }
@@ -58,6 +62,7 @@ export class CrudController {
     }
 
     public async findById(req: Request, res: Response) {
+        await this.authService.roleOnly(req, this.accessRole);
         const obj = await this.service.findById(req.params.id);
 
         if (this.userBased) {
@@ -71,6 +76,7 @@ export class CrudController {
     }
 
     public async updateById(req: Request, res: Response) {
+        await this.authService.roleOnly(req, this.accessRole);
         if (this.readOnly) {
             await this.authService.adminOnly(req);
         }
@@ -88,6 +94,7 @@ export class CrudController {
     }
 
     public async deleteById(req: Request, res: Response) {
+        await this.authService.roleOnly(req, this.accessRole);
         if (this.readOnly) {
             await this.authService.adminOnly(req);
         }

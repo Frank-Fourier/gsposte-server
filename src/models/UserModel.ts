@@ -5,6 +5,7 @@ import uniqueValidator from "mongoose-unique-validator";
 
 export enum UserRoles {
     ROLE_USER = "ROLE_USER",
+    ROLE_TV_MANAGER = "ROLE_TV_MANAGER",
     ROLE_ADMIN = "ROLE_ADMIN"
 }
 
@@ -43,6 +44,7 @@ export enum UserRoles {
  *           type: string
  *           enum:
  *             - "ROLE_USER"
+ *             - "ROLE_TV_MANAGER"
  *             - "ROLE_ADMIN"
  *   UserDocument:
  *     allOf:
@@ -72,6 +74,7 @@ export interface User {
     active?: boolean
     roles?: Array<UserRoles>
     isAdmin?: () => boolean;
+    isTvManager?: () => boolean;
 }
 export interface UserDocument extends User, Document {
 }
@@ -83,6 +86,7 @@ export const userDecoder: Decoder<User> = object({
     referCode: optional(string()),
     roles: optional(array(oneOf(
         constant(UserRoles.ROLE_USER),
+        constant(UserRoles.ROLE_TV_MANAGER),
         constant(UserRoles.ROLE_ADMIN)
     ))),
 });
@@ -145,7 +149,7 @@ export const UserSchema = new Schema<User>({
     },
     roles: {
         type: [ String ],
-        enum: [ UserRoles.ROLE_USER, UserRoles.ROLE_ADMIN ],
+        enum: [ UserRoles.ROLE_USER, UserRoles.ROLE_TV_MANAGER, UserRoles.ROLE_ADMIN ],
         default: [ UserRoles.ROLE_USER ]
     },
 }, {
@@ -158,6 +162,9 @@ export const UserSchema = new Schema<User>({
 UserSchema.plugin(uniqueValidator);
 UserSchema.methods.isAdmin = function() {
     return this.roles.includes(UserRoles.ROLE_ADMIN);
+};
+UserSchema.methods.isTvManager = function() {
+    return this.roles.includes(UserRoles.ROLE_TV_MANAGER);
 };
 
 export const UserModel: Model<UserDocument> = model("User", UserSchema);

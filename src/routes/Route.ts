@@ -18,6 +18,7 @@ export interface RouteInfo {
     requiresAuth: boolean
     handler: ExpressMiddleware
     middlewares?: Array<ExpressMiddleware>
+    authStrategy?: "jwt" | "jwt_tv"
 }
 
 /**
@@ -49,7 +50,7 @@ export class Route {
                 route.handler(req, res).catch(err => res.status(err.statusCode || 500).send(err));
             };
             app.route(path)[route.method]([
-                ...(route.requiresAuth ? [ authenticate("jwt", { session: false }) ] : []),
+                ...(route.requiresAuth ? [ authenticate(route.authStrategy || "jwt", { session: false }) ] : []),
                 ...(route.middlewares || []),
             ], handler);
         });
