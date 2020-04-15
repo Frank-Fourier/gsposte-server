@@ -244,7 +244,7 @@ export class MongoRepository<DTO, Doc extends Document> {
         return {
             pageIndex: parseInt(object["pageIndex"] || "0"),
             pageSize: parseInt(object["pageSize"] || "10"),
-            sort: JSON.parse(object["sort"] || "{}"),
+            sort: typeof object["sort"] === "object" ? object["sort"] : JSON.parse(object["sort"] || "{}"),
             populate: object["populate"] || "",
             select: object["select"] || "",
         };

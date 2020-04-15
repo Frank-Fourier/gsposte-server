@@ -260,7 +260,7 @@ export class PostelService {
             method: "POST",
             headers: { "Content-Type": "application/xml" },
             body: xmlBody,
-            timeout: 60000
+            timeout: 300000
         });
     }
 
