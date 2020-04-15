@@ -241,6 +241,9 @@ export const LetterSchema = new Schema<Letter>({
         type: Boolean,
         default: false,
     },
+    price: {
+        type: Number,
+    },
     stats: new Schema({
         status: Number,
         dateUploaded: Date,

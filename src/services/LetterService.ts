@@ -146,7 +146,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             }).sort((a, b) => a.id - b.id)
                         }
                     }
-                });
+                }, false, false);
                 logFile.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
 
                 logFile.info("That's all folks!");
