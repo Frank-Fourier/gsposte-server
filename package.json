@@ -13,7 +13,6 @@
 		"pretest": "tsc -p .",
 		"watch": "mocha-typescript-watch",
 		"dev-test-watch": "mocha-typescript-watch",
-		"prepare": "tsc -p .",
 		"test": "mocha test/**/*.spec.ts"
 	},
 	"dependencies": {
