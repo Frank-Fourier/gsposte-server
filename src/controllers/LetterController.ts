@@ -24,17 +24,6 @@ export class LetterController extends CrudController {
             throw new httpErrors.Forbidden("This letter is marked as sent, so it can't be updated anymore.");
         }
 
-        // Checks for bad update body (pardon the bad code)
-        if (
-            ("sent" in req.body || "stats" in req.body || "uuid" in req.body) ||
-            ("$set" in req.body &&
-                ("sent" in req.body["$set"] || "stats" in req.body["$set"] || "uuid" in req.body["$set"]) ||
-                ("stats.status" in req.body["$set"] || "stats.envelopes" in req.body["$set"])
-            )
-        ) {
-            throw new httpErrors.Forbidden("You can't modify these parameters!");
-        }
-
         // Can proceed with the update call
         return super.updateById(req, res);
     }
