@@ -86,7 +86,8 @@ html(lang="it")
                 th CAP
                 th Città
                 th Prov.
-                th #{stats.envelopes.some(e => !!e.tracking) ? "Tracking" : "Track."}
+                if kind !== "LETTERA SEMPLICE"
+                    th #{stats.envelopes.some(e => !!e.tracking) ? "Tracking" : "Track."}
                 th Impon.
             tbody
                 each envelope, index in stats.envelopes
@@ -96,11 +97,12 @@ html(lang="it")
                         td(width="40%") #{envelope.recipient.fullName.toUpperCase()}
                             br
                             | #{envelope.recipient.address.street}
-                        td(width="8.5%") #{envelope.recipient.address.zip}
-                        td(width="8.5%") #{envelope.recipient.address.city.toUpperCase()}
-                        td(width="8.5%") #{envelope.recipient.address.province.toUpperCase()}
-                        td(width="8.5%") #{envelope.tracking || "-"}
-                        td(width="8.5%") #{price || "-"}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{envelope.recipient.address.zip}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{envelope.recipient.address.city.toUpperCase()}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{envelope.recipient.address.province.toUpperCase()}
+                        if kind !== "LETTERA SEMPLICE"
+                            td(width="8.5%") #{envelope.tracking || "-"}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{price || "-"}
         p
             | Tot. Prodotti:
             b  #{stats.envelopes.length}

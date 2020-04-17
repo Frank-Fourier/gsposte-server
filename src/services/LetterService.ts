@@ -27,8 +27,13 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     public async save(letter: Letter, depopulate = true): Promise<LetterDocument> {
         const saved = await (await super.save(letter)).populate("sender recipients").execPopulate();
+        const price = await this.priceService.calculatePrice(saved);
+        await saved.updateOne({ $set: { price: price }}).exec();
+        saved.price = price;
+
         try {
-            process.env.NODE_ENV !== "test" && await this.pdf.formatAndSavePdf(saved);
+            if (process.env.NODE_ENV !== "test")
+                await this.pdf.formatAndSavePdf(saved);
         } catch (err) {
             await this.deleteById(saved.id);
             throw err;
@@ -38,6 +43,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
         const updated = await (await super.updateById(id, updateBody, upsert, runValidators)).populate("sender recipients").execPopulate();
+        if (updateBody.recipients || updateBody.kind) {
+            const price = await this.priceService.calculatePrice(updated);
+            await updated.updateOne({ $set: { price: price }}).exec();
+            updated.price = price;
+        }
+
         try {
             if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
                 await this.pdf.formatAndSavePdf(updated);
@@ -50,6 +61,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     public async updateOne(query: MongoQuery<Letter & LetterDocument>, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
         const updated = await (await super.updateOne(query, updateBody, upsert, runValidators)).populate("sender recipients").execPopulate();
+        if (updateBody.recipients || updateBody.kind) {
+            const price = await this.priceService.calculatePrice(updated);
+            await updated.updateOne({ $set: { price: price }}).exec();
+            updated.price = price;
+        }
+
         try {
             if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
                 await this.pdf.formatAndSavePdf(updated);

@@ -111,7 +111,7 @@ export class PdfService {
 
             return await this.toBase64(path);
         } catch (err) {
-            logger.error(`Failed to format PDF for postel! Error: ${err}`);
+            logger.error(`Failed to format PDF for postel! Error: `, err);
             throw err;
         }
     }
@@ -195,7 +195,7 @@ export class PdfService {
                 lineHeight: 15
             });
 
-            if (process.env.NODE_ENV !== "production") {
+            if (process.env.NODE_ENV !== "production" && process.env.LETTER_BBOXES === "true") {
                 // Debug bounding boxes
                 this.drawPostelBoxes(page, px);
             }

@@ -22,11 +22,10 @@ export const swaggerUi = setup(swaggerJSDoc({
         basePath: process.env.API_PATH
     },
     apis: [
-        "src/models/**/*Model.ts",
-        "src/services/**/*Service.ts",
-        "src/services/*Repository.ts",
-        "src/controllers/**/*Controller.ts",
-        "src/routes/**/*Route.ts"
+        "src/models/**/*.ts",
+        "src/services/**/*.ts",
+        "src/controllers/**/*.ts",
+        "src/routes/**/*.ts"
     ]
 }), swaggerOptions);
 

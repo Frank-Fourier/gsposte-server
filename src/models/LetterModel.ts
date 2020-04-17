@@ -88,8 +88,12 @@ import { Recipient, RecipientDocument, RecipientSchema } from "@models/Recipient
  *             example: B887A8D3-2533-4AA7-9112-43ED8144BA96
  *           paid:
  *             type: boolean
+ *             description: True if this letter's invoice was paid correctly.
  *             example: false
- *             description: True if this letter's invoice was paid correctly
+ *           price:
+ *             type: number
+ *             description: Price of a single envelope. Calculated based on letter kind and number of recipients.
+ *             example: 1.1
  *           stats:
  *             type: object
  *             description: Stats about this letter. Gets filled by the Query CRON. You can't update this field or its children manually.
@@ -152,6 +156,7 @@ export interface LetterDocument extends Letter, Document {
     sent: boolean
     uuid?: string
     paid?: boolean
+    price?: number
     stats?: {
         status: number
         dateUploaded?: Date | string
