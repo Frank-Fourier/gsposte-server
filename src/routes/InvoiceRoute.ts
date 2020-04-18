@@ -138,6 +138,40 @@ export class InvoiceRoute extends Route {
             /**
              * @swagger
              *
+             * /invoice/query:
+             *   post:
+             *     tags:
+             *       - Invoices
+             *     description: Find invoices associated with the user requesting. If admin, it ignores the association, you can find all of them.
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: Query model
+             *         required: true
+             *         in: body
+             *         schema:
+             *           $ref: "#/definitions/QueryModel"
+             *     responses:
+             *       200:
+             *         description: Query result
+             *         schema:
+             *           $ref: "#/definitions/Paginated"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/query",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.invoiceController.find(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /invoice/{id}:
              *   get:
              *     tags:
