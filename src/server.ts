@@ -20,6 +20,7 @@ import { LetterRoute } from "@routes/LetterRoute";
 import { PdfRoute } from "@routes/PdfRoute";
 import { MunicipalityRoute } from "@routes/MunicipalityRoute";
 import { PriceRoute } from "@routes/PriceRoute";
+import { InvoiceRoute } from "@routes/InvoiceRoute";
 import { TvUserRoute } from "@routes/tv/TvUserRoute";
 import { TvReportRoute } from "@routes/tv/TvReportRoute";
 
@@ -44,6 +45,7 @@ export class ExpressServer {
         ioc.resolve(PdfRoute),
         ioc.resolve(MunicipalityRoute),
         ioc.resolve(PriceRoute),
+        ioc.resolve(InvoiceRoute),
         ioc.resolve(TvUserRoute),
         ioc.resolve(TvReportRoute),
     ];
