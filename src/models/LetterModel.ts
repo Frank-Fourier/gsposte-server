@@ -14,6 +14,7 @@ import { UserDocument } from "@models/UserModel";
 import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument, RecipientSchema } from "@models/RecipientModel";
+import { InvoiceDocument } from "@models/InvoiceModel";
 
 /**
  * @swagger
@@ -77,6 +78,10 @@ import { Recipient, RecipientDocument, RecipientSchema } from "@models/Recipient
  *         properties:
  *           _id:
  *             type: string
+ *             example: 5c991af86327ba47393f2fb3
+ *           invoice:
+ *             type: string
+ *             description: Invoice associated with this letter
  *             example: 5c991af86327ba47393f2fb3
  *           sent:
  *             type: boolean
@@ -156,6 +161,7 @@ export interface LetterDocument extends Letter, Document {
     sent: boolean
     uuid?: string
     paid?: boolean
+    invoice?: string | InvoiceDocument
     price?: number
     stats?: {
         status: number
@@ -245,6 +251,10 @@ export const LetterSchema = new Schema<Letter>({
     paid: {
         type: Boolean,
         default: false,
+    },
+    invoice: {
+        type: Schema.Types.ObjectId,
+        ref: "Invoice",
     },
     price: {
         type: Number,
