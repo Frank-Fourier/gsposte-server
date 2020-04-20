@@ -274,6 +274,11 @@ export const LetterSchema = new Schema<Letter>({
             }, { _id: false })
         ]
     }, { _id: false }),
+}, {
+    timestamps: {
+        createdAt: true,
+        updatedAt: true,
+    }
 });
 
 export const LetterModel: Model<LetterDocument> = model("Letter", LetterSchema);

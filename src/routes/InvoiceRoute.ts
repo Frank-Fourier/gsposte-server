@@ -202,6 +202,41 @@ export class InvoiceRoute extends Route {
                 requiresAuth: true,
                 handler: (req, res) => this.invoiceController.findById(req, res)
             },
+            /**
+             * @swagger
+             *
+             * /invoice/{id}:
+             *   delete:
+             *     tags:
+             *       - Invoices
+             *     description: Delete an invoice by its id, removes invoice ref from associated letters. Only admins can do this!
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: id
+             *         required: true
+             *         in: path
+             *         description: Mongo id of the invoice to delete
+             *     responses:
+             *       200:
+             *         description: Deleted invoice
+             *         schema:
+             *           $ref: "#/definitions/InvoiceDocument"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             *       403:
+             *         $ref: "#/responses/Forbidden"
+             */
+            {
+                path: "/:id",
+                method: RequestMethod.DELETE,
+                requiresAuth: true,
+                handler: (req, res) => this.invoiceController.deleteById(req, res)
+            }
         ]);
     }
 

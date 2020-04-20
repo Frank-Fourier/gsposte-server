@@ -78,6 +78,11 @@ export const RubricSchema = new Schema<Rubric>({
         type: String,
         maxlength: 500,
     }
+}, {
+    timestamps: {
+        createdAt: true,
+        updatedAt: true,
+    }
 });
 
 export const RubricModel: Model<RubricDocument> = model("Rubric", RubricSchema);

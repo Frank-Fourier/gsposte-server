@@ -125,6 +125,11 @@ export const InvoiceSchema = new Schema({
     paymentDate: {
         type: Date,
     }
+}, {
+    timestamps: {
+        createdAt: true,
+        updatedAt: true,
+    }
 });
 
 export const InvoiceModel: Model<InvoiceDocument> = model("Invoice", InvoiceSchema);

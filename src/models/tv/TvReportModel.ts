@@ -77,6 +77,11 @@ export const TvReportSchema = new Schema<TvReport>({
         type: String,
         default: []
     }]
+}, {
+    timestamps: {
+        createdAt: true,
+        updatedAt: true,
+    }
 });
 
 export const TvReportModel: Model<TvReportDocument> = model("TvReport", TvReportSchema);

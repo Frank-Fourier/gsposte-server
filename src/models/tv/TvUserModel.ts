@@ -1,7 +1,8 @@
 import { Document, model, Model, Schema } from "mongoose";
-import { Decoder, object, string } from "@mojotech/json-type-validation";
+import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
 import { encryptPasswordSync } from "@utils/crypto";
 import uniqueValidator from "mongoose-unique-validator";
+import { UserDocument } from "@models/UserModel";
 
 /**
  * @swagger
@@ -39,6 +40,7 @@ import uniqueValidator from "mongoose-unique-validator";
  *             example: 2020-01-02T18:16:24.892Z
  */
 export interface TvUser {
+    user: string | UserDocument
     username: string
     email: string
     password: string
@@ -46,12 +48,18 @@ export interface TvUser {
 export interface TvUserDocument extends TvUser, Document {
 }
 export const tvUserDecoder: Decoder<TvUser> = object({
+    user: optional(string()),
     username: string(),
     email: string(),
     password: string(),
 });
 
 export const TvUserSchema = new Schema<TvUser>({
+    user: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: "User is required.",
+    },
     username: {
         type: String,
         required: "Username is required.",

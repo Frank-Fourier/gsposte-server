@@ -26,6 +26,14 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         super(invoiceModel, invoiceDecoder, [ "number" ]);
     }
 
+    public async deleteById(id: string): Promise<InvoiceDocument> {
+        const invoice = await this.findById(id, { populate: "letters" });
+        for (const letter of invoice.letters as Array<LetterDocument>) {
+            await letter.updateOne({ $unset: { invoice: "" } });
+        }
+        return super.deleteById(id);
+    }
+
     /**
      * Generate an invoice for a set of letters. The letters array must not be empty,
      * and all the letters must have the same sender.
