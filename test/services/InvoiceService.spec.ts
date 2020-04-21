@@ -34,17 +34,17 @@ import { LetterDocument } from "@models/LetterModel";
     @test async "Should generate a single invoice correctly" () {
         const sender = await this.senderService.save(generateMockSender(this.system.id));
         const letters = [
-            await saveMockLetter(this.system.id, sender.id, null, null, true),
-            await saveMockLetter(this.system.id, sender.id, null, null, true),
-            await saveMockLetter(this.system.id, sender.id, null, null, true),
-            await saveMockLetter(this.system.id, sender.id, null, null, true),
-            await saveMockLetter(this.system.id, sender.id, null, null, true),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
         ];
 
         try {
             await this.invoiceService.generateSingleInvoice([
-                await saveMockLetter(this.system.id, sender.id, null, null, true),
-                await saveMockLetter(this.system.id, (await this.senderService.save(generateMockSender(this.system.id))).id, null, null, true),
+                await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+                await saveMockLetter({ user: this.system.id, sender: (await this.senderService.save(generateMockSender(this.system.id))).id, sent: true }),
             ])
         } catch (err) {
             expect(err).to.exist;
@@ -71,13 +71,13 @@ import { LetterDocument } from "@models/LetterModel";
             await this.senderService.save(generateMockSender(this.system.id)),
         ];
         const firstBatch = [
-            await saveMockLetter(this.system.id, sender1.id, null, null, true),
-            await saveMockLetter(this.system.id, sender1.id, null, null, true),
-            await saveMockLetter(this.system.id, sender1.id, null, null, true),
+            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true }),
         ];
         const secondBatch = [
-            await saveMockLetter(this.system.id, sender2.id, null, null, true),
-            await saveMockLetter(this.system.id, sender2.id, null, null, true),
+            await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true }),
         ];
         const results = await this.invoiceService.generateInvoicesForUser(this.system.id);
         results.forEach(r => r.invoice.depopulate("recipients"));
@@ -108,11 +108,11 @@ import { LetterDocument } from "@models/LetterModel";
     @test async "Should not include already paid letters in new invoices" () {
         // First letters and invoice
         const sender = await this.senderService.save(generateMockSender(this.system.id));
-        await saveMockLetter(this.system.id, sender.id, null, null, true);
-        await saveMockLetter(this.system.id, sender.id, null, null, true);
-        await saveMockLetter(this.system.id, sender.id, null, null, true);
-        await saveMockLetter(this.system.id, sender.id, null, null, true);
-        await saveMockLetter(this.system.id, sender.id, null, null, true);
+        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
         // Will create 1 new invoice
         const [ { invoice } ] = await this.invoiceService.generateInvoicesForUser(this.system.id);
 
@@ -122,9 +122,9 @@ import { LetterDocument } from "@models/LetterModel";
         // But wait! Now the client sends another 3 letters with another sender and makes an invoice for them!
         const newSender = await this.senderService.save(generateMockSender(this.system.id));
         const newLetters = [
-            await saveMockLetter(this.system.id, newSender.id, null, null, true),
-            await saveMockLetter(this.system.id, newSender.id, null, null, true),
-            await saveMockLetter(this.system.id, newSender.id, null, null, true),
+            await saveMockLetter({ user: this.system.id, sender: newSender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: newSender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: newSender.id, sent: true }),
         ];
         newLetters.forEach(l => l.depopulate("user sender recipients"));
 
@@ -139,7 +139,7 @@ import { LetterDocument } from "@models/LetterModel";
 
     @timeout(60000)
     @test async "Should generate a letter invoice PDF correctly" () {
-        const saved = await saveMockLetter(this.system.id);
+        const saved = await saveMockLetter({ user: this.system.id });
 
         // Emulate the final behaviour of batchUploadLetters()
         await this.letterService.updateById(saved.id, {

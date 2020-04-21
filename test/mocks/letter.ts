@@ -13,13 +13,13 @@ import { ioc } from "@ioc";
 import { SenderService } from "@services/SenderService";
 import { RecipientService } from "@services/RecipientService";
 
-export function generateMockLetter(user: string | UserDocument, sender: string | SenderDocument, recipients: Array<string | RecipientDocument>, codePdf: string): Letter {
+export function generateMockLetter(user: string | UserDocument, sender: string | SenderDocument, recipients: Array<string | RecipientDocument>, codePdf: string, kind?: LetterKind): Letter {
     return {
         user: user,
         sender: sender,
         recipients: recipients,
         subject: faker.fake("{{company.companyName}} IMPORTANT TEST LETTERS"),
-        kind: LetterKind.LETTERA_SEMPLICE,
+        kind: kind || LetterKind.LETTERA_SEMPLICE,
         codePdf: codePdf,
         density: 150,
         test: true,
@@ -27,23 +27,24 @@ export function generateMockLetter(user: string | UserDocument, sender: string |
     };
 }
 
-export async function saveMockLetter(user: string | UserDocument, sender?: string | SenderDocument, recipients?: Array<string | RecipientDocument>, codePdf?: string, sent?: boolean) {
-    const userId = typeof(user) === "object" ? (user as UserDocument).id : user;
+export async function saveMockLetter(options: { user: string | UserDocument, sender?: string | SenderDocument, recipients?: Array<string | RecipientDocument>, codePdf?: string, sent?: boolean, kind?: LetterKind }) {
+    const userId = typeof(options.user) === "object" ? (options.user as UserDocument).id : options.user;
     // THIS SHIT DOESN'T WORK!?!?!?!?
     //const recipients = await Promise.all(
     //    Array(numRecipients).map(async () => await ioc.resolve(RecipientService).save(generateMockRecipient(userId)))
     //);
     const letter = await (await ioc.resolve(LetterService).save(generateMockLetter(
         userId,
-        sender || (await ioc.resolve(SenderService).save(generateMockSender(userId))).id,
-        recipients || [
+        options.sender || (await ioc.resolve(SenderService).save(generateMockSender(userId))).id,
+        options.recipients || [
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
         ],
-        codePdf || TEST_CODE_PDF
+        options.codePdf || TEST_CODE_PDF,
+        options.kind || LetterKind.LETTERA_SEMPLICE,
     )));
-    return await ioc.resolve(LetterService).updateById(letter.id, { $set: { sent: sent || false }});
+    return await ioc.resolve(LetterService).updateById(letter.id, { $set: { sent: options.sent || false }});
 }

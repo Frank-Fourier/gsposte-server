@@ -23,6 +23,7 @@ import { PriceRoute } from "@routes/PriceRoute";
 import { InvoiceRoute } from "@routes/InvoiceRoute";
 import { TvUserRoute } from "@routes/tv/TvUserRoute";
 import { TvReportRoute } from "@routes/tv/TvReportRoute";
+import { StatsRoute } from "@routes/StatsRoute";
 
 import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
@@ -48,6 +49,7 @@ export class ExpressServer {
         ioc.resolve(InvoiceRoute),
         ioc.resolve(TvUserRoute),
         ioc.resolve(TvReportRoute),
+        ioc.resolve(StatsRoute),
     ];
 
     constructor(
