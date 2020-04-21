@@ -1,6 +1,6 @@
 {
 	"name": "gsposte-server",
-	"version": "0.10.0",
+	"version": "0.10.1",
 	"description": "GSPoste REST API",
 	"main": "src/index.ts",
 	"repository": "git@bitbucket.org:stasbranger/gsposte-server.git",

@@ -12,7 +12,6 @@ import { UserDocument } from "@models/UserModel";
  *     type: object
  *     required:
  *       - username
- *       - email
  *       - password
  *     properties:
  *       username:
@@ -40,9 +39,9 @@ import { UserDocument } from "@models/UserModel";
  *             example: 2020-01-02T18:16:24.892Z
  */
 export interface TvUser {
-    user: string | UserDocument
+    user?: string | UserDocument
     username: string
-    email: string
+    email?: string
     password: string
 }
 export interface TvUserDocument extends TvUser, Document {
@@ -50,7 +49,7 @@ export interface TvUserDocument extends TvUser, Document {
 export const tvUserDecoder: Decoder<TvUser> = object({
     user: optional(string()),
     username: string(),
-    email: string(),
+    email: optional(string()),
     password: string(),
 });
 
@@ -67,7 +66,6 @@ export const TvUserSchema = new Schema<TvUser>({
     },
     email: {
         type: String,
-        required: "Email is required.",
         unique: true,
         trim: true,
         lowercase: true,
