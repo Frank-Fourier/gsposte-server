@@ -18,3 +18,4 @@ test/assets/.~lock*
 public/pdf/
 public/xlsx/
 public/invoices/
+public/attachments/

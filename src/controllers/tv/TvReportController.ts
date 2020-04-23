@@ -30,9 +30,7 @@ export class TvReportController extends CrudController {
         };
 
         const pagination = this.tvReportService.paginateOptionsFromObject(req.body.pagination);
-        const result = !req.body.query["$text"]
-            ? await this.tvReportService.paginate(req.body.query, pagination)
-            : await this.tvReportService.searchByText(req.body.query["$text"], pagination);
+        const result = await this.tvReportService.paginate(req.body.query, pagination);
         return res.status(200).send(result);
     }
 

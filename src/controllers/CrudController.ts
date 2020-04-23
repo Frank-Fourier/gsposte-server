@@ -55,9 +55,7 @@ export class CrudController {
             }
         }
 
-        const result = !req.body.query["$text"]
-            ? await this.service.paginate(req.body.query, pagination)
-            : await this.service.searchByText(req.body.query["$text"], pagination);
+        const result = await this.service.paginate(req.body.query, pagination);
         return res.status(200).send(result);
     }
 

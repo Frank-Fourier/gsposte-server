@@ -83,6 +83,7 @@ export class ExpressServer {
         this.app.use(express.static("public/assets"));
         this.app.use("/documents", express.static("public/pdf"));
         this.app.use(express.static("public/invoices"));
+        this.app.use(express.static("public/attachments"));
         spinner && spinner.succeed();
     }
 

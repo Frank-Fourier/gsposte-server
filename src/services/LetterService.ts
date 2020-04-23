@@ -21,7 +21,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     constructor(private letterModel = LetterModel) {
         super(letterModel, letterDecoder, [
-            "subject", "kind", "codePdf", "sendAt", "notes"
+            "subject", "kind", "codePdf", "notes"
         ]);
     }
 
