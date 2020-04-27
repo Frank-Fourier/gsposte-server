@@ -114,6 +114,42 @@ export class TvReportRoute extends Route {
             /**
              * @swagger
              *
+             * /tv/report/read:
+             *   post:
+             *     tags:
+             *       - TV Reports
+             *     description: Pass in body an array of TV reports id and mark them all as read. Only TV users with a valid TV JWT token can do this!
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: Array of ids
+             *         required: true
+             *         in: body
+             *         type: array
+             *         items:
+             *           type: string
+             *     responses:
+             *       200:
+             *         description: TV report documents marked as read
+             *         schema:
+             *           $ref: "#/definitions/TvReportDocument"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/read",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                authStrategy: "jwt_tv",
+                handler: (req, res) => this.tvReportController.markAsRead(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /tv/report/attachment/upload:
              *   post:
              *     tags:

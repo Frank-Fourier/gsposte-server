@@ -29,7 +29,7 @@ const uploader = multer({
     }),
     limits: {
         files: 1,
-        fileSize: 10 * 1000 * 1000 // ~10MB
+        fileSize: 100 * 1000 * 1000 // ~100MB
     },
     // The file filter will only accept PDF files
     fileFilter(req: Request, file: Express.Multer.File, callback: (error: (Error | null), acceptFile: boolean) => void): void {
@@ -61,7 +61,7 @@ export class PdfService {
                         case "LIMIT_FILE_COUNT":
                             return reject(new httpErrors.BadRequest("More than one file field was passed to this upload request."));
                         case "LIMIT_FILE_SIZE":
-                            return reject(new httpErrors.PayloadTooLarge("The provided file is too heavy. Only file sizes < 10MB are acceptable for upload."));
+                            return reject(new httpErrors.PayloadTooLarge("The provided file is too heavy. Only file sizes < 100MB are acceptable for upload."));
                         case "LIMIT_UNEXPECTED_FILE":
                             return reject(new httpErrors.NotAcceptable("Only PDF files are acceptable for upload."));
                     }

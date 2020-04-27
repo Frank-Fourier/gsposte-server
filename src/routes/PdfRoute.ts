@@ -26,7 +26,7 @@ export class PdfRoute extends Route {
              *       - JWT: []
              *     parameters:
              *       - name: file
-             *         description: PDF file to upload. Max file size allowed is 10MB.
+             *         description: PDF file to upload. Max file size allowed is 100MB.
              *         required: true
              *         in: formData
              *         type: file
@@ -40,7 +40,7 @@ export class PdfRoute extends Route {
              *       406:
              *         description: Only PDF files are acceptable for upload.
              *       413:
-             *         description: The provided file is too heavy. Only file sizes < 10MB are acceptable for upload.
+             *         description: The provided file is too heavy. Only file sizes < 100MB are acceptable for upload.
              */
             {
                 path: "/upload",

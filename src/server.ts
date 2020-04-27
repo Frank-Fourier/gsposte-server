@@ -81,9 +81,12 @@ export class ExpressServer {
         this.app.use(helmet());
         this.app.disable("x-powered-by");
         this.app.use(express.static("public/assets"));
+
+        // STATIC FILES ROUTES
         this.app.use("/documents", express.static("public/pdf"));
-        this.app.use(express.static("public/invoices"));
-        this.app.use(express.static("public/attachments"));
+        this.app.use("/invoices", express.static("public/invoices"));
+        this.app.use("/attachments", express.static("public/attachments"));
+
         spinner && spinner.succeed();
     }
 

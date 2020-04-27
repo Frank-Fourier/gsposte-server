@@ -16,8 +16,8 @@ export class TvReportController extends CrudController {
         await this.authService.roleOnly(req, this.accessRole);
 
         // Upload the document
-        const filename = await this.tvReportService.upload(req, res);
-        return res.status(201).send({ filename: filename });
+        const file = await this.tvReportService.upload(req, res);
+        return res.status(201).send(file);
     }
 
     public async fetch(req: Request, res: Response) {
@@ -44,6 +44,12 @@ export class TvReportController extends CrudController {
         });
 
         return res.status(200).send(report);
+    }
+
+    public async markAsRead(req: Request, res: Response) {
+        // This method is used by TV users (not managers!) to update the read state of a report
+        const marked = await this.tvReportService.markAsRead(req.body);
+        return res.status(200).send(marked);
     }
 
 }
