@@ -76,11 +76,12 @@ export class ExpressServer {
             }
             next();
         });
-        this.app.use(bodyParser.urlencoded({ extended: false }));
+        this.app.use(bodyParser.json());
+        this.app.use(bodyParser.urlencoded({ extended: true }));
         this.app.use(cors);
         this.app.use(helmet());
-        this.app.disable("x-powered-by");
         this.app.use(express.static("public/assets"));
+        this.app.disable("x-powered-by");
 
         // STATIC FILES ROUTES
         this.app.use("/documents", express.static("public/pdf"));

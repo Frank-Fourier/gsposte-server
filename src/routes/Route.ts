@@ -47,7 +47,9 @@ export class Route {
             const path = `${process.env.API_PATH}${this.path}${route.path || ""}`;
 
             const handler = async (req: Request, res: Response) => {
-                route.handler(req, res).catch(err => res.status(err.statusCode || 500).send(err));
+                route.handler(req, res).catch(err => res.status(err.statusCode || 500).send({
+                    error: err instanceof Error ? err.toString() : err
+                }));
             };
             app.route(path)[route.method]([
                 ...(route.requiresAuth ? [ authenticate(route.authStrategy || "jwt", { session: false }) ] : []),
