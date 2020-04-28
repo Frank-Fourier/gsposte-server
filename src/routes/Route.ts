@@ -44,7 +44,7 @@ export class Route {
 
     makeRoutes(app: Application) {
         this.routes.forEach(route => {
-            const path = `${process.env.API_PATH}${this.path}${route.path || ""}`;
+            const path = `${process.env.API_PATH || ""}${this.path}${route.path || ""}`;
 
             const handler = async (req: Request, res: Response) => {
                 route.handler(req, res).catch(err => res.status(err.statusCode || 500).send({
