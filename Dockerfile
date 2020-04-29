@@ -2,7 +2,7 @@ FROM keymetrics/pm2:latest-alpine
 
 RUN echo "@edge http://nl.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
 RUN apk update
-RUN apk add \
+RUN apk add --no-cache \
         build-base \
         libtool \
         autoconf \
@@ -10,7 +10,14 @@ RUN apk add \
         jq \
         openssh \
         python \
-        libexecinfo-dev@edge
+        libexecinfo-dev@edge \
+        chromium \
+        nss \
+        freetype \
+        freetype-dev \
+        harfbuzz \
+        ca-certificates \
+        ttf-freefont
 
 # Copy package.json
 COPY package.json .
