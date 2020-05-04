@@ -21,12 +21,6 @@ RUN apk add --no-cache \
         ca-certificates \
         ttf-freefont
 
-# Create upload directories
-RUN mkdir public/attachments
-RUN mkdir public/invoices
-RUN mkdir public/pdf
-RUN mkdir public/xlsx
-
 # Copy package.json
 COPY package.json .
 
@@ -37,6 +31,12 @@ RUN npm install
 COPY . .
 COPY src src/
 COPY public public/
+
+# Create upload directories
+RUN mkdir public/attachments
+RUN mkdir public/invoices
+RUN mkdir public/pdf
+RUN mkdir public/xlsx
 
 # Compile the application into dist/
 RUN npm run build
