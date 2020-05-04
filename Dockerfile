@@ -1,5 +1,7 @@
 FROM keymetrics/pm2:latest-alpine
 
+WORKDIR /usr/src/app
+
 RUN echo "@edge http://nl.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
 RUN apk update
 RUN apk add --no-cache \
@@ -18,6 +20,12 @@ RUN apk add --no-cache \
         harfbuzz \
         ca-certificates \
         ttf-freefont
+
+# Create upload directories
+RUN mkdir public/attachments
+RUN mkdir public/invoices
+RUN mkdir public/pdf
+RUN mkdir public/xlsx
 
 # Copy package.json
 COPY package.json .
