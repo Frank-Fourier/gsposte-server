@@ -15,6 +15,10 @@ test/assets/.~lock*
 *.log
 
 # PDF and XLSX files
+!public/pdf/.gitkeep
+!public/xlsx/.gitkeep
+!public/invoices/.gitkeep
+!public/attachments/.gitkeep
 public/pdf/
 public/xlsx/
 public/invoices/

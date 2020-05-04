@@ -35,12 +35,6 @@ COPY . .
 COPY src src/
 COPY public public/
 
-# Create upload directories
-RUN mkdir public/attachments
-RUN mkdir public/invoices
-RUN mkdir public/pdf
-RUN mkdir public/xlsx
-
 # Compile the application into dist/
 RUN npm run build
 
