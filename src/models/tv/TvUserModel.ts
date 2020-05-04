@@ -41,7 +41,7 @@ export interface TvUser {
     user?: string | UserDocument
     username: string
     email?: string
-    password: string
+    password?: string
 }
 export interface TvUserDocument extends TvUser, Document {
 }
@@ -49,7 +49,7 @@ export const tvUserDecoder: Decoder<TvUser> = object({
     user: optional(string()),
     username: string(),
     email: optional(string()),
-    password: string(),
+    password: optional(string()),
 });
 
 export const TvUserSchema = new Schema<TvUser>({
