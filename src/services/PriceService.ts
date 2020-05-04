@@ -3,9 +3,13 @@ import { Price, priceDecoder, PriceDocument, PriceModel } from "@models/PriceMod
 import { provide } from "inversify-binding-decorators";
 import { LetterDocument } from "@models/LetterModel";
 import { LetterKind } from "@services/PostelService";
+import { inject } from "inversify";
+import { PdfService } from "@services/PdfService";
 
 @provide(PriceService)
 export class PriceService extends MongoRepository<Price, PriceDocument> {
+
+    @inject(PdfService) private pdf: PdfService;
 
     constructor(private priceModel = PriceModel) {
         super(priceModel, priceDecoder);
@@ -23,8 +27,14 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
     public async calculatePrice(letter: LetterDocument): Promise<number> {
         const envelopeWeight = parseFloat(process.env.ENVELOPE_WEIGHT || "10");
         const paperWeight = parseFloat(process.env.PAPER_WEIGHT || "1");
-        const totalWeight = envelopeWeight + (paperWeight * letter.recipients.length);
+        let pages = 1;
+        try {
+            pages = (await this.pdf.metadata(`public/${letter.codePdf}/original.pdf`)).pages;
+        } catch (err) {
+            // Ignore errors
+        }
 
+        const totalWeight = envelopeWeight + (paperWeight * pages);
         return (await this.getPriceForWeight(totalWeight, letter.kind)).price;
     }
 
