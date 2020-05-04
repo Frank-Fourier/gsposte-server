@@ -1,8 +1,8 @@
 import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
 import { encryptPasswordSync } from "@utils/crypto";
-import uniqueValidator from "mongoose-unique-validator";
 import { UserDocument } from "@models/UserModel";
+import uniqueValidator from "mongoose-unique-validator";
 
 /**
  * @swagger
@@ -12,7 +12,6 @@ import { UserDocument } from "@models/UserModel";
  *     type: object
  *     required:
  *       - username
- *       - password
  *     properties:
  *       username:
  *         type: string
@@ -72,7 +71,6 @@ export const TvUserSchema = new Schema<TvUser>({
     },
     password: {
         type: String,
-        required: "Password is required.",
         set: (password: string) => encryptPasswordSync(password),
     },
 }, {
