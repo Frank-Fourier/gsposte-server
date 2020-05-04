@@ -19,7 +19,10 @@ RUN apk add --no-cache \
         freetype-dev \
         harfbuzz \
         ca-certificates \
-        ttf-freefont
+        ttf-freefont \
+        poppler-utils \
+        imagemagick \
+        ghostscript
 
 # Copy package.json
 COPY package.json .
