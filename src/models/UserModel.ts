@@ -137,7 +137,6 @@ export const UserSchema = new Schema<User>({
     },
     iva: {
         type: String,
-        required: "IVA is required.",
         maxlength: 11,
     },
     referCode: {

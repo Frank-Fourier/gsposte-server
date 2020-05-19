@@ -21,8 +21,11 @@ export class InvoiceController extends CrudController {
         }
 
         const letterIds = req.body as Array<string>;
+        const invoiceNumber = req.header("X-Invoice-Number");
+
         const invoice = await this.invoiceService.generateSingleInvoice(
-            await Promise.all(letterIds.map(id => this.letterService.findById(id)))
+            await Promise.all(letterIds.map(id => this.letterService.findById(id))),
+            invoiceNumber ? parseInt(invoiceNumber) : undefined
         );
 
         return res.status(201).send(invoice);

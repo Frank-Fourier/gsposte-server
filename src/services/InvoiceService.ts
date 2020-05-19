@@ -78,11 +78,17 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             user: letters[0].user,
             sender: letters[0].sender,
             letters: letters.filter(l => l.sent),
-            number: number || (await this.getLatestInvoiceNumber() + 1),
             taxable: parseFloat(taxableSum.toPrecision(2)),
             iva: parseFloat(iva.toPrecision(2)),
             total: parseFloat(total.toPrecision(2)),
         });
+
+        if (!!number) {
+            await invoice.updateOne({
+                $set: { number: number }
+            }).exec();
+            invoice.number = number;
+        }
 
         for (const letter of letters) {
             await letter.updateOne({ $set: { invoice: invoice.id }}).exec();
@@ -129,7 +135,9 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }> = [];
 
         for (const letter of Object.values(aggregated)) {
-            results.push(await this.generateSingleInvoice(letter));
+            const lastNumber = await this.getLatestInvoiceNumber();
+            const invoice = await this.generateSingleInvoice(letter, lastNumber + 1);
+            results.push(invoice);
         }
 
         return results;

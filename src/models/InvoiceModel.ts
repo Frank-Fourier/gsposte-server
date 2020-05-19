@@ -67,20 +67,19 @@ export interface Invoice {
     user?: string | UserDocument
     sender: string | SenderDocument
     letters: Array<string | LetterDocument>
-    number: number
     taxable: number
     iva: number
     total: number
 }
 export interface InvoiceDocument extends Invoice, Document {
     paid: boolean
+    number: number
     paymentDate?: Date | string
 }
 export const invoiceDecoder: Decoder<Invoice> = object({
     user: optional(string()),
     sender: string(),
     letters: array(string()),
-    number: number(),
     taxable: number(),
     iva: number(),
     total: number(),
@@ -104,7 +103,6 @@ export const InvoiceSchema = new Schema({
     }],
     number: {
         type: Number,
-        required: "Invoice number is required.",
     },
     taxable: {
         type: Number,
