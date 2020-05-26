@@ -47,6 +47,77 @@ export class TvUserRoute extends Route {
             /**
              * @swagger
              *
+             * /tv/user/import:
+             *   post:
+             *     tags:
+             *       - TV Users
+             *     description: Import TV users from an XLSX file. Only TV managers (and admins) can do this!
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: file
+             *         description: XLSX file containing the TV users to import.
+             *         required: true
+             *         in: formData
+             *         type: file
+             *     responses:
+             *       201:
+             *         description: TV users imported correctly, returns the list of imported TV users and the errors that occured during the process.
+             *         schema:
+             *           $ref: "#/definitions/TvUsersImportResponse"
+             *       400:
+             *         description: More than one file was passed to the request, or generic error while uploading.
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             *       406:
+             *         description: Only XLS/XLSX files are acceptable for upload.
+             *       413:
+             *         description: The provided file is too heavy. Only file sizes < 50MB are acceptable for upload.
+             */
+            {
+                path: "/import",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.tvUserController.importFromXLSX(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /tv/user/export:
+             *   post:
+             *     tags:
+             *       - TV Users
+             *     description: Find users associated with the user requesting, then it exports them in XLSX format. Only TV managers (and admins) can do this! If admin, it ignores the association, you can export all of them.
+             *     produces:
+             *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: Query model
+             *         required: true
+             *         in: body
+             *         type: object
+             *     responses:
+             *       200:
+             *         description: XLSX file containing the requested TV users
+             *         schema:
+             *           type: file
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/export",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.tvUserController.exportToXLSX(req, res),
+            },
+            /**
+             * @swagger
+             *
              * /tv/user/query:
              *   post:
              *     tags:

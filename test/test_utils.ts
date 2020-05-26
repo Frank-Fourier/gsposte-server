@@ -89,7 +89,7 @@ export function assertSameInvoice(original: Invoice | InvoiceDocument, candidate
     expect(candidate).to.exist;
     expect(String(candidate.user)).to.equal(String(original.user));
     expect(String(candidate.sender)).to.equal(String(original.sender));
-    expect(candidate.number).to.equal(original.number);
+    expect(candidate.number).to.equal('number' in original ? original.number : undefined);
     expect(candidate.taxable).to.equal(original.taxable);
     expect(candidate.iva).to.equal(original.iva);
     expect(candidate.total).to.equal(original.total);
