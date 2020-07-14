@@ -1,14 +1,15 @@
 import { provide } from "inversify-binding-decorators";
 import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { PDF_ROOT, PdfService } from "@services/PdfService";
-import { LetterKind, PostelService, PostelStatus } from "@services/PostelService";
+import { LetterKind } from "@services/PostelService";
 import { PriceService } from "@services/PriceService";
 import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
-import { SenderDocument } from "@models/SenderModel";
-import { RecipientDocument } from "@models/RecipientModel";
-import { generateUUID } from "@utils/random";
+import { mapSenderToPerson, SenderDocument } from "@models/SenderModel";
+import { mapRecipientToPerson } from "@models/RecipientModel";
 import { createLogFile, detachLogFile, logger } from "@utils/winston";
+import { PosteWayService } from "@services/PosteWayService";
+import winston from "winston";
 import moment from "moment";
 import fs from "fs";
 
@@ -16,7 +17,7 @@ import fs from "fs";
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     @inject(PdfService) private pdf: PdfService;
-    @inject(PostelService) private postel: PostelService;
+    @inject(PosteWayService) private posteWay: PosteWayService;
     @inject(PriceService) private priceService: PriceService;
 
     constructor(private letterModel = LetterModel) {
@@ -26,18 +27,24 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public async save(letter: Letter, depopulate = true): Promise<LetterDocument> {
-        const saved = await (await super.save(letter)).populate("sender recipients").execPopulate();
+        let saved = await (await super.save(letter)).populate("sender recipients").execPopulate();
         const price = await this.priceService.calculatePrice(saved);
         await saved.updateOne({ $set: { price: price }}).exec();
         saved.price = price;
 
-        try {
-            if (process.env.NODE_ENV !== "test")
-                await this.pdf.formatAndSavePdf(saved);
-        } catch (err) {
-            await this.deleteById(saved.id);
-            throw err;
+        if (!letter.sendAt || moment(letter.sendAt).isSameOrBefore(moment())) {
+            // No need to schedule! Send everything immediately!
+            saved = await this.sendLetter(saved);
         }
+
+        // Not needed anymore as I don't have to format PDFs with PosteWay
+        // try {
+        //     if (process.env.NODE_ENV !== "test")
+        //         await this.pdf.formatAndSavePdf(saved);
+        // } catch (err) {
+        //     await this.deleteById(saved.id);
+        //     throw err;
+        // }
         return depopulate ? saved.depopulate("sender recipients") : saved;
     }
 
@@ -49,13 +56,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             updated.price = price;
         }
 
-        try {
-            if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
-                await this.pdf.formatAndSavePdf(updated);
-        } catch (err) {
-            await this.deleteById(updated.id);
-            throw err;
-        }
+        // Not needed anymore as I don't have to format PDFs with PosteWay
+        // try {
+        //     if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
+        //         await this.pdf.formatAndSavePdf(updated);
+        // } catch (err) {
+        //     await this.deleteById(updated.id);
+        //     throw err;
+        // }
         return updated;
     }
 
@@ -67,107 +75,42 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             updated.price = price;
         }
 
-        try {
-            if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
-                await this.pdf.formatAndSavePdf(updated);
-        } catch (err) {
-            await this.deleteById(updated.id);
-            throw err;
-        }
+        // Not needed anymore as I don't have to format PDFs with PosteWay
+        // try {
+        //     if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
+        //         await this.pdf.formatAndSavePdf(updated);
+        // } catch (err) {
+        //     await this.deleteById(updated.id);
+        //     throw err;
+        // }
         return updated;
     }
 
     /**
-     * This function gets all the letters marked as **not sent** and uploads all of them to Postel.
+     * This function gets all the letters marked as **not sent** and uploads all of them to PosteWay if needed.
      * It's normally called by its CRON job, but no one stops you from calling it yourself.
      *
      * @returns Promise resolved with the number of errors when all the letters are sent.
      */
-    public async batchUploadLetters(): Promise<number> {
+    public async batchSendScheduledLetters(): Promise<number> {
         const toSend = (await this.find({ sent: false }, { populate: "sender recipients" }))
             .filter(l => moment(l.sendAt).isSameOrBefore(moment()));
 
         if (toSend.length === 0) {
-            logger.info(`Upload job has no letters to send! Waiting for the next CRON call...`);
+            logger.info(`Upload job has no scheduled letters to send! Waiting for the next CRON call...`);
             return 0;
         }
 
-        logger.info(`Time to send letters! This time I'll send ${toSend.length} letters, using ${process.env.CURRENT_ENVELOPE_ID} as the EnvelopeID base.`);
+        logger.info(`Time to send scheduled letters! This time I'll send ${toSend.length} letters.`);
         let errors = 0;
 
         for (const letter of toSend) {
             const logFile = createLogFile(`${letter.codePdf}.log`);
             try {
-                logger.info(`Sending letter '${letter.codePdf}'...`);
+                logger.info(`Sending scheduled letter '${letter.codePdf}'...`);
+                await this.updateById(letter.id, { $set: { sent: true }});
 
-                let pdfBase64 = "";
-
-                const pdf_postel_path = `${PDF_ROOT}/${letter.codePdf}/postel.pdf`;
-                const pdf_postel_exists: boolean = !!(await fs.promises.stat(pdf_postel_path).catch(() => false));
-
-                if (!pdf_postel_exists) {
-                    logger.info(`Letter '${letter.codePdf}' does not have formatted Postel PDF! Creating one...`);
-                    logFile.info("This file does not have formatted Postel PDF, hence I'm creating one.");
-                    pdfBase64 = await this.pdf.formatAndSavePdf(letter);
-                    logFile.info("Postel PDF was created successfully.");
-                }
-
-                const uuid = generateUUID();
-                logFile.info(`Generated UUID is ${uuid}`);
-
-                const pages = (await this.pdf.metadata(pdf_postel_path)).pages;
-                logFile.info(`The formatted PDF file has ${pages} pages. Generating Base64...`);
-
-                if (!pdfBase64) {
-                    pdfBase64 = await this.pdf.toBase64(pdf_postel_path);
-                }
-
-                const baseEnvelopeID = parseInt(process.env.CURRENT_ENVELOPE_ID || "0") + 1;
-                logFile.info(`Generated Base64. BaseEnvelopeID is ${baseEnvelopeID}. Calling Postel to upload...`);
-
-                const postelRes = await this.postel.upload(
-                    letter.sender as SenderDocument,
-                    letter.recipients as Array<RecipientDocument>, {
-                        test: process.env.NODE_ENV !== "production" ? true : letter.test,
-                        letterType: letter.kind,
-                        setID: uuid,
-                        baseEnvelopeID: baseEnvelopeID,
-                        pdf: {
-                            pages: pages,
-                            base64: pdfBase64,
-                        }
-                    }
-                );
-                if (postelRes.code !== 0 || !this.postel.isUploadResponseOk(postelRes))
-                    throw { error: "MpxUpload response is not OK.", response: postelRes };
-
-                process.env.CURRENT_ENVELOPE_ID = (baseEnvelopeID + letter.recipients.length).toString();
-                logFile.info(`Postel upload API called successfully, got this result: `, postelRes);
-
-                const price = await this.priceService.calculatePrice(letter);
-                logFile.info(`Current EnvelopeID is ${process.env.CURRENT_ENVELOPE_ID}. Calculated price for each letter is ${price} €. Updating MongoDB entry for this letter...`);
-
-                const updated = await this.updateById(letter._id, {
-                    $set: {
-                        sent: true,
-                        uuid: uuid,
-                        price: price,
-                        stats: {
-                            status: 0,
-                            envelopes: letter.recipients.map((r: RecipientDocument, index) => {
-                                return {
-                                    recipient: r.toObject(),
-                                    id: baseEnvelopeID + index,
-                                    status: 0
-                                }
-                            }).sort((a, b) => a.id - b.id)
-                        }
-                    }
-                }, false, false);
-                logFile.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
-
-                logFile.info("That's all folks!");
-                logger.info("Ok!");
+                await this.sendLetter(letter, logFile);
             } catch (err) {
                 logger.error(`ARGH! Got an error while trying to send letter '${letter.codePdf}'!`, err);
                 logFile.error(`ARGH! Got an error while sending this letter!`, err);
@@ -177,7 +120,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             }
         }
 
-        logger.info(`Done sending letters. Current EnvelopeID is: ${process.env.CURRENT_ENVELOPE_ID}!`);
+        logger.info(`Done sending scheduled letters.`);
         return errors;
     }
 
@@ -189,6 +132,126 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      * @returns Promise resolved with the number of errors when all the queries are done.
      */
     public async batchQueryLetters(): Promise<number> {
+        // Filter only letters that are recent
+        const toQuery = (await this.find({ sent: true }, { populate: "sender recipients" }))
+            .filter(l => !!l.posteway && (moment().diff(l.sendAt, "months") <= 1));
+
+        if (toQuery.length === 0) {
+            logger.info(`Query job has no letters to check! Waiting for the next CRON call...`);
+            return 0;
+        }
+
+        logger.info(`Time to query PosteWay! I'm gonna ask for info about ${toQuery.length} letters.`);
+        let errors = 0;
+
+        for (const letter of toQuery) {
+            try {
+                await this.queryLetter(letter);
+                logger.info("Ok!");
+            } catch (err) {
+                logger.error(`ARGH! Got an error while trying to query info about letter '${letter.codePdf}'!`, err);
+                errors++;
+            }
+        }
+
+        logger.info(`Done querying Postel.`);
+        return errors;
+    }
+
+    /**
+     * Sends a letter through PosteWay, confirms it, updates everything on the document,
+     * and finally returns the updated document with all the info about the order.
+     *
+     * @param letter {LetterDocument}
+     * @param logFile {winston.Logger}
+     * @returns {Promise<LetterDocument>} Updated document containing an up-to-date posteway object
+     */
+    public async sendLetter(letter: LetterDocument, logFile?: winston.Logger): Promise<LetterDocument> {
+        logger.info(`--> Sending letter '${letter.codePdf}' <--`);
+        const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
+
+        const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
+        const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
+
+        if (!pdf_exists) {
+            logger.error(`Letter '${letter.codePdf}' does not have a PDF!`);
+            logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
+            throw { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` };
+        }
+
+        // Upload through PosteWay to get the CID
+        const { cid } = await this.posteWay.upload(await fs.promises.readFile(pdf_path));
+
+        // Submit through PosteWay to get the Request ID
+        const submit = await this.posteWay.send({
+            kind: kind,
+            foreign: false, // Needs to be mapped based on recipients
+            sender: mapSenderToPerson(letter.sender as SenderDocument),
+            recipients: letter.recipients.map(mapRecipientToPerson),
+            cid: cid
+        });
+        if (!submit.ok) {
+            logFile.error(`PosteWay send API result was not ok. Got this result: `, submit);
+            throw { error: `PosteWay send API result was not ok.`, result: submit };
+        }
+
+        // Immediately confirm the request to get the Order ID
+        const confirm = await this.posteWay.confirm(kind, submit.request.requestId);
+
+        // Call status, track and recipients to get the info I need to fill the posteway object on document
+        const status = await this.posteWay.status(kind, submit.request.requestId);
+        const track = await this.posteWay.track(kind, confirm.orderId);
+        const recipients = await this.posteWay.recipients(kind, submit.request.requestId);
+
+        const updated = await this.updateById(letter.id, {
+            $set: {
+                posteway: {
+                    requestId: submit.request?.requestId,
+                    orderId: confirm.orderId,
+                    status: status,
+                    track: track,
+                    recipients: recipients,
+                }
+            }
+        }, false, false);
+        logFile.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
+
+        logFile.info("That's all folks!");
+        logger.info("Ok!");
+
+        return updated;
+    }
+
+    /**
+     * Calls PosteWay to query a particular letter. Calls status, track and recipients.
+     * Updates the document and returns the updated one.
+     *
+     * @param letter {LetterDocument}
+     * @returns {Promise<LetterDocument>}
+     */
+    public async queryLetter(letter: LetterDocument): Promise<LetterDocument> {
+        logger.info(`--> Querying letter '${letter.codePdf}' <--`);
+        const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
+        const { requestId, orderId } = letter.posteway;
+
+        const status = await this.posteWay.status(kind, requestId);
+        const track = await this.posteWay.track(kind, orderId);
+        const recipients = await this.posteWay.recipients(kind, requestId);
+
+        return await this.updateById(letter.id, {
+            $set: {
+                posteway: {
+                    status: status,
+                    track: track,
+                    recipients: recipients,
+                }
+            }
+        }, false, false);
+    }
+
+    /**
+     * GRAVEYARD -- THE FOLLOWING CODE WAS USED TO QUERY POSTEL ABOUT STATUS CODES. REPLACED IN FAVOR OF POSTEWAY
+     * public async batchQueryLetters(): Promise<number> {
         const interestingStatuses = [
             PostelStatus.Approvato,
             PostelStatus.LavorazioneInCorso,
@@ -305,6 +368,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
         logger.info(`Done querying Postel.`);
         return errors;
-    }
+     }
+     */
 
 }

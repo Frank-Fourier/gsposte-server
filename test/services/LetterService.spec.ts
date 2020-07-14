@@ -263,7 +263,7 @@ import faker from "faker/locale/it";
 
         let errors = 0;
         try {
-            errors = await this.letterService.batchUploadLetters();
+            errors = await this.letterService.batchSendScheduledLetters();
         } catch (err) {
             expect(err).not.to.exist;
         }

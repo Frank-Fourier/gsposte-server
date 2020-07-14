@@ -141,7 +141,7 @@ import { LetterDocument } from "@models/LetterModel";
     @test async "Should generate a letter invoice PDF correctly" () {
         const saved = await saveMockLetter({ user: this.system.id });
 
-        // Emulate the final behaviour of batchUploadLetters()
+        // Emulate the final behaviour of batchSendScheduledLetters()
         await this.letterService.updateById(saved.id, {
             $set: {
                 sent: true,

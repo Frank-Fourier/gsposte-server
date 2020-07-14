@@ -13,8 +13,9 @@ import {
 import { UserDocument } from "@models/UserModel";
 import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
-import { Recipient, RecipientDocument, RecipientSchema } from "@models/RecipientModel";
+import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
+import { Person, StatusResponse, TrackResponse } from "../posteway";
 
 /**
  * @swagger
@@ -159,10 +160,21 @@ export interface Letter {
 }
 export interface LetterDocument extends Letter, Document {
     sent: boolean
-    uuid?: string
     paid?: boolean
     invoice?: string | InvoiceDocument
     price?: number
+    posteway?: {
+        requestId?: string
+        orderId?: string
+        status?: string
+        prices?: StatusResponse
+        track?: TrackResponse
+        recipients?: Array<{
+            id: string
+            person: Person
+        }>
+    }
+    /** REMOVED IN FAVOR OF POSTEWAY
     stats?: {
         status: number
         dateUploaded?: Date | string
@@ -176,6 +188,7 @@ export interface LetterDocument extends Letter, Document {
             tracking?: string
         }>
     }
+     */
 }
 export const letterDecoder: Decoder<Letter> = object({
     user: optional(string()),
@@ -245,9 +258,6 @@ export const LetterSchema = new Schema<Letter>({
         type: Boolean,
         default: false,
     },
-    uuid: {
-        type: String,
-    },
     paid: {
         type: Boolean,
         default: false,
@@ -259,6 +269,15 @@ export const LetterSchema = new Schema<Letter>({
     price: {
         type: Number,
     },
+    posteway: new Schema({
+        requestId: String,
+        orderId: String,
+        status: String,
+        prices: Schema.Types.Mixed,
+        track: Schema.Types.Mixed,
+        recipients: Schema.Types.Mixed
+    }, { _id: false }),
+    /** REMOVED IN FAVOR OF POSTEWAY
     stats: new Schema({
         status: Number,
         dateUploaded: Date,
@@ -274,6 +293,7 @@ export const LetterSchema = new Schema<Letter>({
             }, { _id: false })
         ]
     }, { _id: false }),
+    */
 }, {
     timestamps: {
         createdAt: true,

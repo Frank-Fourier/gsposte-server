@@ -2,6 +2,7 @@ import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
 import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
+import { Person } from "../posteway";
 
 /**
  * @swagger
@@ -91,6 +92,22 @@ export const senderDecoder: Decoder<Sender> = object({
     email: optional(string()),
     notes: optional(string()),
 });
+
+export function mapSenderToPerson(sender: SenderDocument): Person {
+    return {
+        name: sender.name.split(" ")[0],
+        surname: sender.name.split(" ")[1] || "",
+        businessName: sender.businessName,
+        address: {
+            kind: "normal",
+            street: sender.address?.street,
+            city: sender.address?.city,
+            zip: sender.address?.zip,
+            province: sender.address?.province,
+            country: sender.address?.country
+        }
+    }
+}
 
 export const SenderSchema = new Schema<Sender>({
     user: {

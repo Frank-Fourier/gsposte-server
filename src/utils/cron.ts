@@ -5,8 +5,8 @@ import { logger } from "@utils/winston";
 
 export const uploadJob = new CronJob(process.env.CRON_UPLOAD, () => {
     const letterService = ioc.resolve(LetterService);
-    letterService.batchUploadLetters()
-        .then(() => logger.info("UPLOAD CRON JOB COMPLETED!"))
+    letterService.batchSendScheduledLetters()
+        .then(errors => logger.info(`UPLOAD CRON JOB COMPLETED WITH ${errors} ERRORS!`))
         .catch(() => logger.error("UPLOAD CRON JOB FAILED. CHECK LOGS!"));
 }, null, false, "Europe/Rome");
 
