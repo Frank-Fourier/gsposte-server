@@ -7,7 +7,6 @@ import {
     string,
     oneOf,
     constant,
-    number,
     boolean
 } from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
@@ -61,13 +60,13 @@ import { Person, StatusResponse, TrackResponse } from "../posteway";
  *         type: string
  *         description: The code used to associate the PDF to this campaign. Get this from the /pdf/upload call.
  *         example: GSK6RNCXHW
- *       density:
- *         type: number
- *         description: The DPI to use when converting the source PDF into Postel PDF. Must be between 150 and 300. Default is 150.
- *         example: 150
- *       test:
+ *       bw:
  *         type: boolean
- *         description: Marks if this letter is a test campaign, meaning that it won't be considered by Postel and deleted after a month.
+ *         description: Gray-scale print on Poste - Default is false
+ *         example: false
+ *       backSide:
+ *         type: boolean
+ *         description: Print on the paper's backside - Default is true
  *         example: true
  *       notes:
  *         type: string
@@ -100,45 +99,9 @@ import { Person, StatusResponse, TrackResponse } from "../posteway";
  *             type: number
  *             description: Price of a single envelope. Calculated based on letter kind and number of recipients.
  *             example: 1.1
- *           stats:
+ *           posteway:
  *             type: object
- *             description: Stats about this letter. Gets filled by the Query CRON. You can't update this field or its children manually.
- *             properties:
- *               status:
- *                 type: number
- *                 description: Postel Status Code. 1 = Approvato. 2 = Lavorazione in corso. 3 = Completato. 4 = Offline. 5 = Da Approvare. 6 = Sospeso. 7 = Annullato.
- *                 example: 1
- *               dateUploaded:
- *                 type: string
- *                 description: Upload date of this Set (YYYY-MM-DD HH:MM:SS format)
- *               dateCompleted:
- *                 type: string
- *                 description: Completion date of this Set (YYYY-MM-DD HH:MM:SS format)
- *               envelopes:
- *                 type: array
- *                 items:
- *                   type: object
- *                   description: Envelopes associated to this Set as viewed from Postel (each Recipient has its Envelope)
- *                   properties:
- *                     recipient:
- *                       $ref: "#/definitions/RecipientDocument"
- *                     id:
- *                       type: number
- *                       description: CustomerEnvelopeID of this Envelope (will be a progressive)
- *                       example: 874979
- *                     status:
- *                       type: number
- *                       description: Postel Status Code. 1 = Approvato. 2 = Lavorazione in corso. 3 = Completato. 4 = Offline. 5 = Da Approvare. 6 = Sospeso. 7 = Annullato.
- *                       example: 1
- *                     dateUploaded:
- *                       type: string
- *                       description: Upload date of this Envelope (YYYY-MM-DD HH:MM:SS format)
- *                     dateCompleted:
- *                       type: string
- *                       description: Completion date of this Envelope (YYYY-MM-DD HH:MM:SS format)
- *                     tracking:
- *                       type: string
- *                       description: Queried and available when the letter kind is "Raccomandata" or "Raccomandata AR". It's used to track the ship status of an Envelope.
+ *             description: PosteWay query objects. Gets filled by the Query CRON. You can't update this field or its children manually.
  *           createdAt:
  *             type: string
  *             example: 2019-03-25T18:16:24.892Z
@@ -154,8 +117,8 @@ export interface Letter {
     sendAt?: Date | string
     kind: LetterKind
     codePdf: string
-    density?: number
-    test?: boolean
+    bw?: boolean
+    backSide?: boolean
     notes?: string
 }
 export interface LetterDocument extends Letter, Document {
@@ -195,15 +158,15 @@ export const letterDecoder: Decoder<Letter> = object({
     sender: string(),
     recipients: array(string()),
     subject: string(),
-    sendAt: string(),
+    sendAt: optional(string()),
     kind: oneOf(
         constant(LetterKind.LETTERA_SEMPLICE),
         constant(LetterKind.RACCOMANDATA),
         constant(LetterKind.RACCOMANDATA_AR),
     ),
     codePdf: string(),
-    density: optional(number()),
-    test: optional(boolean()),
+    bw: optional(boolean()),
+    backSide: optional(boolean()),
     notes: optional(string()),
 });
 
@@ -241,14 +204,13 @@ export const LetterSchema = new Schema<Letter>({
         type: String,
         required: "PDF code is required.",
     },
-    density: {
-        type: Number,
-        default: 150,
-        min: 150, max: 300
-    },
-    test: {
+    bw: {
         type: Boolean,
         default: false,
+    },
+    backSide: {
+        type: Boolean,
+        default: true
     },
     notes: {
         type: String,

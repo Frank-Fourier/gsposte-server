@@ -72,7 +72,6 @@ export function assertSameLetter(original: Letter | LetterDocument, candidate: L
     if (original.sendAt) expect(candidate.sendAt).to.eql(original.sendAt);
     expect(candidate.kind).to.equal(original.kind);
     expect(candidate.codePdf).to.equal(original.codePdf);
-    expect(candidate.density).to.equal(original.density);
     expect(candidate.notes).to.equal(original.notes);
 }
 

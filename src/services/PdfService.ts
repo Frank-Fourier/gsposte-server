@@ -96,7 +96,7 @@ export class PdfService {
             const base64 = await this.postelFormat(`${PDF_ROOT}/${letter.codePdf}/original.pdf`,
                 letter.sender as SenderDocument,
                 letter.recipients as Array<RecipientDocument>,
-                letter.density
+                300 // letter.density - 150 to 300
             );
             const path = `${PDF_ROOT}/${letter.codePdf}/postel.pdf`;
             await fs.promises.writeFile(path, Buffer.from(base64, "base64"));
@@ -233,13 +233,14 @@ export class PdfService {
 
         // Create the HTML with margins applied and page images
         const html = `
-            <html>
+            <html lang="it">
                 <head>
                     <style>
                         .first-page { margin: 96mm 10mm 10mm; }
                         .page { margin: 2mm 10mm 10mm; }
                         img { width: 100%; }
                     </style>
+                    <title></title>
                 </head>
                 <body>
                     ${images.map((img, index) => `<div class=${index === 0 ? "first-page" : "page"}><img src=${img} alt="Page #${index + 1}"/></div>`).join("")}

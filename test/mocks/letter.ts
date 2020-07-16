@@ -21,8 +21,6 @@ export function generateMockLetter(user: string | UserDocument, sender: string |
         subject: faker.fake("{{company.companyName}} IMPORTANT TEST LETTERS"),
         kind: kind || LetterKind.LETTERA_SEMPLICE,
         codePdf: codePdf,
-        density: 150,
-        test: true,
         notes: faker.lorem.sentence(),
     };
 }

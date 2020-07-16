@@ -219,6 +219,41 @@ export class LetterRoute extends Route {
                 method: RequestMethod.DELETE,
                 requiresAuth: true,
                 handler: (req, res) => this.letterController.deleteById(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /letter/{id}/status:
+             *   put:
+             *     tags:
+             *       - Letters
+             *     description: Update letter's PosteWay status by its id, associated with the user requesting. If admin, it ignores the association.
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: id
+             *         required: true
+             *         in: path
+             *         description: Mongo id of the letter to update
+             *     responses:
+             *       200:
+             *         description: Updated letter
+             *         schema:
+             *           $ref: "#/definitions/LetterDocument"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             *       403:
+             *         description: You are not allowed to update letters of other users!
+             */
+            {
+                path: "/:id/status",
+                method: RequestMethod.PUT,
+                requiresAuth: true,
+                handler: (req, res) => this.letterController.updateStatus(req, res)
             }
         ]);
     }

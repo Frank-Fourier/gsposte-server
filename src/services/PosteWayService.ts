@@ -1,6 +1,4 @@
 import { provide } from "inversify-binding-decorators";
-import fetch from "node-fetch";
-import FormData from "form-data";
 import {
     ConfirmResponse,
     Person,
@@ -10,6 +8,9 @@ import {
     SubmitResponse,
     TrackResponse
 } from "../posteway";
+import { ReadStream } from "fs";
+import fetch from "node-fetch";
+import FormData from "form-data";
 
 @provide(PosteWayService)
 export class PosteWayService {
@@ -23,10 +24,17 @@ export class PosteWayService {
                 ...(headers || {})
             }
         });
-        return await res.json();
+        const json = await res.json();
+        if (!res.ok) {
+            throw {
+                statusCode: res.status,
+                posteway: json
+            };
+        }
+        return json;
     }
 
-    public async upload(pdf: Buffer): Promise<{ cid: string }> {
+    public async upload(pdf: ReadStream): Promise<{ cid: string }> {
         const form = new FormData();
         form.append("file", pdf, { contentType: "application/pdf" });
 
@@ -34,7 +42,7 @@ export class PosteWayService {
     }
 
     public async send(submit: Submit): Promise<SubmitResponse> {
-        return this.call("/send", submit, "POST");
+        return this.call("/send", JSON.stringify(submit), "POST", { "Content-Type": "application/json" });
     }
 
     public async status(kind: SubmitKind, requestId: string): Promise<StatusResponse> {
@@ -42,11 +50,11 @@ export class PosteWayService {
     }
 
     public async confirm(kind: SubmitKind, requestId: string): Promise<ConfirmResponse> {
-        return this.call("/confirm", { kind, requestId }, "POST");
+        return this.call("/confirm", JSON.stringify({ kind, requestId }), "POST", { "Content-Type": "application/json" });
     }
 
     public async cancel(kind: SubmitKind, requestId: string): Promise<void> {
-        return this.call("/cancel", { kind, requestId }, "DELETE");
+        return this.call("/cancel", JSON.stringify({ kind, requestId }), "DELETE", { "Content-Type": "application/json" });
     }
 
     public async track(kind: SubmitKind, orderId: string): Promise<TrackResponse> {

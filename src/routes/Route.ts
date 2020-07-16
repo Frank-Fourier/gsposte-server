@@ -48,7 +48,10 @@ export class Route {
 
             const handler = async (req: Request, res: Response) => {
                 route.handler(req, res).catch(err => res.status(err.statusCode || 500).send({
-                    error: err instanceof Error ? err.toString() : err
+                    error: err instanceof Error ? {
+                        type: err.name,
+                        details: err.message,
+                    } : err
                 }));
             };
             app.route(path)[route.method]([

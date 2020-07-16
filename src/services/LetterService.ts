@@ -12,6 +12,7 @@ import { PosteWayService } from "@services/PosteWayService";
 import winston from "winston";
 import moment from "moment";
 import fs from "fs";
+import { sleep } from "@utils/sleep";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -34,7 +35,13 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
         if (!letter.sendAt || moment(letter.sendAt).isSameOrBefore(moment())) {
             // No need to schedule! Send everything immediately!
-            saved = await this.sendLetter(saved);
+            try {
+                saved = await this.sendLetter(saved);
+            } catch (err) {
+                // Since something went wrong, delete this letter and re-throw the error
+                await this.deleteById(saved.id);
+                throw err;
+            }
         }
 
         // Not needed anymore as I don't have to format PDFs with PosteWay
@@ -108,8 +115,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             const logFile = createLogFile(`${letter.codePdf}.log`);
             try {
                 logger.info(`Sending scheduled letter '${letter.codePdf}'...`);
-                await this.updateById(letter.id, { $set: { sent: true }});
-
                 await this.sendLetter(letter, logFile);
             } catch (err) {
                 logger.error(`ARGH! Got an error while trying to send letter '${letter.codePdf}'!`, err);
@@ -167,59 +172,74 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      * @returns {Promise<LetterDocument>} Updated document containing an up-to-date posteway object
      */
     public async sendLetter(letter: LetterDocument, logFile?: winston.Logger): Promise<LetterDocument> {
-        logger.info(`--> Sending letter '${letter.codePdf}' <--`);
-        const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
+        try {
+            logger.info(`--> Sending letter '${letter.codePdf}' <--`);
+            await this.updateById(letter.id, { $set: { sent: true }});
 
-        const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
-        const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
+            const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
+            const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
+            const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
 
-        if (!pdf_exists) {
-            logger.error(`Letter '${letter.codePdf}' does not have a PDF!`);
-            logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
-            throw { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` };
-        }
-
-        // Upload through PosteWay to get the CID
-        const { cid } = await this.posteWay.upload(await fs.promises.readFile(pdf_path));
-
-        // Submit through PosteWay to get the Request ID
-        const submit = await this.posteWay.send({
-            kind: kind,
-            foreign: false, // Needs to be mapped based on recipients
-            sender: mapSenderToPerson(letter.sender as SenderDocument),
-            recipients: letter.recipients.map(mapRecipientToPerson),
-            cid: cid
-        });
-        if (!submit.ok) {
-            logFile.error(`PosteWay send API result was not ok. Got this result: `, submit);
-            throw { error: `PosteWay send API result was not ok.`, result: submit };
-        }
-
-        // Immediately confirm the request to get the Order ID
-        const confirm = await this.posteWay.confirm(kind, submit.request.requestId);
-
-        // Call status, track and recipients to get the info I need to fill the posteway object on document
-        const status = await this.posteWay.status(kind, submit.request.requestId);
-        const track = await this.posteWay.track(kind, confirm.orderId);
-        const recipients = await this.posteWay.recipients(kind, submit.request.requestId);
-
-        const updated = await this.updateById(letter.id, {
-            $set: {
-                posteway: {
-                    requestId: submit.request?.requestId,
-                    orderId: confirm.orderId,
-                    status: status,
-                    track: track,
-                    recipients: recipients,
-                }
+            if (!pdf_exists) {
+                logger.error(`Letter '${letter.codePdf}' does not have a PDF!`);
+                logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
+                throw { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` };
             }
-        }, false, false);
-        logFile.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
 
-        logFile.info("That's all folks!");
-        logger.info("Ok!");
+            // Upload through PosteWay to get the CID
+            const { cid } = await this.posteWay.upload(fs.createReadStream(pdf_path));
+            await sleep(500);
 
-        return updated;
+            // Submit through PosteWay to get the Request ID
+            const submit = await this.posteWay.send({
+                kind: kind,
+                foreign: false, // Needs to be mapped based on recipients
+                sender: mapSenderToPerson(letter.sender as SenderDocument),
+                recipients: letter.recipients.map(mapRecipientToPerson),
+                cid: cid,
+                options: {
+                    bw: letter.bw || false,
+                    backSide: letter.backSide || true
+                }
+            });
+            if (!submit.ok) {
+                logFile.error(`PosteWay send API result was not ok. Got this result: `, submit);
+                logger.error(`PosteWay send API result was not ok. Got this result: `, submit);
+                throw { error: `PosteWay send API result was not ok.`, result: submit };
+            }
+            await sleep(5000);
+
+            // Immediately confirm the request to get the Order ID
+            const confirm = await this.posteWay.confirm(kind, submit.request.requestId);
+            await sleep(5000);
+
+            // Call status, track and recipients to get the info I need to fill the posteway object on document
+            const { status, total, details } = await this.posteWay.status(kind, submit.request.requestId);
+            const track = await this.posteWay.track(kind, confirm.orderId);
+            const recipients = await this.posteWay.recipients(kind, submit.request.requestId);
+
+            const updated = await this.updateById(letter.id, {
+                $set: {
+                    posteway: {
+                        requestId: submit.request?.requestId,
+                        orderId: confirm.orderId,
+                        status: status,
+                        prices: { total, details },
+                        track: track,
+                        recipients: recipients,
+                    }
+                }
+            }, false, false);
+            logFile?.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
+
+            logFile?.info("That's all folks!");
+            logger.info(`Ok! Sent letter '${letter.codePdf}'`);
+
+            return updated;
+        } catch (err) {
+            logger.error("Error while calling PosteWay!", err);
+            throw err;
+        }
     }
 
     /**

@@ -4,7 +4,6 @@ import { PdfService } from "@services/PdfService";
 import { LetterDocument } from "@models/LetterModel";
 import { SenderDocument } from "@models/SenderModel";
 import { Invoice, invoiceDecoder, InvoiceDocument, InvoiceModel } from "@models/InvoiceModel";
-import { LetterKind, PostelStatus } from "@services/PostelService";
 import { PriceService } from "@services/PriceService";
 import { LetterService } from "@services/LetterService";
 import { UserService } from "@services/UserService";
@@ -221,29 +220,25 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
         await letter.populate("sender recipients").execPopulate();
 
-        const { stats } = letter;
+        const { posteway } = letter;
         const price = await this.priceService.calculatePrice(letter);
-        const partial = !stats ? true :
-            stats.envelopes.some(envelope => envelope.status !== PostelStatus.Completato && (
-                letter.kind === LetterKind.LETTERA_SEMPLICE ? true : !!envelope.tracking
-            ));
+        const partial = !posteway || !posteway.status?.startsWith("S");
 
         // Format envelopes dates
-        stats.envelopes = stats.envelopes.map(e => ({
+        posteway.track.tracking =  posteway.track.tracking?.map(e => ({
             ...e,
-            dateUploaded: e.dateUploaded ? moment(e.dateUploaded).format("DD/MM/YYYY") : null,
-            dateCompleted: e.dateCompleted ? moment(e.dateCompleted).format("DD/MM/YYYY") : null,
+            date: e.date ? moment(e.date).format("DD/MM/YYYY") : null,
         }));
 
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({
             sender: (letter.sender as SenderDocument).toObject(),
-            stats: (stats as Partial<Document>).toObject(),
+            posteway: (posteway as Partial<Document>).toObject(),
             dateSent: letter.sendAt ? moment(letter.sendAt).format("DD/MM/YYYY") : null,
             partial: partial,
             codePdf: letter.codePdf,
             kind: letter.kind,
             price: this.formatCurrency(price),
-            total: this.formatCurrency(price * stats.envelopes.length),
+            total: this.formatCurrency(price * posteway.recipients.length),
         });
 
         // I want until networkidle2 to let all the images on the HTML load before converting

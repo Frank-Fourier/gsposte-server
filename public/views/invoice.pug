@@ -87,25 +87,25 @@ html(lang="it")
                 th Città
                 th Prov.
                 if kind !== "LETTERA SEMPLICE"
-                    th #{stats.envelopes.some(e => !!e.tracking) ? "Tracking" : "Track."}
+                    th Tracking
                 th Impon.
             tbody
-                each envelope, index in stats.envelopes
+                each recipient, index in posteway.recipients
                     tr
                         td(width="5%") #{index + 1}
-                        td(width="12.5%") #{envelope.dateUploaded || "-"}
-                        td(width="40%") #{envelope.recipient.fullName.toUpperCase()}
+                        td(width="12.5%") #{posteway.track.tracking[index].date || "-"}
+                        td(width="40%") #{recipient.person.name.toUpperCase() + " " + recipient.person.surname.toUpperCase()}
                             br
-                            | #{envelope.recipient.address.street}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{envelope.recipient.address.zip}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{envelope.recipient.address.city.toUpperCase()}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{envelope.recipient.address.province.toUpperCase()}
+                            | #{recipient.address.street}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.address.zip}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.address.city.toUpperCase()}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.address.province.toUpperCase()}
                         if kind !== "LETTERA SEMPLICE"
-                            td(width="8.5%") #{envelope.tracking || "-"}
+                            td(width="8.5%") #{posteway.track.tracking[index].number || "-"}
                         td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{price || "-"}
         p
             | Tot. Prodotti:
-            b  #{stats.envelopes.length}
+            b  #{posteway.recipients.length}
             |
             span Totale Distinta:
                 |

@@ -51,7 +51,7 @@ export class LetterController extends CrudController {
 
         const user = await this.authService.getUserFromRequest(req);
         if (!user.isAdmin() && letter.user !== user.id) {
-            throw new httpErrors.Forbidden("You are not authorized to operate on letters from other users!");
+            throw new httpErrors.Forbidden("You are not authorized to update letters from other users!");
         }
 
         const doc = await this.letterService.queryLetter(letter);
