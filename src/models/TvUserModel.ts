@@ -22,11 +22,10 @@ import { Decoder, object, optional, string } from "@mojotech/json-type-validatio
 export interface TvUser {
     username: string
     email?: string
-    password?: string
+    password: string
 }
 export const tvUserDecoder: Decoder<TvUser> = object({
-    user: optional(string()),
     username: string(),
     email: optional(string()),
-    password: optional(string()),
+    password: string(),
 });
