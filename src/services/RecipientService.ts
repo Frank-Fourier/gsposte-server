@@ -115,8 +115,8 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                   rowCityName = cellValue(3),
                   // rowProvince = cellValue(4), -- not used
                   rowUsername = cellValue(5),
-                  rowEmail    = cellValue(6),
-                  rowPassword = cellValue(7);
+                  rowPassword = cellValue(6),
+                  rowEmail    = cellValue(7);
 
             const validateCell = (val: string, validators: CellValidator[]) =>
                 validators.filter(v => !v(val).valid).map(nv => {
