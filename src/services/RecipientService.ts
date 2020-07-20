@@ -112,7 +112,11 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             const rowName     = cellValue(0),
                   rowStreet   = cellValue(1),
                   rowZip      = cellValue(2),
-                  rowCityName = cellValue(3);
+                  rowCityName = cellValue(3),
+                  // rowProvince = cellValue(4), -- not used
+                  rowUsername = cellValue(5),
+                  rowEmail    = cellValue(6),
+                  rowPassword = cellValue(7);
 
             const validateCell = (val: string, validators: CellValidator[]) =>
                 validators.filter(v => !v(val).valid).map(nv => {
@@ -129,9 +133,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             let municipality: MunicipalityDocument = null;
             try {
                 municipality = await this.municipalityService.findOne({
-                    name: {
-                        $regex: `^${rowCityName}$`, $options: "i"
-                    }
+                    name: { $regex: `^${rowCityName}$`, $options: "i" }
                 } as object);
             } catch (err) {
                 if (err.status !== 404) logger.error(`Got an error while querying for the municipality on row ${row + 2}! ${err}`);
@@ -164,6 +166,11 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     zip: rowZip,
                     province: municipality.province,
                     country: municipality.country
+                },
+                tv: {
+                    username: rowUsername,
+                    email: rowEmail,
+                    password: rowPassword
                 },
                 notes: "Contatto importato da Excel."
             };
@@ -210,11 +217,23 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             INDIRIZZO: rec.address.street,
             CAP: rec.address.zip,
             COMUNE: rec.address.city,
-            PROVINCIA: rec.address.province
+            PROVINCIA: rec.address.province,
+            USERNAME: rec.tv?.username,
+            PASSWORD: "******",
+            EMAIL: rec.tv?.email,
         })), {
-            header: [ "DENOMINAZIONE", "INDIRIZZO", "CAP", "COMUNE", "PROVINCIA" ]
+            header: [ "DENOMINAZIONE", "INDIRIZZO", "CAP", "COMUNE", "PROVINCIA", "USERNAME", "PASSWORD", "EMAIL" ]
         });
-        worksheet["!cols"] = [ { wch: 20 }, { wch: 30 }, { wch: 10 }, { wch: 20 }, { wch: 10 } ];
+        worksheet["!cols"] = [
+            { wch: 20 }, // DENOMINAZIONE
+            { wch: 30 }, // INDIRIZZO
+            { wch: 10 }, // CAP
+            { wch: 20 }, // COMUNE
+            { wch: 10 }, // PROVINCIA
+            { wch: 20 }, // USERNAME
+            { wch: 10 }, // PASSWORD
+            { wch: 30 }, // EMAIL
+        ];
 
         utils.book_append_sheet(workbook, worksheet, "Anagrafiche");
         const buffer = write(workbook, {
