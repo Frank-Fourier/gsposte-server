@@ -1,7 +1,7 @@
 import { CrudController } from "@controllers/CrudController";
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
-import { TvReportService } from "@services/tv/TvReportService";
+import { TvReportService } from "@services/TvReportService";
 import { UserRoles } from "@models/UserModel";
 import { Request, Response } from "express";
 

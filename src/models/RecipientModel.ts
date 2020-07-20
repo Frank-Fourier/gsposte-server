@@ -3,6 +3,8 @@ import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
 import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
 import { Person } from "../posteway";
+import { encryptPasswordSync } from "@utils/crypto";
+import { TvUser, tvUserDecoder } from "@models/TvUserModel";
 
 /**
  * @swagger
@@ -22,6 +24,8 @@ import { Person } from "../posteway";
  *         example: Makoto Nijima
  *       address:
  *         $ref: "#/definitions/Address"
+ *       tv:
+ *         $ref: "#/definitions/TvUser"
  *       notes:
  *         type: string
  *         example: The sister of prosecutor Sae Nijima, and student council president at Shujin. She tries to blackmail the Thieves to force them to change the heart of a Yakuza boss, awakening to her Persona in the process. She is the canonic love interest for the protagonist.
@@ -47,6 +51,7 @@ export interface Recipient {
     user?: string | UserDocument
     fullName: string
     address: Address
+    tv?: TvUser
     notes?: string
 }
 export interface RecipientDocument extends Recipient, Document {
@@ -56,13 +61,14 @@ export const recipientDecoder: Decoder<Recipient> = object({
     user: optional(string()),
     fullName: string(),
     address: addressDecoder,
+    tv: optional(tvUserDecoder),
     notes: optional(string()),
 });
 
 export function mapRecipientToPerson(recipient: RecipientDocument): Person {
     return {
         name: recipient.fullName.split(" ")[0],
-        surname: recipient.fullName.split(" ")[1] || "",
+        surname: recipient.fullName.substring(recipient.fullName.indexOf(" ") + 1),
         address: {
             kind: "normal",
             street: recipient.address?.street,
@@ -89,6 +95,22 @@ export const RecipientSchema = new Schema<Recipient>({
         type: AddressSchema,
         required: "Address is required."
     },
+    tv: new Schema<TvUser>({
+        username: {
+            type: String,
+            unique: true,
+        },
+        email: {
+            type: String,
+            unique: true,
+            trim: true,
+            lowercase: true,
+        },
+        password: {
+            type: String,
+            set: (password: string) => encryptPasswordSync(password),
+        },
+    }, { _id: false }),
     notes: {
         type: String,
         maxlength: 500,

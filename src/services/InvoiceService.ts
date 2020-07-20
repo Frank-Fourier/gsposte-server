@@ -222,19 +222,19 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
         const { posteway } = letter;
         const price = await this.priceService.calculatePrice(letter);
-        const partial = !posteway || !posteway.status?.startsWith("S");
+        // const partial = !posteway || !posteway.status?.startsWith("S");
 
         // Format envelopes dates
         posteway.track.tracking =  posteway.track.tracking?.map(e => ({
             ...e,
-            date: e.date ? moment(e.date).format("DD/MM/YYYY") : null,
+            date: e.date ? moment(e.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : null,
         }));
 
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({
             sender: (letter.sender as SenderDocument).toObject(),
             posteway: (posteway as Partial<Document>).toObject(),
             dateSent: letter.sendAt ? moment(letter.sendAt).format("DD/MM/YYYY") : null,
-            partial: partial,
+            partial: false,
             codePdf: letter.codePdf,
             kind: letter.kind,
             price: this.formatCurrency(price),

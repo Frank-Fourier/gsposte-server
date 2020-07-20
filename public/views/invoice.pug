@@ -11,10 +11,10 @@ html(lang="it")
                 -webkit-print-color-adjust: exact;
             }
             p {
-                font-size: 18px;
+                font-size: 14px;
             }
             span {
-                font-size: 18px;
+                font-size: 14px;
                 float: right;
             }
             img {
@@ -28,7 +28,7 @@ html(lang="it")
             }
             .header {}
             .sender {
-                font-size: 18px;
+                font-size: 14px;
                 padding-bottom: 20px;
             }
             .invoice-info {
@@ -40,7 +40,7 @@ html(lang="it")
             }
             .recipients-table {
                 margin-top: 20px;
-                font-size: 18px;
+                font-size: 14px;
             }
             table {
                 border-collapse: collapse;
@@ -96,10 +96,10 @@ html(lang="it")
                         td(width="12.5%") #{posteway.track.tracking[index].date || "-"}
                         td(width="40%") #{recipient.person.name.toUpperCase() + " " + recipient.person.surname.toUpperCase()}
                             br
-                            | #{recipient.address.street}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.address.zip}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.address.city.toUpperCase()}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.address.province.toUpperCase()}
+                            | #{recipient.person.address.street}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.zip}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.city.toUpperCase()}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.province.toUpperCase()}
                         if kind !== "LETTERA SEMPLICE"
                             td(width="8.5%") #{posteway.track.tracking[index].number || "-"}
                         td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{price || "-"}

@@ -9,8 +9,8 @@ import httpErrors from "http-errors";
 import moment from "moment";
 import jwt from "jwt-simple";
 import { comparePasswords } from "@utils/crypto";
-import { TvUserService } from "@services/tv/TvUserService";
-import { TvUserDocument } from "@models/tv/TvUserModel";
+import { RecipientService } from "@services/RecipientService";
+import { RecipientDocument } from "@models/RecipientModel";
 
 export interface JwtToken {
     exp: number
@@ -54,7 +54,7 @@ export interface LoginPayload {
 export class AuthService {
 
     @inject(UserService) private userService: UserService;
-    @inject(TvUserService) private tvUserService: TvUserService;
+    @inject(RecipientService) private recipientService: RecipientService;
 
     private getTokenStrategy(): Strategy {
         return new Strategy({
@@ -87,11 +87,11 @@ export class AuthService {
         }, (req: Request, payload: JwtToken, done: VerifiedCallback) => {
             (async () => {
                 try {
-                    const user = await this.tvUserService.findById(payload.userId);
-                    if (!user) {
+                    const user = await this.recipientService.findById(payload.userId);
+                    if (!user || !user.tv) {
                         return done(null, null, {error: "TV user by token not found!"});
                     }
-                    return done(null, user);
+                    return done(null, user.tv);
                 } catch (err) {
                     return done(null, null, err);
                 }
@@ -105,7 +105,7 @@ export class AuthService {
         return passport.initialize();
     }
 
-    public createToken(user: UserDocument | TvUserDocument): string {
+    public createToken(user: UserDocument | RecipientDocument): string {
         const expires = moment().utc().add({ weeks: 1 }).unix();
         const token: JwtToken = {
             exp: expires,
@@ -148,14 +148,14 @@ export class AuthService {
     public async tvLogin(payload: LoginPayload): Promise<string> {
         try {
             // Grab the first user that has either payload username or payload email
-            const user = await this.tvUserService.findOne({
+            const recipient = await this.recipientService.findOne({
                 $or: [
-                    { username: payload.usernameOrEmail },
-                    { email: payload.usernameOrEmail }
+                    { "tv.username": payload.usernameOrEmail },
+                    { "tv.email": payload.usernameOrEmail }
                 ]
             });
-            await this.comparePasswords(user.password, payload.password);
-            return this.createToken(user);
+            await this.comparePasswords(recipient.tv.password, payload.password);
+            return this.createToken(recipient);
         } catch (err) {
             throw new httpErrors.Unauthorized("Invalid username or password!");
         }
@@ -168,9 +168,9 @@ export class AuthService {
             throw new httpErrors.NotFound(err);
         }
     }
-    public async getTvUserByToken(token: string): Promise<TvUserDocument> {
+    public async getTvUserByToken(token: string): Promise<RecipientDocument> {
         try {
-            return await this.tvUserService.findById(this.decodeToken(token).userId);
+            return await this.recipientService.findById(this.decodeToken(token).userId);
         } catch (err) {
             throw new httpErrors.NotFound(err);
         }
@@ -179,7 +179,7 @@ export class AuthService {
     public async getUserFromRequest(req: Request): Promise<UserDocument> {
         return this.getUserByToken(req.headers.authorization);
     }
-    public async getTvUserFromRequest(req: Request): Promise<TvUserDocument> {
+    public async getTvUserFromRequest(req: Request): Promise<RecipientDocument> {
         return this.getTvUserByToken(req.headers.authorization);
     }
 

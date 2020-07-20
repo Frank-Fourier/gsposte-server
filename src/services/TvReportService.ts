@@ -6,7 +6,7 @@ import {
     tvReportDecoder,
     TvReportDocument,
     TvReportModel
-} from "@models/tv/TvReportModel";
+} from "@models/TvReportModel";
 import multer, { diskStorage, MulterError } from "multer";
 import { Request, Response } from "express";
 import path from "path";

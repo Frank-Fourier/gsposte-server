@@ -1,6 +1,6 @@
 import { RequestMethod, Route } from "@routes/Route";
 import { inject } from "inversify";
-import { TvReportController } from "@controllers/tv/TvReportController";
+import { TvReportController } from "@controllers/TvReportController";
 
 export class TvReportRoute extends Route {
 

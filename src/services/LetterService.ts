@@ -254,14 +254,17 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
         const { requestId, orderId } = letter.posteway;
 
-        const status = await this.posteWay.status(kind, requestId);
+        const { status, total, details } = await this.posteWay.status(kind, requestId);
         const track = await this.posteWay.track(kind, orderId);
         const recipients = await this.posteWay.recipients(kind, requestId);
 
         return await this.updateById(letter.id, {
             $set: {
                 posteway: {
+                    requestId: requestId,
+                    orderId: orderId,
                     status: status,
+                    prices: { total, details },
                     track: track,
                     recipients: recipients,
                 }

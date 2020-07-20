@@ -1,7 +1,7 @@
-import { TvUserDocument } from "@models/tv/TvUserModel";
 import { Document, model, Model, Schema } from "mongoose";
 import { array, boolean, Decoder, object, optional, string } from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
+import { Recipient, RecipientDocument } from "@models/RecipientModel";
 
 /**
  * @swagger
@@ -70,7 +70,7 @@ export interface TvReportAttachment {
 }
 export interface TvReport {
     user?: string | UserDocument
-    tvUser: string | TvUserDocument
+    tvUser: string | RecipientDocument
     body: string
     read?: boolean
     attachments?: Array<TvReportAttachment>
@@ -98,7 +98,7 @@ export const TvReportSchema = new Schema<TvReport>({
     },
     tvUser: {
         type: Schema.Types.ObjectId,
-        ref: "TvUser",
+        ref: "Recipient",
         required: "TvUser is required.",
     },
     body: {

@@ -25,8 +25,8 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
     }
 
     public async calculatePrice(letter: LetterDocument): Promise<number> {
-        const envelopeWeight = parseFloat(process.env.ENVELOPE_WEIGHT || "10");
-        const paperWeight = parseFloat(process.env.PAPER_WEIGHT || "1");
+        const envelopeWeight = parseFloat(process.env.ENVELOPE_WEIGHT || "5");
+        const paperWeight = parseFloat(process.env.PAPER_WEIGHT || "5");
         let pages = 1;
         try {
             pages = (await this.pdf.metadata(`public/${letter.codePdf}/original.pdf`)).pages;
@@ -35,7 +35,8 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
         }
 
         const totalWeight = envelopeWeight + (paperWeight * pages);
-        return (await this.getPriceForWeight(totalWeight, letter.kind)).price;
+        const price = (await this.getPriceForWeight(totalWeight, letter.kind)).price;
+        return letter.bw ? price : (price + parseFloat(process.env.COLOR_PRICE || "0.5"));
     }
 
 }
