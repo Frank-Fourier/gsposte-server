@@ -35,8 +35,8 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
         }
 
         const totalWeight = envelopeWeight + (paperWeight * pages);
-        const price = (await this.getPriceForWeight(totalWeight, letter.kind)).price;
-        return letter.bw ? price : (price + parseFloat(process.env.COLOR_PRICE || "0.5"));
+        const { price, extra } = (await this.getPriceForWeight(totalWeight, letter.kind));
+        return letter.bw ? price : (price + extra);
     }
 
 }
