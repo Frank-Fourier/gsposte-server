@@ -42,7 +42,7 @@ export class LetterController extends CrudController {
 
         return res.status(201).send({
             message: `Invoice created correctly. Available at ${path}`,
-            url: `${process.env.SERVER_HOST}:${process.env.SERVER_PORT}/documents/${letter.codePdf}/invoice.pdf`
+            url: `${process.env.SERVER_HOST}${(process.env.NODE_ENV === "production" ? "" : `:${process.env.SERVER_PORT}`)}/documents/${letter.codePdf}/invoice.pdf`
         });
     }
 

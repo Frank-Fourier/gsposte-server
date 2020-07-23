@@ -221,6 +221,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         await letter.populate("sender recipients").execPopulate();
 
         const { posteway } = letter;
+        if (!posteway) {
+            throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.")
+        }
+
         const price = await this.priceService.calculatePrice(letter);
         // const partial = !posteway || !posteway.status?.startsWith("S");
 
@@ -231,8 +235,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }));
 
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({
-            sender: (letter.sender as SenderDocument).toObject(),
-            posteway: (posteway as Partial<Document>).toObject(),
+            sender: letter.sender ? (letter.sender as SenderDocument).toObject() : {},
+            posteway: (posteway as Partial<Document>).toObject() || {},
             dateSent: letter.sendAt ? moment(letter.sendAt).format("DD/MM/YYYY") : null,
             partial: false,
             codePdf: letter.codePdf,

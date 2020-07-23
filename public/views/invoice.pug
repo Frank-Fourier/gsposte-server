@@ -72,11 +72,11 @@ html(lang="it")
             // img(class="logo-poste" src=`${process.env.SERVER_HOST || "http://localhost"}:${process.env.SERVER_PORT || "5000"}${process.env.IMAGES_PATH || "/images"}/poste-italiane.svg`)
         br
         h2 Spett.
-        p(class="sender") #{sender?.name?.toUpperCase() || "-"}
+        p(class="sender") #{sender.name.toUpperCase() || "-"}
             br
-            | #{sender?.address?.street?.toUpperCase() || "-"}
+            | #{sender.address.street.toUpperCase() || "-"}
             br
-            | #{sender?.address?.zip} #{sender?.address?.city?.toUpperCase()} (#{sender?.address?.province?.toUpperCase()})
+            | #{sender.address.zip} #{sender.address.city.toUpperCase()} (#{sender.address.province.toUpperCase()})
         p(class="invoice-info") Distinta #{partial ? "parziale" : ""} #{codePdf} #{dateSent ? `del ${dateSent}` : ""}
         table(class="recipients-table")
             thead
@@ -90,25 +90,25 @@ html(lang="it")
                     th Tracking
                 th Impon.
             tbody
-                each recipient, index in (posteway?.recipients || [])
+                each recipient, index in (posteway.recipients)
                     tr
                         td(width="5%") #{index + 1}
                         if kind !== "LETTERA SEMPLICE"
-                            td(width="12.5%") #{posteway?.track?.tracking[index]?.date || "-"}
+                            td(width="12.5%") #{posteway.track.tracking[index].date || "-"}
                         if kind === "LETTERA SEMPLICE"
                             td(width="12.5%") #{dateSent || "-"}
-                        td(width="40%") #{recipient?.person?.name?.toUpperCase() + " " + recipient?.person?.surname?.toUpperCase()}
+                        td(width="40%") #{recipient.person.name.toUpperCase() + " " + recipient.person.surname.toUpperCase()}
                             br
-                            | #{recipient?.person?.address?.street || "-"}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient?.person?.address?.zip || "-"}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient?.person?.address?.city?.toUpperCase() || "-"}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient?.person?.address?.province?.toUpperCase() || "-"}
+                            | #{recipient.person.address.street || "-"}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.zip || "-"}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.city.toUpperCase() || "-"}
+                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.province.toUpperCase() || "-"}
                         if kind !== "LETTERA SEMPLICE"
-                            td(width="8.5%") #{posteway?.track?.tracking[index]?.number || "-"}
+                            td(width="8.5%") #{posteway.track.tracking[index].number || "-"}
                         td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{price || "-"}
         p
             | Tot. Prodotti:
-            b  #{posteway?.recipients?.length || 0}
+            b  #{posteway.recipients ? posteway.recipients.length : 0}
             |
             span Totale Distinta:
                 |
