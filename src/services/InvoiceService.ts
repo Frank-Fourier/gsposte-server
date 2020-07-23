@@ -220,6 +220,9 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
         await letter.populate("sender recipients").execPopulate();
 
+        // Call PosteWay to get the latest info
+        letter = await this.letterService.queryLetter(letter);
+
         const { posteway } = letter;
         if (!posteway) {
             throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.")
