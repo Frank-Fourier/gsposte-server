@@ -12,6 +12,7 @@ import { Document } from "mongoose";
 import { MongoRepository } from "@services/MongoRepository";
 import httpErrors from "http-errors";
 import moment from "moment";
+import { logger } from "@utils/winston";
 
 @provide(InvoiceService)
 export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
@@ -220,8 +221,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
         await letter.populate("sender recipients").execPopulate();
 
-        // Call PosteWay to get the latest info
-        letter = await this.letterService.queryLetter(letter);
+        try {
+            // Call PosteWay to get the latest info
+            letter = await this.letterService.queryLetter(letter);
+        } catch (err) {
+            logger.warn(`! Failed to query letter ${letter.codePdf} !`, err);
+        }
 
         const { posteway } = letter;
         if (!posteway) {
