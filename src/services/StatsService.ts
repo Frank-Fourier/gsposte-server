@@ -4,6 +4,7 @@ import { inject } from "inversify";
 import { LetterService } from "@services/LetterService";
 import { RubricService } from "@services/RubricService";
 import { RecipientService } from "@services/RecipientService";
+import { logger } from "@utils/winston";
 
 /**
  * @swagger
