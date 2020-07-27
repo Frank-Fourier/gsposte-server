@@ -136,7 +136,7 @@ export class StatsService {
             [LetterKind.RACCOMANDATA_AR]: await fetchLetterStats(LetterKind.RACCOMANDATA_AR),
         };
 
-        logger.info(stats);
+        logger.info(JSON.stringify(stats));
         const totalSpent = Object.values(stats).reduce<number>((acc, s) => acc + s.spent, 0);
         return {
             letters: {
