@@ -52,6 +52,7 @@ export interface Recipient {
     fullName: string
     address: Address
     tv?: TvUser
+    cf?: string
     notes?: string
 }
 export interface RecipientDocument extends Recipient, Document {
@@ -62,6 +63,7 @@ export const recipientDecoder: Decoder<Recipient> = object({
     fullName: string(),
     address: addressDecoder,
     tv: optional(tvUserDecoder),
+    cf: optional(string()),
     notes: optional(string()),
 });
 
@@ -111,6 +113,10 @@ export const RecipientSchema = new Schema<Recipient>({
             set: (password: string) => encryptPasswordSync(password),
         },
     }, { _id: false }),
+    cf: {
+        type: String,
+        maxlength: 16
+    },
     notes: {
         type: String,
         maxlength: 500,

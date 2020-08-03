@@ -14,6 +14,7 @@ export interface Person {
     businessName?: string
     postalOffice?: string
     postalBox?: string
+    cf?: string
     address: {
         kind?: AddressKind
         street: string

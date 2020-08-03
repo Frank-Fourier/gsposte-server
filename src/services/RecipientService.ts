@@ -116,7 +116,8 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                   // rowProvince = cellValue(4), -- not used
                   rowUsername = cellValue(5),
                   rowPassword = cellValue(6),
-                  rowEmail    = cellValue(7);
+                  rowEmail    = cellValue(7),
+                  rowCf       = cellValue(8);
 
             const validateCell = (val: string, validators: CellValidator[]) =>
                 validators.filter(v => !v(val).valid).map(nv => {
@@ -128,6 +129,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             if (!validateCell(rowStreet, [ validators.notEmpty("Indirizzo"), validators.maxLength("Indirizzo", 40) ])) continue;
             if (!validateCell(rowZip, [ validators.notEmpty("CAP"), validators.maxLength("CAP", 5) ])) continue;
             if (!validateCell(rowCityName, [ validators.notEmpty("Comune"), validators.maxLength("Comune", 40) ])) continue;
+            if (!validateCell(rowCf, [ validators.maxLength("Codice Fiscale", 16) ])) continue;
 
             // Query municipality
             let municipality: MunicipalityDocument = null;
@@ -174,6 +176,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                         password: rowPassword
                     }
                 } : {}),
+                cf: rowCf,
                 notes: "Contatto importato da Excel."
             };
 
@@ -221,10 +224,10 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             COMUNE: rec.address.city,
             PROVINCIA: rec.address.province,
             USERNAME: rec.tv?.username,
-            PASSWORD: "******",
             EMAIL: rec.tv?.email,
+            "CODICE FISCALE": rec.cf,
         })), {
-            header: [ "DENOMINAZIONE", "INDIRIZZO", "CAP", "COMUNE", "PROVINCIA", "USERNAME", "PASSWORD", "EMAIL" ]
+            header: [ "DENOMINAZIONE", "INDIRIZZO", "CAP", "COMUNE", "PROVINCIA", "USERNAME", "EMAIL", "CODICE FISCALE" ]
         });
         worksheet["!cols"] = [
             { wch: 20 }, // DENOMINAZIONE
@@ -233,8 +236,8 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             { wch: 20 }, // COMUNE
             { wch: 10 }, // PROVINCIA
             { wch: 20 }, // USERNAME
-            { wch: 10 }, // PASSWORD
             { wch: 30 }, // EMAIL
+            { wch: 30 }, // CODICE FISCALE
         ];
 
         utils.book_append_sheet(workbook, worksheet, "Anagrafiche");
