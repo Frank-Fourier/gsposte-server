@@ -200,13 +200,13 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 }
             });
         } catch (err) {
-            logFile.error(`Error while calling PosteWay SEND endpoint`, err);
+            logFile?.error(`Error while calling PosteWay SEND endpoint`, err);
             logger.error(`Error while calling PosteWay SEND endpoint. Got this error: `, err);
             throw { message: `Error while calling PosteWay SEND endpoint`, error: err };
         }
 
         if (!submit.ok) {
-            logFile.error(`PosteWay send API result was not ok. Got this result: `, submit);
+            logFile?.error(`PosteWay send API result was not ok. Got this result: `, submit);
             logger.error(`PosteWay send API result was not ok. Got this result: `, submit);
             throw { error: `PosteWay send API result was not ok.`, result: submit };
         }
@@ -217,7 +217,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         try {
             confirm = await this.posteWay.confirm(kind, submit.request.requestId);
         } catch (err) {
-            logFile.error(`Error while calling PosteWay CONFIRM endpoint`, err);
+            logFile?.error(`Error while calling PosteWay CONFIRM endpoint`, err);
             logger.error(`Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
             throw { message: `Error while calling PosteWay CONFIRM endpoint`, error: err };
         }
@@ -231,7 +231,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             total = res.total;
             details = res.details;
         } catch (err) {
-            logFile.error(`Error while calling PosteWay STATUS endpoint`, err);
+            logFile?.error(`Error while calling PosteWay STATUS endpoint`, err);
             logger.error(`Error while calling PosteWay STATUS endpoint. Got this error: `, err);
             throw { message: `Error while calling PosteWay STATUS endpoint`, error: err };
         }
@@ -240,7 +240,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         try {
             track = await this.posteWay.track(kind, confirm.orderId);
         } catch (err) {
-            logFile.error(`Error while calling PosteWay TRACK endpoint`, err);
+            logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
             logger.error(`Error while calling PosteWay TRACK endpoint. Got this error: `, err);
             throw { message: `Error while calling PosteWay TRACK endpoint`, error: err };
         }
@@ -249,7 +249,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         try {
             recipients = await this.posteWay.recipients(kind, submit.request.requestId);
         } catch (err) {
-            logFile.error(`Error while calling PosteWay RECIPIENTS endpoint`, err);
+            logFile?.error(`Error while calling PosteWay RECIPIENTS endpoint`, err);
             logger.error(`Error while calling PosteWay RECIPIENTS endpoint. Got this error: `, err);
             throw { message: `Error while calling PosteWay RECIPIENTS endpoint`, error: err };
         }
