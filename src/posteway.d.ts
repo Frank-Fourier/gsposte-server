@@ -64,6 +64,7 @@ export interface Submit {
     recipients: Person[]
     cid: string
     foreign?: boolean
+    ar?: boolean
     options?: {
         bw?: boolean
         backSide?: boolean
@@ -89,4 +90,9 @@ export interface ConfirmResponse {
         number?: string
         epm?: string
     }[]
+}
+
+export interface RecipientsResponse {
+    id: string
+    person: Person
 }

@@ -167,11 +167,13 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     province: municipality.province,
                     country: municipality.country
                 },
-                tv: {
-                    username: rowUsername,
-                    email: rowEmail,
-                    password: rowPassword
-                },
+                ...(!!rowUsername && !!rowPassword? {
+                    tv: {
+                        username: rowUsername,
+                        email: rowEmail || "",
+                        password: rowPassword
+                    }
+                } : {}),
                 notes: "Contatto importato da Excel."
             };
 

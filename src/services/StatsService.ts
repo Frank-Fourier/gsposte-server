@@ -4,7 +4,6 @@ import { inject } from "inversify";
 import { LetterService } from "@services/LetterService";
 import { RubricService } from "@services/RubricService";
 import { RecipientService } from "@services/RecipientService";
-import { logger } from "@utils/winston";
 
 /**
  * @swagger
@@ -136,7 +135,6 @@ export class StatsService {
             [LetterKind.RACCOMANDATA_AR]: await fetchLetterStats(LetterKind.RACCOMANDATA_AR),
         };
 
-        logger.info(JSON.stringify(stats));
         const totalSpent = Object.values(stats).reduce<number>((acc, s) => acc + s.spent, 0);
         return {
             letters: {

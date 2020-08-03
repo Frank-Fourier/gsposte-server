@@ -1,7 +1,7 @@
 import { provide } from "inversify-binding-decorators";
 import {
     ConfirmResponse,
-    Person,
+    RecipientsResponse,
     StatusResponse,
     Submit,
     SubmitKind,
@@ -61,7 +61,7 @@ export class PosteWayService {
         return this.call(`/track/${kind}/${orderId}`);
     }
 
-    public async recipients(kind: SubmitKind, requestId: string): Promise<{ id: string, person: Person }[]> {
+    public async recipients(kind: SubmitKind, requestId: string): Promise<RecipientsResponse[]> {
         return this.call(`/recipients/${kind}/${requestId}`);
     }
 
