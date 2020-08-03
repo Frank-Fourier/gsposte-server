@@ -260,7 +260,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     // Format currency
     public formatCurrency(price: number) {
         const [ int, decimal ] = price.toPrecision(3).split(".");
-        return `${int},${decimal.padEnd(2, "0")} €`;
+        return `${int},${decimal?.padEnd(2, "0") || "00"} €`;
     }
 
 }
