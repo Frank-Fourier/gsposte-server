@@ -71,6 +71,7 @@ export function mapRecipientToPerson(recipient: RecipientDocument): Person {
     return {
         name: recipient.fullName.split(" ")[0],
         surname: recipient.fullName.substring(recipient.fullName.indexOf(" ") + 1),
+        cf: recipient.cf,
         address: {
             kind: "normal",
             street: recipient.address?.street,

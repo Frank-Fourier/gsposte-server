@@ -98,6 +98,7 @@ export function mapSenderToPerson(sender: SenderDocument): Person {
         name: sender.name.split(" ")[0],
         surname: sender.name.split(" ")[1] || "",
         businessName: sender.businessName,
+        cf: sender.cf,
         address: {
             kind: "normal",
             street: sender.address?.street,
