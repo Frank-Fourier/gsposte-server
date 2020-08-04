@@ -9,11 +9,11 @@ import { mapSenderToPerson, SenderDocument } from "@models/SenderModel";
 import { mapRecipientToPerson } from "@models/RecipientModel";
 import { createLogFile, detachLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
+import { sleep } from "@utils/sleep";
+import { ConfirmResponse, RecipientsResponse, SubmitResponse, TrackResponse } from "../posteway";
 import winston from "winston";
 import moment from "moment";
 import fs from "fs";
-import { sleep } from "@utils/sleep";
-import { ConfirmResponse, Price, RecipientsResponse, SubmitResponse, TrackResponse } from "../posteway";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -223,19 +223,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         }
         await sleep(5000);
 
-        // Call status, track and recipients to get the info I need to fill the posteway object on document
-        let status: string, total: Price, details: any;
-        try {
-            const res = await this.posteWay.status(kind, submit.request.requestId);
-            status = res.status;
-            total = res.total;
-            details = res.details;
-        } catch (err) {
-            logFile?.error(`Error while calling PosteWay STATUS endpoint`, err);
-            logger.error(`Error while calling PosteWay STATUS endpoint. Got this error: `, err);
-            throw { message: `Error while calling PosteWay STATUS endpoint`, error: err };
-        }
-
+        // Call track and recipients to get the info I need to fill the posteway object on document
         let track: TrackResponse;
         try {
             track = await this.posteWay.track(kind, confirm.orderId);
@@ -259,8 +247,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 posteway: {
                     requestId: submit.request?.requestId,
                     orderId: confirm.orderId,
-                    status: status,
-                    prices: { total, details },
+                    prices: {
+                        total: confirm.price?.total,
+                        details: confirm.price?.details,
+                    },
                     track: track,
                     recipients: recipients,
                 }
@@ -284,21 +274,15 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     public async queryLetter(letter: LetterDocument): Promise<LetterDocument> {
         logger.info(`--> Querying letter '${letter.codePdf}' <--`);
         const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
-        const { requestId, orderId } = letter.posteway;
+        const { orderId } = letter.posteway;
 
-        const { status, total, details } = await this.posteWay.status(kind, requestId);
+        // Get new tracking info
         const track = await this.posteWay.track(kind, orderId);
-        const recipients = await this.posteWay.recipients(kind, requestId);
-
         return await this.updateById(letter.id, {
             $set: {
                 posteway: {
-                    requestId: requestId,
-                    orderId: orderId,
-                    status: status,
-                    prices: { total, details },
+                    ...letter.posteway,
                     track: track,
-                    recipients: recipients,
                 }
             }
         }, false, false);

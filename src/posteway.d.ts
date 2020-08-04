@@ -33,9 +33,7 @@ export interface Price {
     cur: string
 }
 
-export interface StatusResponse {
-    request: Request
-    status: string
+export interface PriceResponse {
     pages: number
     total: Price
     details: {
@@ -45,6 +43,12 @@ export interface StatusResponse {
         vat: number
         vatCode: string
     }[]
+}
+
+export interface StatusResponse {
+    request: Request
+    status: string
+    price: PriceResponse
 }
 
 export interface TrackResponse {
@@ -91,6 +95,7 @@ export interface ConfirmResponse {
         number?: string
         epm?: string
     }[]
+    price: PriceResponse
 }
 
 export interface RecipientsResponse {
