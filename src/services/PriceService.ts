@@ -33,6 +33,7 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
             pages = (await this.pdf.metadata(`public/${letter.codePdf}/original.pdf`)).pages;
         } catch (err) {
             // Ignore errors
+            logger.error(`Error while getting PDF pages for letter ${letter.codePdf}!`, err);
         }
 
         if (letter.backSide) {
