@@ -221,7 +221,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             logger.error(`Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
             throw { message: `Error while calling PosteWay CONFIRM endpoint`, error: err };
         }
-        await sleep(5000);
+        await sleep(10000);
 
         // Call track and recipients to get the info I need to fill the posteway object on document
         let track: TrackResponse;

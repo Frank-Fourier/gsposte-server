@@ -217,8 +217,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async generateLetterInvoicePDF(letter: LetterDocument): Promise<Buffer> {
         if (!letter.sent) {
-            throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter not yet sent!");
+            throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
         }
+        if (!letter.posteway) {
+            throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
+        }
+
         await letter.populate("sender recipients").execPopulate();
 
         try {
@@ -228,32 +232,26 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             logger.warn(`! Failed to query letter ${letter.codePdf} !`, err);
         }
 
-        const { posteway } = letter;
-        if (!posteway) {
-            throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.")
-        }
-
         const price = await this.priceService.calculatePrice(letter);
-        // const partial = !posteway || !posteway.status?.startsWith("S");
 
         // Format envelopes dates
-        posteway.track.tracking =  posteway.track.tracking?.map(e => ({
+        letter.posteway.track.tracking =  letter.posteway.track.tracking?.map(e => ({
             ...e,
             date: e.date ? moment(e.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : null,
         }));
 
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({
             sender: letter.sender ? (letter.sender as SenderDocument).toObject() : {},
-            posteway: (posteway as Partial<Document>).toObject() || {},
+            posteway: (letter.posteway as Partial<Document>).toObject() || {},
             dateSent: letter.sendAt ? moment(letter.sendAt).format("DD/MM/YYYY") : null,
             partial: false,
             codePdf: letter.codePdf,
             kind: letter.kind,
             price: this.formatCurrency(price),
-            total: this.formatCurrency(price * posteway.recipients.length),
+            total: this.formatCurrency(price * letter.posteway.recipients.length),
         });
 
-        // I want until networkidle2 to let all the images on the HTML load before converting
+        // I wait until networkidle2 to let all the images on the HTML load before converting
         return await this.pdf.htmlToPdf(html, "networkidle2");
     }
 
