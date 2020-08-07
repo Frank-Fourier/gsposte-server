@@ -30,7 +30,7 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
         const paperWeight = parseFloat(process.env.PAPER_WEIGHT || "5");
         let pages = 1;
         try {
-            pages = (await this.pdf.metadata(`public/${letter.codePdf}/original.pdf`)).pages;
+            pages = (await this.pdf.metadata(`public/pdf/${letter.codePdf}/original.pdf`)).pages;
         } catch (err) {
             // Ignore errors
             logger.error(`Error while getting PDF pages for letter ${letter.codePdf}!`, err);
