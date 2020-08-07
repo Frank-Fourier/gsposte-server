@@ -29,12 +29,12 @@ export class LetterController extends CrudController {
     }
 
     public async generateInvoice(req: Request, res: Response) {
-        const letter = await this.letterService.findById(req.params.id);
+        const letter = (await this.letterService.findById(req.params.id)).depopulate("user");
 
-        const user = await this.authService.getUserFromRequest(req);
-        if (!user.isAdmin() && letter.user !== user.id) {
-            throw new httpErrors.Forbidden("You are not authorized to generate invoices for other users!");
-        }
+        // const user = await this.authService.getUserFromRequest(req);
+        // if (!user.isAdmin() && letter.user !== user.id) {
+        //     throw new httpErrors.Forbidden("You are not authorized to generate invoices for other users!");
+        // }
 
         const pdf = await this.invoiceService.generateLetterInvoicePDF(letter);
         const path = `${PDF_ROOT}/${letter.codePdf}/invoice.pdf`;
