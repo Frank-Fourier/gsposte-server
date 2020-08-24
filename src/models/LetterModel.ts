@@ -87,13 +87,13 @@ import { Person, StatusResponse, TrackResponse } from "../posteway";
  *             type: boolean
  *             description: This gets updated to true when the campaign is sent from the CRON. You can't update this field manually.
  *             example: false
- *           uuid:
- *             type: string
- *             description: CustomerSetID passed to Postel on upload. You can't update this field manually.
- *             example: B887A8D3-2533-4AA7-9112-43ED8144BA96
  *           paid:
  *             type: boolean
  *             description: True if this letter's invoice was paid correctly.
+ *             example: false
+ *           error:
+ *             type: boolean
+ *             description: True if PosteWay couldn't send this letter due to an error
  *             example: false
  *           price:
  *             type: number
@@ -124,6 +124,7 @@ export interface Letter {
 export interface LetterDocument extends Letter, Document {
     sent: boolean
     paid?: boolean
+    error?: boolean
     invoice?: string | InvoiceDocument
     price?: number
     posteway?: {
@@ -150,8 +151,7 @@ export interface LetterDocument extends Letter, Document {
             dateCompleted?: Date | string
             tracking?: string
         }>
-    }
-     */
+    } */
 }
 export const letterDecoder: Decoder<Letter> = object({
     user: optional(string()),
@@ -224,6 +224,10 @@ export const LetterSchema = new Schema<Letter>({
         type: Boolean,
         default: false,
     },
+    error: {
+        type: Boolean,
+        default: false,
+    },
     invoice: {
         type: Schema.Types.ObjectId,
         ref: "Invoice",
@@ -254,8 +258,7 @@ export const LetterSchema = new Schema<Letter>({
                 tracking: String,
             }, { _id: false })
         ]
-    }, { _id: false }),
-    */
+    }, { _id: false }), */
 }, {
     timestamps: {
         createdAt: true,

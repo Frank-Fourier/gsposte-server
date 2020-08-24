@@ -19,7 +19,7 @@ import fs from "fs";
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     @inject(PdfService) private pdf: PdfService;
-    @inject(PosteWayService) private posteWay: PosteWayService;
+    @inject(PosteWayService) private posteway: PosteWayService;
     @inject(PriceService) private priceService: PriceService;
 
     constructor(private letterModel = LetterModel) {
@@ -170,98 +170,103 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         logger.info(`--> Sending letter '${letter.codePdf}' <--`);
         await this.updateById(letter.id, { $set: { sent: true }});
 
-        const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
-        const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
-        const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
-
-        if (!pdf_exists) {
-            logger.error(`Letter '${letter.codePdf}' does not have a PDF!`);
-            logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
-            throw { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` };
-        }
-
-        // Upload through PosteWay to get the CID
-        const { cid } = await this.posteWay.upload(fs.createReadStream(pdf_path));
-        await sleep(500);
-
-        // Submit through PosteWay to get the Request ID
-        let submit: SubmitResponse;
         try {
-            submit = await this.posteWay.send({
-                kind: kind,
-                foreign: false, // Needs to be mapped based on recipients
-                sender: mapSenderToPerson(letter.sender as SenderDocument),
-                recipients: letter.recipients.map(mapRecipientToPerson),
-                cid: cid,
-                ar: letter.kind === LetterKind.RACCOMANDATA_AR,
-                options: {
-                    bw: letter.bw || false,
-                    backSide: letter.backSide || true
-                }
-            });
-        } catch (err) {
-            logFile?.error(`Error while calling PosteWay SEND endpoint`, err);
-            logger.error(`Error while calling PosteWay SEND endpoint. Got this error: `, err);
-            throw { message: `Error while calling PosteWay SEND endpoint`, error: err };
-        }
+            const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
+            const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
+            const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
 
-        if (!submit.ok) {
-            logFile?.error(`PosteWay send API result was not ok. Got this result: `, submit);
-            logger.error(`PosteWay send API result was not ok. Got this result: `, submit);
-            throw { error: `PosteWay send API result was not ok.`, result: submit };
-        }
-        await sleep(60000);
-
-        // Immediately confirm the request to get the Order ID
-        let confirm: ConfirmResponse;
-        try {
-            confirm = await this.posteWay.confirm(kind, submit.request.requestId);
-        } catch (err) {
-            logFile?.error(`Error while calling PosteWay CONFIRM endpoint`, err);
-            logger.error(`Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
-            throw { message: `Error while calling PosteWay CONFIRM endpoint`, error: err };
-        }
-        await sleep(10000);
-
-        // Call track and recipients to get the info I need to fill the posteway object on document
-        let track: TrackResponse;
-        try {
-            track = await this.posteWay.track(kind, confirm.orderId);
-        } catch (err) {
-            logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
-            logger.error(`Error while calling PosteWay TRACK endpoint. Got this error: `, err);
-            throw { message: `Error while calling PosteWay TRACK endpoint`, error: err };
-        }
-
-        let recipients: RecipientsResponse[];
-        try {
-            recipients = await this.posteWay.recipients(kind, submit.request.requestId);
-        } catch (err) {
-            logFile?.error(`Error while calling PosteWay RECIPIENTS endpoint`, err);
-            logger.error(`Error while calling PosteWay RECIPIENTS endpoint. Got this error: `, err);
-            throw { message: `Error while calling PosteWay RECIPIENTS endpoint`, error: err };
-        }
-
-        const updated = await this.updateById(letter.id, {
-            $set: {
-                posteway: {
-                    requestId: submit.request?.requestId,
-                    orderId: confirm.orderId,
-                    prices: {
-                        total: confirm.price?.total,
-                        details: confirm.price?.details,
-                    },
-                    track: track,
-                    recipients: recipients,
-                }
+            if (!pdf_exists) {
+                logger.error(`Letter '${letter.codePdf}' does not have a PDF!`);
+                logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
+                throw {error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}`};
             }
-        }, false, false);
-        logFile?.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
 
-        logFile?.info("That's all folks!");
-        logger.info(`Ok! Sent letter '${letter.codePdf}'`);
+            // Upload through PosteWay to get the CID
+            const {cid} = await this.posteway.upload(fs.createReadStream(pdf_path));
+            await sleep(500);
 
-        return updated;
+            // Submit through PosteWay to get the Request ID
+            let submit: SubmitResponse;
+            try {
+                submit = await this.posteway.send({
+                    kind: kind,
+                    foreign: false, // Needs to be mapped based on recipients
+                    sender: mapSenderToPerson(letter.sender as SenderDocument),
+                    recipients: letter.recipients.map(mapRecipientToPerson),
+                    cid: cid,
+                    ar: letter.kind === LetterKind.RACCOMANDATA_AR,
+                    options: {
+                        bw: letter.bw || false,
+                        backSide: letter.backSide || true
+                    }
+                });
+            } catch (err) {
+                logFile?.error(`Error while calling PosteWay SEND endpoint`, err);
+                logger.error(`Error while calling PosteWay SEND endpoint. Got this error: `, err);
+                throw {message: `Error while calling PosteWay SEND endpoint`, error: err};
+            }
+
+            if (!submit.ok) {
+                logFile?.error(`PosteWay send API result was not ok. Got this result: `, submit);
+                logger.error(`PosteWay send API result was not ok. Got this result: `, submit);
+                throw {error: `PosteWay send API result was not ok.`, result: submit};
+            }
+            await sleep(60000);
+
+            // Immediately confirm the request to get the Order ID
+            let confirm: ConfirmResponse;
+            try {
+                confirm = await this.posteway.confirm(kind, submit.request.requestId);
+            } catch (err) {
+                logFile?.error(`Error while calling PosteWay CONFIRM endpoint`, err);
+                logger.error(`Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
+                throw {message: `Error while calling PosteWay CONFIRM endpoint`, error: err};
+            }
+            await sleep(10000);
+
+            // Call track and recipients to get the info I need to fill the posteway object on document
+            let track: TrackResponse;
+            try {
+                track = await this.posteway.track(kind, confirm.orderId);
+            } catch (err) {
+                logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
+                logger.error(`Error while calling PosteWay TRACK endpoint. Got this error: `, err);
+                throw {message: `Error while calling PosteWay TRACK endpoint`, error: err};
+            }
+
+            let recipients: RecipientsResponse[];
+            try {
+                recipients = await this.posteway.recipients(kind, submit.request.requestId);
+            } catch (err) {
+                logFile?.error(`Error while calling PosteWay RECIPIENTS endpoint`, err);
+                logger.error(`Error while calling PosteWay RECIPIENTS endpoint. Got this error: `, err);
+                throw {message: `Error while calling PosteWay RECIPIENTS endpoint`, error: err};
+            }
+
+            const updated = await this.updateById(letter.id, {
+                $set: {
+                    posteway: {
+                        requestId: submit.request?.requestId,
+                        orderId: confirm.orderId,
+                        prices: {
+                            total: confirm.price?.total,
+                            details: confirm.price?.details,
+                        },
+                        track: track,
+                        recipients: recipients,
+                    }
+                }
+            }, false, false);
+            logFile?.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
+
+            logFile?.info("That's all folks!");
+            logger.info(`Ok! Sent letter '${letter.codePdf}'`);
+
+            return updated;
+        } catch (err) {
+            await this.updateById(letter.id, { $set: { error: true }});
+            throw err;
+        }
     }
 
     /**
@@ -277,7 +282,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         const { orderId } = letter.posteway;
 
         // Get new tracking info
-        const track = await this.posteWay.track(kind, orderId);
+        const track = await this.posteway.track(kind, orderId);
         return await this.updateById(letter.id, {
             $set: {
                 posteway: {

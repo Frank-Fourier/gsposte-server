@@ -14,6 +14,13 @@ import httpErrors from "http-errors";
 import moment from "moment";
 import { logger } from "@utils/winston";
 
+const groupBy = <T>(array: Array<T>, property: (x: T) => string): { [key: string]: Array<T> } =>
+    array.reduce((memo: { [key: string]: Array<T> }, x: T) => {
+        if (!memo[property(x)]) memo[property(x)] = [];
+        memo[property(x)].push(x);
+        return memo;
+    }, {});
+
 @provide(InvoiceService)
 export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
@@ -58,14 +65,20 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             if (letter.sender.toString() !== letters[0].sender.toString()) {
                 throw new httpErrors.BadRequest("Letters to generate an invoice from must all have the same sender!");
             }
+
             try {
                 if (!letter.sent) {
-                    throw `This letter is not sent so I won't include it in the invoice.`;
+                    throw new httpErrors.BadRequest("This letter is not sent so I won't include it in the invoice.");
                 }
+                if (!letter.error) {
+                    throw new httpErrors.BadRequest("This letter is in an error state so I won't include it in the invoice.");
+                }
+
                 const taxable = await this.priceService.calculatePrice(letter);
                 if (taxable <= 0) {
                     throw new httpErrors.BadRequest("Can't create an invoice for a letter without a price!");
                 }
+
                 taxableSum += taxable;
             } catch (err) {
                 errors.push({ letter: letter, error: err });
@@ -84,9 +97,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         });
 
         if (!!number) {
-            await invoice.updateOne({
-                $set: { number: number }
-            }).exec();
+            await invoice.updateOne({ $set: { number: number } }).exec();
             invoice.number = number;
         }
 
@@ -115,18 +126,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             user: user,
             sent: true,
             paid: false,
-            invoice: <any>{ $exists: false },
+            error: false,
+            invoice: { $exists: false },
         });
         if (!letters || letters.length === 0) {
             return [];
         }
-
-        const groupBy = <T>(array: Array<T>, property: (x: T) => string): { [key: string]: Array<T> } =>
-            array.reduce((memo: { [key: string]: Array<T> }, x: T) => {
-                if (!memo[property(x)]) memo[property(x)] = [];
-                memo[property(x)].push(x);
-                return memo;
-            }, {});
 
         const aggregated = groupBy<LetterDocument>(letters, letter => letter.sender as string);
         const results: Array<{
@@ -178,7 +183,14 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * @returns {Promise<number>} Promise resolving to the latest invoice number
      */
     public async getLatestInvoiceNumber(): Promise<number> {
-        const invoices = (await this.findAll({ sort: { "createdAt": 1 } }));
+        // Filter invoices of this current year
+        const year = new Date().getFullYear();
+        const invoices = (await this.find({
+            createdAt: {
+                $gte: `${year}-01-01`,
+                $lte: `${year}-12-31`
+            }
+        }, { sort: { "createdAt": 1 } }));
         if (!invoices || invoices.length === 0) {
             return 0;
         }
@@ -218,6 +230,9 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     public async generateLetterInvoicePDF(letter: LetterDocument): Promise<Buffer> {
         if (!letter.sent) {
             throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
+        }
+        if (letter.error) {
+            throw new httpErrors.Forbidden("You are not allowed to create an invoice for an errored letter!");
         }
         if (!letter.posteway) {
             throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
