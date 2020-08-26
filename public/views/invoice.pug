@@ -22,10 +22,6 @@ html(lang="it")
                 float: left;
                 margin-right: 20px;
             }
-            .logo-poste {
-                width: 150px;
-                float: right;
-            }
             .header {}
             .sender {
                 font-size: 14px;
@@ -90,11 +86,11 @@ html(lang="it")
                     th Tracking
                 th Impon.
             tbody
-                each recipient, index in (posteway.recipients)
+                each recipient, index in (posteway.track.recipients)
                     tr
                         td(width="5%") #{index + 1}
                         if kind !== "LETTERA SEMPLICE"
-                            td(width="12.5%") #{posteway.track.tracking[index].date || "-"}
+                            td(width="12.5%") #{recipient.tracking.date || "-"}
                         if kind === "LETTERA SEMPLICE"
                             td(width="12.5%") #{dateSent || "-"}
                         td(width="40%") #{recipient.person.name.toUpperCase() + " " + recipient.person.surname.toUpperCase()}
@@ -104,11 +100,11 @@ html(lang="it")
                         td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.city.toUpperCase() || "-"}
                         td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.province.toUpperCase() || "-"}
                         if kind !== "LETTERA SEMPLICE"
-                            td(width="8.5%") #{posteway.track.tracking[index].number || "-"}
+                            td(width="8.5%") #{recipient.tracking.number || "-"}
                         td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{price || "-"}
         p
             | Tot. Prodotti:
-            b  #{posteway.recipients ? posteway.recipients.length : 0}
+            b  #{posteway.track.recipients.length}
             |
             span Totale Distinta:
                 |

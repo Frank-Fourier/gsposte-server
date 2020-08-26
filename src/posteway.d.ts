@@ -51,15 +51,21 @@ export interface StatusResponse {
     price: PriceResponse
 }
 
+export interface TrackInfo {
+    number: string
+    statusCode: string
+    description: string
+    date: string
+}
+
 export interface TrackResponse {
     requestId: string
     orderStatus: string
     requestStatus: string
-    tracking?: {
-        number: string
-        statusCode: string
-        description: string
-        date: string
+    recipients: {
+        id: string
+        person: Person
+        tracking?: TrackInfo
     }[]
 }
 
@@ -98,7 +104,7 @@ export interface ConfirmResponse {
     price: PriceResponse
 }
 
-export interface RecipientsResponse {
+export interface Recipient {
     id: string
     person: Person
 }

@@ -19,3 +19,7 @@ export async function generateSystemUser(): Promise<UserDocument> {
         return;
     } finally { spinner && spinner.succeed("Created system user!"); }
 }
+
+export function isTestEnv(): boolean {
+    return process.env.NODE_ENV === "test";
+}

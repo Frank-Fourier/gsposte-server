@@ -15,6 +15,7 @@ import { SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
 import { Person, StatusResponse, TrackResponse } from "../posteway";
+import { ProvisionDocument } from "@models/ProvisionModel";
 
 /**
  * @swagger
@@ -83,6 +84,10 @@ import { Person, StatusResponse, TrackResponse } from "../posteway";
  *             type: string
  *             description: Invoice associated with this letter
  *             example: 5c991af86327ba47393f2fb3
+ *           provision:
+ *             type: string
+ *             description: Provision associated with this letter
+ *             example: 5c991af86327ba47393f2fb3
  *           sent:
  *             type: boolean
  *             description: This gets updated to true when the campaign is sent from the CRON. You can't update this field manually.
@@ -126,6 +131,7 @@ export interface LetterDocument extends Letter, Document {
     paid?: boolean
     error?: boolean
     invoice?: string | InvoiceDocument
+    provision?: string | ProvisionDocument
     price?: number
     posteway?: {
         requestId?: string
@@ -232,6 +238,10 @@ export const LetterSchema = new Schema<Letter>({
         type: Schema.Types.ObjectId,
         ref: "Invoice",
     },
+    provision: {
+        type: Schema.Types.ObjectId,
+        ref: "Provision",
+    },
     price: {
         type: Number,
     },
@@ -241,7 +251,6 @@ export const LetterSchema = new Schema<Letter>({
         status: String,
         prices: Schema.Types.Mixed,
         track: Schema.Types.Mixed,
-        recipients: Schema.Types.Mixed
     }, { _id: false }),
     /** REMOVED IN FAVOR OF POSTEWAY
     stats: new Schema({

@@ -27,8 +27,8 @@ RUN apk add --no-cache \
 # Copy package.json
 COPY package.json .
 
-# Install dependencies through NPM
-RUN npm install
+# Install dependencies through Yarn
+RUN yarn
 
 # Copy source files
 COPY . .
@@ -36,7 +36,7 @@ COPY src src/
 COPY public public/
 
 # Compile the application into dist/
-RUN npm run build
+RUN yarn build
 
 # Launch PM2
 EXPOSE 5000

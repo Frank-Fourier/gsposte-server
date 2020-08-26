@@ -250,9 +250,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         const price = await this.priceService.calculatePrice(letter);
 
         // Format envelopes dates
-        letter.posteway.track.tracking =  letter.posteway.track.tracking?.map(e => ({
+        letter.posteway.track.recipients = letter.posteway.track.recipients?.map(e => ({
             ...e,
-            date: e.date ? moment(e.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : null,
+            tracking: e.tracking ? {
+                ...e.tracking,
+                date: e.tracking.date ? moment(e.tracking.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : null
+            } : undefined,
         }));
 
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({
@@ -270,8 +273,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         return await this.pdf.htmlToPdf(html, "networkidle2");
     }
 
-    // Format currency
-    public formatCurrency(price: number) {
+    public formatCurrency(price: number): string {
         const [ int, decimal ] = price.toPrecision(3).split(".");
         return `${int},${decimal?.padEnd(2, "0") || "00"} €`;
     }

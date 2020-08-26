@@ -28,9 +28,9 @@ export function generateMockLetter(user: string | UserDocument, sender: string |
 export async function saveMockLetter(options: { user: string | UserDocument, sender?: string | SenderDocument, recipients?: Array<string | RecipientDocument>, codePdf?: string, sent?: boolean, kind?: LetterKind }) {
     const userId = typeof(options.user) === "object" ? (options.user as UserDocument).id : options.user;
     // THIS SHIT DOESN'T WORK!?!?!?!?
-    //const recipients = await Promise.all(
+    // const recipients = await Promise.all(
     //    Array(numRecipients).map(async () => await ioc.resolve(RecipientService).save(generateMockRecipient(userId)))
-    //);
+    // );
     const letter = await (await ioc.resolve(LetterService).save(generateMockLetter(
         userId,
         options.sender || (await ioc.resolve(SenderService).save(generateMockSender(userId))).id,

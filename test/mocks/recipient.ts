@@ -9,6 +9,11 @@ export function generateMockRecipient(user: string | UserDocument): Recipient {
         user: user,
         fullName: faker.fake("{{name.firstName}} {{name.lastName}}"),
         address: generateMockAddress(),
+        tv: {
+            username: faker.internet.userName(),
+            password: faker.internet.password(),
+            email: faker.internet.email()
+        },
         notes: faker.lorem.sentence(),
     }
 }

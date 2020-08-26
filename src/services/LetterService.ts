@@ -10,7 +10,9 @@ import { mapRecipientToPerson } from "@models/RecipientModel";
 import { createLogFile, detachLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
-import { ConfirmResponse, RecipientsResponse, SubmitResponse, TrackResponse } from "../posteway";
+import { ConfirmResponse, SubmitResponse, TrackResponse } from "../posteway";
+import { isTestEnv } from "@utils/system";
+import { ProvisionService } from "@services/ProvisionService";
 import winston from "winston";
 import moment from "moment";
 import fs from "fs";
@@ -21,6 +23,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     @inject(PdfService) private pdf: PdfService;
     @inject(PosteWayService) private posteway: PosteWayService;
     @inject(PriceService) private priceService: PriceService;
+    @inject(ProvisionService) private provisionService: ProvisionService;
 
     constructor(private letterModel = LetterModel) {
         super(letterModel, letterDecoder, [
@@ -34,19 +37,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         await saved.updateOne({ $set: { price: price }}).exec();
         saved.price = price;
 
-        if (!letter.sendAt || moment(letter.sendAt).isSameOrBefore(moment())) {
-            // No need to schedule! Send everything immediately!
+        if (!isTestEnv() && (!letter.sendAt || moment(letter.sendAt).isSameOrBefore(moment()))) {
+            // No need to schedule, send everything immediately
             saved = await this.sendLetter(saved);
         }
 
-        // Not needed anymore as I don't have to format PDFs with PosteWay
-        // try {
-        //     if (process.env.NODE_ENV !== "test")
-        //         await this.pdf.formatAndSavePdf(saved);
-        // } catch (err) {
-        //     await this.deleteById(saved.id);
-        //     throw err;
-        // }
         return depopulate ? saved.depopulate("sender recipients") : saved;
     }
 
@@ -58,14 +53,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             updated.price = price;
         }
 
-        // Not needed anymore as I don't have to format PDFs with PosteWay
-        // try {
-        //     if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
-        //         await this.pdf.formatAndSavePdf(updated);
-        // } catch (err) {
-        //     await this.deleteById(updated.id);
-        //     throw err;
-        // }
         return updated;
     }
 
@@ -77,14 +64,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             updated.price = price;
         }
 
-        // Not needed anymore as I don't have to format PDFs with PosteWay
-        // try {
-        //     if (process.env.NODE_ENV !== "test" && (updateBody.sender || updateBody.recipients || updateBody.codePdf))
-        //         await this.pdf.formatAndSavePdf(updated);
-        // } catch (err) {
-        //     await this.deleteById(updated.id);
-        //     throw err;
-        // }
         return updated;
     }
 
@@ -169,6 +148,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     public async sendLetter(letter: LetterDocument, logFile?: winston.Logger): Promise<LetterDocument> {
         logger.info(`--> Sending letter '${letter.codePdf}' <--`);
         await this.updateById(letter.id, { $set: { sent: true }});
+        let updated: LetterDocument;
 
         try {
             const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
@@ -178,11 +158,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             if (!pdf_exists) {
                 logger.error(`Letter '${letter.codePdf}' does not have a PDF!`);
                 logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
-                throw {error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}`};
+                throw { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` };
             }
 
             // Upload through PosteWay to get the CID
-            const {cid} = await this.posteway.upload(fs.createReadStream(pdf_path));
+            const { cid } = await this.posteway.upload(fs.createReadStream(pdf_path));
             await sleep(500);
 
             // Submit through PosteWay to get the Request ID
@@ -203,14 +183,16 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             } catch (err) {
                 logFile?.error(`Error while calling PosteWay SEND endpoint`, err);
                 logger.error(`Error while calling PosteWay SEND endpoint. Got this error: `, err);
-                throw {message: `Error while calling PosteWay SEND endpoint`, error: err};
+                throw { message: `Error while calling PosteWay SEND endpoint`, error: err };
             }
 
             if (!submit.ok) {
                 logFile?.error(`PosteWay send API result was not ok. Got this result: `, submit);
                 logger.error(`PosteWay send API result was not ok. Got this result: `, submit);
-                throw {error: `PosteWay send API result was not ok.`, result: submit};
+                throw { message: `PosteWay send API result was not ok.`, result: submit };
             }
+
+            // Eccolo lo sleep dei 60 secondi
             await sleep(60000);
 
             // Immediately confirm the request to get the Order ID
@@ -220,7 +202,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             } catch (err) {
                 logFile?.error(`Error while calling PosteWay CONFIRM endpoint`, err);
                 logger.error(`Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
-                throw {message: `Error while calling PosteWay CONFIRM endpoint`, error: err};
+                throw { message: `Error while calling PosteWay CONFIRM endpoint`, error: err };
             }
             await sleep(10000);
 
@@ -231,19 +213,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             } catch (err) {
                 logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
                 logger.error(`Error while calling PosteWay TRACK endpoint. Got this error: `, err);
-                throw {message: `Error while calling PosteWay TRACK endpoint`, error: err};
+                throw { message: `Error while calling PosteWay TRACK endpoint`, error: err };
             }
 
-            let recipients: RecipientsResponse[];
-            try {
-                recipients = await this.posteway.recipients(kind, submit.request.requestId);
-            } catch (err) {
-                logFile?.error(`Error while calling PosteWay RECIPIENTS endpoint`, err);
-                logger.error(`Error while calling PosteWay RECIPIENTS endpoint. Got this error: `, err);
-                throw {message: `Error while calling PosteWay RECIPIENTS endpoint`, error: err};
-            }
-
-            const updated = await this.updateById(letter.id, {
+            updated = await this.updateById(letter.id, {
                 $set: {
                     posteway: {
                         requestId: submit.request?.requestId,
@@ -252,21 +225,24 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             total: confirm.price?.total,
                             details: confirm.price?.details,
                         },
-                        track: track,
-                        recipients: recipients,
+                        track: track
                     }
                 }
             }, false, false);
             logFile?.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
 
             logFile?.info("That's all folks!");
+            logFile?.close();
             logger.info(`Ok! Sent letter '${letter.codePdf}'`);
 
-            return updated;
         } catch (err) {
             await this.updateById(letter.id, { $set: { error: true }});
             throw err;
         }
+
+        // Everything went fine, generate provision
+        updated.provision = await this.provisionService.generateProvision(letter);
+        return await updated.save();
     }
 
     /**

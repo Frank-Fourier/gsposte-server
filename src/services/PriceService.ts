@@ -20,12 +20,11 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
         return await this.findOne({
             minWeight: { $lte: weight },
             maxWeight: { $gte: weight },
-            // Because RACCOMANDATA and RACCOMANDATA_AR are the same thing in this context
-            kind: kind === LetterKind.LETTERA_SEMPLICE ? kind : LetterKind.RACCOMANDATA
+            kind: kind
         } as object);
     }
 
-    public async calculatePrice(letter: LetterDocument): Promise<number> {
+    public async calculateWeight(letter: LetterDocument): Promise<{ pages: number, weight: number }> {
         const envelopeWeight = parseFloat(process.env.ENVELOPE_WEIGHT || "5");
         const paperWeight = parseFloat(process.env.PAPER_WEIGHT || "5");
         let pages = 1;
@@ -40,9 +39,15 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
             pages = Math.ceil(pages / 2);
         }
 
-        logger.info(`Calculating price for letter ${letter.codePdf} with ${pages} pages!`);
-        const totalWeight = envelopeWeight + (paperWeight * pages);
-        const { price, extra } = (await this.getPriceForWeight(totalWeight, letter.kind));
+        const weight = envelopeWeight + (paperWeight * pages);
+        return { pages, weight };
+    }
+
+    public async calculatePrice(letter: LetterDocument): Promise<number> {
+        const { pages, weight } = await this.calculateWeight(letter);
+        const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
+
+        logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: € ${price} with € ${extra} as extra`);
         return letter.bw ? price : (price + extra);
     }
 

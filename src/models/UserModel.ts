@@ -2,6 +2,7 @@ import { model, Model, Schema, Document } from "mongoose";
 import { encryptPasswordSync } from "@utils/crypto";
 import { array, constant, Decoder, object, oneOf, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
+import { generateRandomCode } from "@utils/random";
 
 export enum UserRoles {
     ROLE_USER = "ROLE_USER",
@@ -33,9 +34,13 @@ export enum UserRoles {
  *       iva:
  *         type: string
  *         example: 06998950726
- *       referCode:
+ *       referFrom:
  *         type: string
  *         description: Referral code (got from someone else)
+ *         example: GSC4ZSGQZO
+ *       referCode:
+ *         type: string
+ *         description: Referral code (used to refer other people)
  *         example: GSK6UJDIUI
  *       roles:
  *         type: array
@@ -70,6 +75,7 @@ export interface User {
     email: string
     password: string
     iva: string
+    referFrom?: string
     referCode?: string
     active?: boolean
     roles?: Array<UserRoles>
@@ -83,6 +89,7 @@ export const userDecoder: Decoder<User> = object({
     email: string(),
     password: string(),
     iva: string(),
+    referFrom: optional(string()),
     referCode: optional(string()),
     roles: optional(array(oneOf(
         constant(UserRoles.ROLE_USER),
@@ -139,8 +146,12 @@ export const UserSchema = new Schema<User>({
         type: String,
         maxlength: 11,
     },
+    referFrom: {
+        type: String
+    },
     referCode: {
         type: String,
+        default: () => `GS${generateRandomCode()}`
     },
     active: {
         type: Boolean,

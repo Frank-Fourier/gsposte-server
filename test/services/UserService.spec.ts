@@ -20,6 +20,7 @@ let dummy: UserDocument;
     mockUser = userGiovanni;
 
     static async before() { await generateSystemUser(); }
+    static after() { cleanTestDB(); }
 
     @test async "Should save a new dummy user" () {
         try {
@@ -168,6 +169,24 @@ let dummy: UserDocument;
         expect(found.email).to.equal(trimEmail.toLowerCase().trim());
     }
 
-    static after() { cleanTestDB(); }
+    @test async "Should find referrers up to 2 levels" () {
+        try {
+            const userA = await this.userService.save(generateMockUser());
+            const userB = await this.userService.save(generateMockUser(userA.referCode));
+            const userC = await this.userService.save(generateMockUser(userB.referCode));
+
+            const referrersC = await this.userService.getUserReferrers(userC, 2);
+            expect(referrersC.map(ref => ref.id)).eql([ userC.id, userB.id, userA.id ]);
+
+            const referrersB = await this.userService.getUserReferrers(userB, 2);
+            expect(referrersB.map(ref => ref.id)).eql([ userB.id, userA.id ]);
+
+            const referrersA = await this.userService.getUserReferrers(userA, 2);
+            expect(referrersA.map(ref => ref.id)).eql([ userA.id ]);
+        } catch (err) {
+            logger.error(err);
+            expect(err).not.to.exist;
+        }
+    }
 
 }
