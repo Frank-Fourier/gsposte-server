@@ -115,6 +115,12 @@ export class StatsService {
     @inject(RubricService) private rubricService: RubricService;
     @inject(RecipientService) private recipientService: RecipientService;
 
+    /**
+     * Calculates and returns stats for a single user
+     *
+     * @param user {string} User ID to fetch stats for
+     * @returns {Promise<Stats>} Object containing stats for the user
+     */
     public async fetchStats(user: string): Promise<Stats> {
         const fetchLetterStats = async (kind: LetterKind) => {
             const letters = await this.letterService.find({ user: user, kind: kind });

@@ -42,7 +42,7 @@ export async function saveMockLetter(options: { user: string | UserDocument, sen
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
         ],
         options.codePdf || TEST_CODE_PDF,
-        options.kind || LetterKind.LETTERA_SEMPLICE,
+        options.kind || LetterKind.RACCOMANDATA,
     )));
     return await ioc.resolve(LetterService).updateById(letter.id, { $set: { sent: options.sent || false }});
 }

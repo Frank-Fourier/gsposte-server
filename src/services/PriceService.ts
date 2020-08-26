@@ -16,6 +16,13 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
         super(priceModel, priceDecoder);
     }
 
+    /**
+     * Finds the right price in the ranges for the provided weight and letter kind
+     *
+     * @param weight {number} Weight of the letter in grams
+     * @param kind {LetterKind} Letter kind
+     * @returns {Promise<PriceDocument>} Found price range from database
+     */
     public async getPriceForWeight(weight: number, kind: LetterKind): Promise<PriceDocument> {
         return await this.findOne({
             minWeight: { $lte: weight },
@@ -24,6 +31,12 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
         } as object);
     }
 
+    /**
+     * Given a letter, calculates its weight and returns it
+     *
+     * @param letter {LetterDocument} Letter to get weight for
+     * @returns { pages: number, weight: number } The number of pages of the PDF and the weight
+     */
     public async calculateWeight(letter: LetterDocument): Promise<{ pages: number, weight: number }> {
         const envelopeWeight = parseFloat(process.env.ENVELOPE_WEIGHT || "5");
         const paperWeight = parseFloat(process.env.PAPER_WEIGHT || "5");
@@ -43,6 +56,12 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
         return { pages, weight };
     }
 
+    /**
+     * Calculates and returns the price of a single letter
+     *
+     * @param letter {LetterDocument} Letter to calculate the price for
+     * @returns {Promise<number>} Calculated price
+     */
     public async calculatePrice(letter: LetterDocument): Promise<number> {
         const { pages, weight } = await this.calculateWeight(letter);
         const { price, extra } = await this.getPriceForWeight(weight, letter.kind);

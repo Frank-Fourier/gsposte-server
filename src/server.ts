@@ -29,7 +29,7 @@ import { logger } from "@utils/winston";
 import { cors } from "@utils/cors";
 import { swaggerUi, serveSwagger } from "@utils/swagger";
 import { generateSystemUser } from "@utils/system";
-import { queryJob, uploadJob } from "@utils/cron";
+import { queryJob, revenuesJob, uploadJob } from "@utils/cron";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -131,6 +131,7 @@ export class ExpressServer {
         const spinner = this.makeSpinner("Starting CRON jobs...");
         uploadJob.start();
         queryJob.start();
+        revenuesJob.start();
         spinner && spinner.succeed("CRON jobs are running!");
     }
 

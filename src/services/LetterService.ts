@@ -187,9 +187,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             }
 
             if (!submit.ok) {
-                logFile?.error(`PosteWay send API result was not ok. Got this result: `, submit);
-                logger.error(`PosteWay send API result was not ok. Got this result: `, submit);
-                throw { message: `PosteWay send API result was not ok.`, result: submit };
+                logFile?.error(`PosteWay SEND API result was not ok. Got this result: `, submit);
+                logger.error(`PosteWay SEND API result was not ok. Got this result: `, submit);
+                throw { message: `PosteWay SEND API result was not ok.`, result: submit };
             }
 
             // Eccolo lo sleep dei 60 secondi

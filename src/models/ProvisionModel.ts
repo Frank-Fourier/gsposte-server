@@ -30,6 +30,10 @@ import { array, Decoder, number, object, optional, string } from "@mojotech/json
  *         type: number
  *         description: Weight (in grams) of this letter (used to determine provisions range)
  *         example: 32
+ *       month:
+ *         type: number
+ *         description: 0-based month when this provision was created
+ *         example: 3
  *       referrers:
  *         type: array
  *         items:
@@ -71,6 +75,7 @@ export interface Provision {
     revenue: number
     spent: number
     weight?: number
+    month?: number
     referrers: Array<{
         user: string | UserDocument
         amount: number
@@ -85,6 +90,7 @@ export const provisionDecoder: Decoder<Provision> = object({
     revenue: number(),
     spent: number(),
     weight: optional(number()),
+    month: optional(number()),
     referrers: array(object({
         user: string(),
         amount: number(),
@@ -108,6 +114,10 @@ export const ProvisionSchema = new Schema<Provision>({
     },
     weight: {
         type: Number
+    },
+    month: {
+        type: Number,
+        default: () => new Date().getMonth()
     },
     referrers: [{
         type: new Schema({
