@@ -16,6 +16,8 @@ export interface WSMessage {
     content: string
     sender: string
     broadcast: boolean
+    error?: boolean
+    data?: any
 }
 
 export function createWebSocketServer(server: http.Server | https.Server): WebSocket.Server {
@@ -39,28 +41,32 @@ export function initializeWebSocketServer(server: http.Server | https.Server): W
     return WSS;
 }
 
-export function ws_message(clientId: string, title: string, content: string) {
+export function ws_message(clientId: string, message: { title?: string, content?: string, error?: boolean, data?: any }) {
     WSS?.clients.forEach((ws: WebSocketClient) => {
         if (ws.id !== clientId) {
             return;
         }
         ws.send(JSON.stringify({
-            title: title,
-            content: content,
+            title: message.title || "Notifica",
+            content: message.content || "",
             sender: DEFAULT_SENDER,
-            broadcast: false
+            broadcast: false,
+            error: message.error || false,
+            data: message.data
         } as WSMessage));
         logger.debug(`[WebSocket] Sent message to client {${clientId}}.`);
     });
 }
 
-export function ws_broadcast(title: string, content: string) {
+export function ws_broadcast(message: { title?: string, content?: string, error?: boolean, data?: any }) {
     WSS?.clients.forEach((ws: WebSocketClient) => {
         ws.send(JSON.stringify({
-            title: title,
-            content: content,
+            title: message.title || "Messaggio generale",
+            content: message.content || "",
             sender: DEFAULT_SENDER,
-            broadcast: true
+            broadcast: true,
+            error: message.error || false,
+            data: message.data
         } as WSMessage));
     });
     logger.debug(`[WebSocket] Broadcast message to ${WSS?.clients.size} client(s).`);
