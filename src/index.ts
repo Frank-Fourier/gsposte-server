@@ -11,9 +11,9 @@ ioc.load(buildProviderModule());
 import { logger } from "@utils/winston";
 import { ExpressServer } from "@server";
 
-const server = ioc.resolve(ExpressServer);
+const express = ioc.resolve(ExpressServer);
 const port = parseInt(process.env.SERVER_PORT || "5000");
 
-server.app.listen(port, () => {
+express.server.listen(port, () => {
     logger.info(`GSPoste server up and running in ${process.env.NODE_ENV} on port ${port}`);
 });

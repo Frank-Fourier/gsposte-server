@@ -23,7 +23,7 @@ export const createLogFile = (filename: string, level = "info") => {
 export const detachLogFile = (logger: winston.Logger) => logger.clear();
 
 logger.add(new winston.transports.Console({
-    level: process.env.NODE_ENV !== "test" ? "info" : "error",
+    level: process.env.NODE_ENV === "production" ? "info" : (process.env.NODE_ENV === "development" ? "debug" : "error"),
     format: combine(
         timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSS" }),
         splat(),

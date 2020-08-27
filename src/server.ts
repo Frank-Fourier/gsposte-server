@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
+import http from "http";
 import ora from "ora";
 import helmet from "helmet";
 
@@ -31,11 +32,14 @@ import { cors } from "@utils/cors";
 import { swaggerUi, serveSwagger } from "@utils/swagger";
 import { generateSystemUser } from "@utils/system";
 import { queryJob, revenuesJob, uploadJob } from "@utils/cron";
+import { initializeWebSocketServer, WebSocketClient } from "@utils/websockets";
 
 @provide(ExpressServer)
 export class ExpressServer {
 
     app: express.Application;
+    server: http.Server;
+
     routes: Route[] = [
         ioc.resolve(AuthRoute),
         ioc.resolve(UserRoute),
@@ -58,6 +62,8 @@ export class ExpressServer {
     ) {
         logger.info("Starting server");
         this.app = express();
+        this.server = http.createServer(this.app);
+
         this.setupConfig();
         this.setupDatabase();
         this.setupRoutes();
@@ -65,6 +71,7 @@ export class ExpressServer {
         this.setupSystemUser();
         this.setupSwagger();
         this.setupCronJobs();
+        this.setupWebSocket();
     }
 
     private setupConfig() {
@@ -135,6 +142,24 @@ export class ExpressServer {
         queryJob.start();
         revenuesJob.start();
         spinner && spinner.succeed("CRON jobs are running!");
+    }
+
+    private setupWebSocket() {
+        const spinner = this.makeSpinner("Starting WebSocket...");
+        const wss = initializeWebSocketServer(this.server);
+        // Poll every 10 seconds to see if any WS client disconnected unexpectedly
+        setInterval(() => {
+            logger.debug(`[WebSocket] Searching for dead WS connections in ${wss.clients.size} client(s).`);
+            wss.clients.forEach((ws: WebSocketClient) => {
+                if (!ws.isAlive) {
+                    logger.debug(`[WebSocket] WebSocket client {${ws.id}} is dead. Terminating.`);
+                    return ws.terminate();
+                }
+                ws.isAlive = false;
+                ws.ping();
+            });
+        }, 60000);
+        spinner && spinner.succeed("WebSocket is ready!");
     }
 
     private makeSpinner(text: string): ora.Ora {
