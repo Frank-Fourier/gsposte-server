@@ -117,8 +117,8 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         const referrers = await this.userService.getUserReferrers(user as UserDocument, percents.length - 1);
         return this.save({
             letter: letter.id,
-            revenue: revenue,
-            spent: spent,
+            revenue: parseFloat(revenue.toPrecision(3)),
+            spent: parseFloat(spent.toPrecision(3)),
             weight: weight,
             referrers: referrers.map((referrer, index) => ({
                 // For each referrer calculate percentage of the total provision (if present)

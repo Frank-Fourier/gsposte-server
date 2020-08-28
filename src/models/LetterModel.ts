@@ -14,7 +14,7 @@ import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
-import { Person, StatusResponse, TrackResponse } from "../posteway";
+import { StatusResponse, TrackResponse } from "../posteway";
 import { ProvisionDocument } from "@models/ProvisionModel";
 
 /**
@@ -139,10 +139,6 @@ export interface LetterDocument extends Letter, Document {
         status?: string
         prices?: StatusResponse
         track?: TrackResponse
-        recipients?: Array<{
-            id: string
-            person: Person
-        }>
     }
     /** REMOVED IN FAVOR OF POSTEWAY
     stats?: {

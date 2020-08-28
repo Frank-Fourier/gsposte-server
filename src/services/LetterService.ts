@@ -40,7 +40,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
         if (!isTestEnv() && (!letter.sendAt || moment(letter.sendAt).isSameOrBefore(moment()))) {
             // No need to schedule, send everything immediately
-            saved = await this.sendLetter(saved);
+            saved = await this.sendLetter(saved, createLogFile(`${letter.codePdf}.log`));
         }
 
         return depopulate ? saved.depopulate("sender recipients") : saved;
@@ -100,7 +100,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             }
         }
 
-        logger.info(`Done sending scheduled letters.`);
         return errors;
     }
 
@@ -134,7 +133,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             }
         }
 
-        logger.info(`Done querying Postel.`);
         return errors;
     }
 
@@ -165,9 +163,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
          * - Calcolo e salvo la provvigione, e la associo alla lettera;
          * - Informo il WS client che la procedura di invio è andata a buon fine, ritornando la lettera aggiornata;
          */
-        logger.info(`--> Sending letter '${letter.codePdf}' <--`);
+        logger.info(`===== SENDING LETTER '${letter.codePdf}' =====`);
         let updated = await this.updateById(letter.id, { $set: { sent: true }});
-        letter = letter.depopulate("user");
+        const userId = letter.depopulate("user").user.toString();
 
         const confirmAndTrackLetter = async (submit: SubmitResponse, kind: SubmitKind) => {
             try {
@@ -183,34 +181,38 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     logger.error(`Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
 
                     // Inform the user that there was an error
-                    ws_message(letter.user.toString(), {
+                    ws_message(userId, {
                         title: "Errore durante l'invio della lettera",
                         content: `Errore durante la conferma della lettera '${letter.codePdf}' tramite PosteWay!`,
                         data: { error: err },
                         error: true
                     });
 
-                    return;
+                    throw err;
                 }
-                await sleep(10000);
+
+                // Wait another 30 seconds so I can be sure that I will have tracking numbers
+                await sleep(30000);
 
                 // Call track and recipients to get the info I need to fill the posteway object on document
                 let track: TrackResponse;
-                try {
-                    track = await this.posteway.track(kind, confirm.orderId);
-                } catch (err) {
-                    logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
-                    logger.error(`Error while calling PosteWay TRACK endpoint. Got this error: `, err);
+                if (kind !== "lol") {
+                    try {
+                        track = await this.posteway.track(kind, confirm.orderId);
+                    } catch (err) {
+                        logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
+                        logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TRACK endpoint. Got this error: `, err);
 
-                    // Inform the user that there was an error
-                    ws_message(letter.user.toString(), {
-                        title: "Errore durante l'invio della lettera",
-                        content: `Errore durante il tracking della lettera '${letter.codePdf}' tramite PosteWay!`,
-                        data: { error: err },
-                        error: true
-                    });
+                        // Inform the user that there was an error
+                        ws_message(userId, {
+                            title: "Errore durante l'invio della lettera",
+                            content: `Errore durante il tracking della lettera '${letter.codePdf}' tramite PosteWay!`,
+                            data: {error: err},
+                            error: true
+                        });
 
-                    return;
+                        throw err;
+                    }
                 }
 
                 try {
@@ -230,7 +232,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     logFile?.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
                 } catch (err) {
                     logFile?.error(`Error while updating the letter in Mongo!`, err);
-                    logger.error(`Error while updating the letter in Mongo! Got this error: `, err);
+                    logger.error(`[LETTER ${letter.codePdf}] Error while updating the letter in Mongo! Got this error: `, err);
 
                     // Inform the user that there was an error
                     ws_message(letter.user.toString(), {
@@ -240,12 +242,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         error: true
                     });
 
-                    return;
+                    throw err;
                 }
 
                 logFile?.info("That's all folks!");
                 logFile?.close();
-                logger.info(`Ok! Sent letter '${letter.codePdf}'`);
+                logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
 
                 // Everything went fine, generate provision
                 try {
@@ -253,25 +255,28 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     await updated.save();
                 } catch (err) {
                     logFile?.error(`Error while generating the provision!`, err);
-                    logger.error(`Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
+                    logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
 
                     // Inform the user that there was an error
-                    ws_message(letter.user.toString(), {
+                    ws_message(userId, {
                         title: "Creazione della provvigione fallita",
                         content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
                         data: { error: err },
                         error: true
                     });
 
-                    return;
+                    throw err;
                 }
 
                 // Finally inform the client that this letter is ready
-                ws_message(letter.user.toString(), {
+                logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}. Informing WS client that the letter was sent...`);
+                ws_message(userId, {
                     title: "Lettera inviata",
                     content: `La lettera '${letter.codePdf}' è stata inviata correttamente.`,
                     data: { letter: updated }
                 });
+
+                logger.info(`[LETTER ${letter.codePdf}] Send routine completed correctly!`);
             } catch (err) {
                 await this.updateById(letter.id, { $set: { error: true }});
             }
@@ -283,11 +288,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
 
             if (!pdf_exists) {
-                logger.error(`Letter '${letter.codePdf}' does not have a PDF!`);
+                logger.error(`[LETTER ${letter.codePdf}] PDF not found!`);
                 logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
 
                 // Inform the user that there was an error
-                ws_message(letter.user.toString(), {
+                ws_message(userId, {
                     title: "Errore durante l'invio della lettera",
                     content: `La lettera '${letter.codePdf}' non ha alcun PDF associato. Effettuare nuovamente l'upload e riprovare.`,
                     data: { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` },
@@ -303,10 +308,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 cid = (await this.posteway.upload(fs.createReadStream(pdf_path))).cid;
             } catch (err) {
                 logFile?.error(`Error while calling PosteWay UPLOAD endpoint`, err);
-                logger.error(`Error while calling PosteWay UPLOAD endpoint. Got this error: `, err);
+                logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay UPLOAD endpoint. Got this error: `, err);
 
                 // Inform the user that there was an error
-                ws_message(letter.user.toString(), {
+                ws_message(userId, {
                     title: "Errore durante l'invio della lettera",
                     content: `Errore durante l'upload del PDF della lettera '${letter.codePdf}' tramite PosteWay!`,
                     data: { error: err },
@@ -333,10 +338,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 });
             } catch (err) {
                 logFile?.error(`Error while calling PosteWay SEND endpoint`, err);
-                logger.error(`Error while calling PosteWay SEND endpoint. Got this error: `, err);
+                logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay SEND endpoint. Got this error: `, err);
 
                 // Inform the user that there was an error
-                ws_message(letter.user.toString(), {
+                ws_message(userId, {
                     title: "Errore durante l'invio della lettera",
                     content: `Errore durante la richiesta di invio della lettera '${letter.codePdf}' tramite PosteWay!`,
                     data: { error: err },
@@ -348,10 +353,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
             if (!submit.ok) {
                 logFile?.error(`PosteWay SEND API result was not ok. Got this result: `, submit);
-                logger.error(`PosteWay SEND API result was not ok. Got this result: `, submit);
+                logger.error(`[LETTER ${letter.codePdf}] PosteWay SEND API result was not ok. Got this result: `, submit);
 
                 // Inform the user that there was an error
-                ws_message(letter.user.toString(), {
+                ws_message(userId, {
                     title: "Errore durante l'invio della lettera",
                     content: "La lettera contiene dei campi non validi. Controllare la risposta e riprovare.",
                     data: { result: submit },
@@ -381,20 +386,15 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      * @returns {Promise<LetterDocument>}
      */
     public async queryLetter(letter: LetterDocument): Promise<LetterDocument> {
-        logger.info(`--> Querying letter '${letter.codePdf}' <--`);
-        const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
+        if (letter.kind === LetterKind.LETTERA_SEMPLICE) {
+            return;
+        }
+
+        logger.info(`===== QUERYING LETTER '${letter.codePdf}' =====`);
         const { orderId } = letter.posteway;
 
-        // Get new tracking info
-        const track = await this.posteway.track(kind, orderId);
-        return await this.updateById(letter.id, {
-            $set: {
-                posteway: {
-                    ...letter.posteway,
-                    track: track,
-                }
-            }
-        }, false, false);
+        const track = await this.posteway.track("rol", orderId);
+        return await this.updateById(letter.id, { $set: { "posteway.track": track }}, false, false);
     }
 
     /**

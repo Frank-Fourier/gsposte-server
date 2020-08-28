@@ -244,7 +244,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             // Call PosteWay to get the latest info
             letter = await this.letterService.queryLetter(letter);
         } catch (err) {
-            logger.warn(`! Failed to query letter ${letter.codePdf} !`, err);
+            logger.warn(`[INVOICE ${letter.codePdf}] Failed to query letter on PosteWay!`, err);
         }
 
         const price = await this.priceService.calculatePrice(letter);
@@ -266,7 +266,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             codePdf: letter.codePdf,
             kind: letter.kind,
             price: this.formatCurrency(price),
-            total: this.formatCurrency(price * letter.posteway.recipients.length),
+            total: this.formatCurrency(price * letter.posteway.track.recipients.length),
         });
 
         // I wait until networkidle2 to let all the images on the HTML load before converting

@@ -27,6 +27,7 @@ export class UserService extends MongoRepository<User, UserDocument> {
     }
 
     public async getUserReferrer(user: UserDocument): Promise<UserDocument> {
+        if (!user.referFrom) { return null; }
         return this.findOne({ referCode: user.referFrom }).catch(() => null);
     }
 
