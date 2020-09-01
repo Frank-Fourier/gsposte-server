@@ -144,7 +144,8 @@ export const UserSchema = new Schema<User>({
     },
     iva: {
         type: String,
-        maxlength: 11,
+        minlength: 11,
+        maxlength: 16,
     },
     referFrom: {
         type: String
