@@ -79,7 +79,7 @@ export class ProvisionRoute extends Route {
              * @swagger
              *
              * /provision/revenue/{userId}:
-             *   get:
+             *   post:
              *     tags:
              *       - Provisions
              *     description: Calculate user's revenue
