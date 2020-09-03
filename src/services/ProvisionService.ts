@@ -121,7 +121,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * @returns {Promise<ProvisionDocument>} Generated provision document
      */
     public async generateProvision(letter: LetterDocument): Promise<ProvisionDocument> {
-        if (letter.provision) {
+        if (!!letter.provision) {
             throw new httpErrors.BadRequest("This letter has a provision already. Can't generate it again.");
         }
 
