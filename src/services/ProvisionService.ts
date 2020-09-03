@@ -8,6 +8,7 @@ import { UserService } from "@services/UserService";
 import { UserDocument } from "@models/UserModel";
 import provisionJson from "../../provisions.json";
 import { RevenueService } from "@services/RevenueService";
+import { Revenue } from "@models/RevenueModel";
 
 export interface ProvisionRanges {
     percents: number[]
@@ -25,6 +26,17 @@ export type Ranges = "0-20" | "21-50" | "51-100";
  * @swagger
  *
  * definitions:
+ *   RevenueMonth:
+ *     type: object
+ *     properties:
+ *       amount:
+ *         type: number
+ *         example: 20
+ *       provisions:
+ *         type: array
+ *         description: Array of provisions used to make this amount
+ *         items:
+ *           $ref: "#/definitions/ProvisionDocument"
  *   RevenueMonths:
  *     type: object
  *     properties:
@@ -41,46 +53,53 @@ export type Ranges = "0-20" | "21-50" | "51-100";
  *         description: Total amount of € spent for this campaign
  *         example: 500
  *       jan:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       feb:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       mar:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       apr:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       may:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       jun:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       jul:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       aug:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       sep:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       oct:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       nov:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  *       dec:
- *         type: number
- *         example: 20
+ *         $ref: "#/definitions/RevenueMonth"
  */
-export interface RevenueMonths {
+export interface RevenueMonth {
+    amount: number
+    provisions: Array<ProvisionDocument>
+}
+export interface Months {
+    jan: RevenueMonth
+    feb: RevenueMonth
+    mar: RevenueMonth
+    apr: RevenueMonth
+    may: RevenueMonth
+    jun: RevenueMonth
+    jul: RevenueMonth
+    aug: RevenueMonth
+    sep: RevenueMonth
+    oct: RevenueMonth
+    nov: RevenueMonth
+    dec: RevenueMonth
+    // Used to avoid nasty Typescript compiler errors
+    [key: string]: RevenueMonth | number
+}
+export interface RevenueMonths extends Months {
     year: number
     total: number
-    [key: string]: number
 }
 
 @provide(ProvisionService)
@@ -134,14 +153,20 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      *
      * @param userId {string} User ID
      * @param query {MongoQuery<Provision> | any} Optional additional query done on Provision table
-     * @returns {Promise<number>} Revenue in €
+     * @returns {Promise<Revenue>} Revenue object
      */
-    public async calculateRevenue(userId: string, query?: MongoQuery<Provision> | any): Promise<number> {
+    public async calculateRevenue(userId: string, query?: MongoQuery<Provision> | any): Promise<Revenue> {
         const provisions = await this.find({
             ...query,
             referrers: { $elemMatch: { user: userId } }
         });
-        return provisions.reduce<number>((acc, cur) => acc + cur.referrers.find(ref => ref.user.toString() === userId).amount, 0);
+        return {
+            user: userId,
+            year: new Date().getFullYear(),
+            month: new Date().getMonth(),
+            provisions: provisions,
+            amount: provisions.reduce<number>((acc, cur) => acc + cur.referrers.find(ref => ref.user.toString() === userId).amount, 0)
+        };
     }
 
     /**
@@ -152,8 +177,20 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * @returns {Promise<RevenueMonths>} The object containing all months
      */
     public async calculateRevenuesMonthly(userId: string): Promise<RevenueMonths> {
-        const months: { [key: string]: number } = {
-            "jan": 0, "feb": 0, "mar": 0, "apr": 0, "may": 0, "jun": 0, "jul": 0, "aug": 0, "sep": 0, "oct": 0, "nov": 0, "dec": 0
+        const defaultRevenueMonth: RevenueMonth = { amount: 0, provisions: [] };
+        const months: Months = {
+            jan: defaultRevenueMonth,
+            feb: defaultRevenueMonth,
+            mar: defaultRevenueMonth,
+            apr: defaultRevenueMonth,
+            may: defaultRevenueMonth,
+            jun: defaultRevenueMonth,
+            jul: defaultRevenueMonth,
+            aug: defaultRevenueMonth,
+            sep: defaultRevenueMonth,
+            oct: defaultRevenueMonth,
+            nov: defaultRevenueMonth,
+            dec: defaultRevenueMonth
         };
         const currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth();
 
@@ -161,16 +198,22 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
             user: userId,
             year: currentYear,
             month: { $lt: currentMonth }
-        });
+        }, { populate: "provisions" });
         const currentRevenue = await this.calculateRevenue(userId, { month: currentMonth });
 
         const revenueMonths = { ...months };
-        pastRevenues.forEach(pastRevenue => revenueMonths[Object.keys(months)[pastRevenue.month]] = pastRevenue.amount);
-        revenueMonths[Object.keys(months)[currentMonth]] = currentRevenue;
+        pastRevenues.forEach(pastRevenue => revenueMonths[Object.keys(months)[pastRevenue.month]] = {
+            amount: pastRevenue.amount,
+            provisions: pastRevenue.provisions as ProvisionDocument[]
+        });
+        revenueMonths[Object.keys(months)[currentMonth]] = {
+            amount: currentRevenue.amount,
+            provisions: currentRevenue.provisions as ProvisionDocument[]
+        };
 
         return {
             year: currentYear,
-            total: Object.values(revenueMonths).reduce<number>((acc, cur) => acc + cur, 0),
+            total: Object.values(revenueMonths).reduce<number>((acc: number, cur: RevenueMonth) => acc + cur.amount, 0),
             ...revenueMonths
         };
     }

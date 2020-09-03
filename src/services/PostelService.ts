@@ -378,7 +378,7 @@ export class PostelService {
      * before calling the APIs. These follow strictly the documentation provided by Postel.
      */
 
-    private createUploadModel(sender: SenderDocument, recipients: Array<RecipientDocument>, options: MpxUploadOptions): Object {
+    private createUploadModel(sender: SenderDocument, recipients: Array<RecipientDocument>, options: MpxUploadOptions) {
         const originalPages = Math.ceil(options.pdf.pages / recipients.length);
         return {
             MPX: {
@@ -422,7 +422,7 @@ export class PostelService {
         };
     }
 
-    private createQueryModel(options: MpxQueryOptions): Object {
+    private createQueryModel(options: MpxQueryOptions) {
         return {
             MPXQuery: {
                 Header: {
