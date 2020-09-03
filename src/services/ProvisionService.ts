@@ -6,9 +6,10 @@ import { inject } from "inversify";
 import { PriceService } from "@services/PriceService";
 import { UserService } from "@services/UserService";
 import { UserDocument } from "@models/UserModel";
-import provisionJson from "../../provisions.json";
 import { RevenueService } from "@services/RevenueService";
 import { Revenue } from "@models/RevenueModel";
+import httpErrors from "http-errors";
+import provisionConfig from "../../provisions.json";
 
 export interface ProvisionRanges {
     percents: number[]
@@ -120,7 +121,11 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * @returns {Promise<ProvisionDocument>} Generated provision document
      */
     public async generateProvision(letter: LetterDocument): Promise<ProvisionDocument> {
-        const { percents, ranges } = provisionJson as ProvisionRanges;
+        if (letter.provision) {
+            throw new httpErrors.BadRequest("This letter has a provision already. Can't generate it again.");
+        }
+
+        const { percents, ranges } = provisionConfig as ProvisionRanges;
         const { user } = await letter.populate("user").execPopulate();
 
         // Calculate the amount of total provision

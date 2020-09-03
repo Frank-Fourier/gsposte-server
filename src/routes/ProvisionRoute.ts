@@ -11,6 +11,39 @@ export class ProvisionRoute extends Route {
             /**
              * @swagger
              *
+             * /provision/generate/{letterId}:
+             *   post:
+             *     tags:
+             *       - Provisions
+             *     description: Generate a provision for a letter if not already generated
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: letterId
+             *         required: true
+             *         in: path
+             *         description: Mongo id of the letter to calculate provision of
+             *     responses:
+             *       201:
+             *         description: Provision generated correctly
+             *         schema:
+             *           $ref: "#/definitions/ProvisionDocument"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/generate/:letterId",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.provisionController.generate(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /provision/query:
              *   post:
              *     tags:

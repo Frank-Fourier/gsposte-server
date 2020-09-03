@@ -2,11 +2,27 @@ import { provide } from "inversify-binding-decorators";
 import { Request, Response } from "express";
 import { inject } from "inversify";
 import { ProvisionService } from "@services/ProvisionService";
+import { LetterService } from "@services/LetterService";
+import httpErrors from "http-errors";
 
 @provide(ProvisionController)
 export class ProvisionController {
 
     @inject(ProvisionService) private provisionService: ProvisionService;
+    @inject(LetterService) private letterService: LetterService;
+
+    public async generate(req: Request, res: Response) {
+        const letterId = req.params.letterId;
+        if (!letterId) {
+            throw new httpErrors.BadRequest("Letter ID is required to generate a provision.");
+        }
+
+        const letter = await this.letterService.findById(letterId);
+        letter.provision = await this.provisionService.generateProvision(letter);
+        await letter.save();
+
+        return res.status(201).send(letter.provision);
+    }
 
     public async find(req: Request, res: Response) {
         const pagination = this.provisionService.paginateOptionsFromObject(req.body.pagination);
