@@ -242,7 +242,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
         try {
             // Call PosteWay to get the latest info
-            await this.letterService.queryLetter(letter);
+            const { posteway } = await this.letterService.queryLetter(letter);
+            letter = await letter.update({ $set: { posteway: posteway }}).exec();
         } catch (err) {
             logger.warn(`[INVOICE ${letter.codePdf}] Failed to query letter on PosteWay!`, err);
         }
