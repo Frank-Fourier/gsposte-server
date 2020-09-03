@@ -74,11 +74,12 @@ export interface Submit {
     sender: Person
     recipients: Person[]
     cid: string
-    foreign?: boolean
-    ar?: boolean
     options?: {
         bw?: boolean
         backSide?: boolean
+        foreign?: boolean
+        ar?: boolean
+        priority?: boolean
     }
 }
 

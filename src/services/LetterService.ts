@@ -326,14 +326,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             try {
                 submit = await this.posteway.send({
                     kind: kind,
-                    foreign: false, // Needs to be mapped based on recipients
                     sender: mapSenderToPerson(letter.sender as SenderDocument),
                     recipients: letter.recipients.map(mapRecipientToPerson),
                     cid: cid,
-                    ar: letter.kind === LetterKind.RACCOMANDATA_AR,
                     options: {
                         bw: letter.bw || false,
-                        backSide: letter.backSide || true
+                        backSide: letter.backSide || true,
+                        foreign: false, // Needs to be mapped based on recipients
+                        ar: letter.kind === LetterKind.RACCOMANDATA_AR,
                     }
                 });
             } catch (err) {
