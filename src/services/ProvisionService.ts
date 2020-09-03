@@ -9,6 +9,7 @@ import { UserDocument } from "@models/UserModel";
 import { RevenueService } from "@services/RevenueService";
 import { Revenue } from "@models/RevenueModel";
 import httpErrors from "http-errors";
+import moment from "moment";
 import provisionConfig from "../../provisions.json";
 
 export interface ProvisionRanges {
@@ -77,6 +78,22 @@ export type Ranges = "0-20" | "21-50" | "51-100";
  *         $ref: "#/definitions/RevenueMonth"
  *       dec:
  *         $ref: "#/definitions/RevenueMonth"
+ *   RevenueYears:
+ *     type: object
+ *     properties:
+ *       year:
+ *         type: number
+ *         description: Year of this revenue data
+ *         example: 2020
+ *       total:
+ *         type: number
+ *         description: Total amount of revenues in €
+ *         example: 240
+ *       provisions:
+ *         type: array
+ *         description: Array of provisions used to make this amount
+ *         items:
+ *           $ref: "#/definitions/ProvisionDocument"
  */
 export interface RevenueMonth {
     amount: number
@@ -101,6 +118,11 @@ export interface Months {
 export interface RevenueMonths extends Months {
     year: number
     total: number
+}
+export interface RevenueYears {
+    year: number
+    total: number
+    provisions: Array<ProvisionDocument>
 }
 
 @provide(ProvisionService)
@@ -158,9 +180,10 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      *
      * @param userId {string} User ID
      * @param query {MongoQuery<Provision> | any} Optional additional query done on Provision table
+     * @param includeMonth {boolean} True if you want to save the current month
      * @returns {Promise<Revenue>} Revenue object
      */
-    public async calculateRevenue(userId: string, query?: MongoQuery<Provision> | any): Promise<Revenue> {
+    public async calculateRevenue(userId: string, query?: MongoQuery<Provision> | any, includeMonth?: boolean): Promise<Revenue> {
         const provisions = await this.find({
             ...query,
             referrers: { $elemMatch: { user: userId } }
@@ -168,10 +191,25 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         return {
             user: userId,
             year: new Date().getFullYear(),
-            month: new Date().getMonth(),
+            month: includeMonth ? new Date().getMonth() : undefined,
             provisions: provisions,
             amount: provisions.reduce<number>((acc, cur) => acc + cur.referrers.find(ref => ref.user.toString() === userId).amount, 0)
         };
+    }
+
+    /**
+     * Calculates the current year's revenue for a single user
+     *
+     * @param userId {string} User ID
+     * @returns {Promise<RevenueMonths>} The object containing all months
+     */
+    public async calculateRevenueYearly(userId: string): Promise<RevenueYears> {
+        const revenue = await this.calculateRevenue(userId, { year: new Date().getFullYear() });
+        return {
+            year: revenue.year,
+            total: revenue.amount,
+            provisions: revenue.provisions as ProvisionDocument[]
+        }
     }
 
     /**
@@ -183,20 +221,9 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      */
     public async calculateRevenuesMonthly(userId: string): Promise<RevenueMonths> {
         const defaultRevenueMonth: RevenueMonth = { amount: 0, provisions: [] };
-        const months: Months = {
-            jan: defaultRevenueMonth,
-            feb: defaultRevenueMonth,
-            mar: defaultRevenueMonth,
-            apr: defaultRevenueMonth,
-            may: defaultRevenueMonth,
-            jun: defaultRevenueMonth,
-            jul: defaultRevenueMonth,
-            aug: defaultRevenueMonth,
-            sep: defaultRevenueMonth,
-            oct: defaultRevenueMonth,
-            nov: defaultRevenueMonth,
-            dec: defaultRevenueMonth
-        };
+        const months: Months = moment().locale("en").localeData().monthsShort()
+            .map(m => m.toLowerCase())
+            .reduce((o, key) => ({ ...o, [key]: defaultRevenueMonth }), {} as Months);
         const currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth();
 
         const pastRevenues = await this.revenueService.find({

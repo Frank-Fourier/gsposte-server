@@ -92,6 +92,11 @@ export class ProvisionRoute extends Route {
              *         required: true
              *         in: path
              *         description: Mongo id of the user to calculate revenue of
+             *       - name: Query
+             *         required: true
+             *         in: body
+             *         schema:
+             *           type: object
              *     responses:
              *       200:
              *         description: Calculated revenue for the user
@@ -108,7 +113,7 @@ export class ProvisionRoute extends Route {
              */
             {
                 path: "/revenue/:userId",
-                method: RequestMethod.GET,
+                method: RequestMethod.POST,
                 requiresAuth: true,
                 handler: (req, res) => this.provisionController.calculateRevenue(req, res)
             },
@@ -144,6 +149,39 @@ export class ProvisionRoute extends Route {
                 method: RequestMethod.GET,
                 requiresAuth: true,
                 handler: (req, res) => this.provisionController.calculateRevenuesMonthly(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /provision/revenue/yearly/{userId}:
+             *   get:
+             *     tags:
+             *       - Provisions
+             *     description: Calculates the current year's revenue for a user
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: userId
+             *         required: true
+             *         in: path
+             *         description: Mongo id of the user to calculate revenue of
+             *     responses:
+             *       200:
+             *         description: Calculated current year's revenue for a user
+             *         schema:
+             *           $ref: "#/definitions/RevenueYears"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/revenue/yearly/:userId",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.provisionController.calculateRevenueYearly(req, res)
             },
         ]);
     }

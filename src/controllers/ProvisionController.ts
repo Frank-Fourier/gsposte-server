@@ -31,12 +31,26 @@ export class ProvisionController {
     }
 
     public async calculateRevenue(req: Request, res: Response) {
-        const revenue = await this.provisionService.calculateRevenue(req.params.userId);
+        if (!req.params.userId) {
+            throw new httpErrors.BadRequest("User ID is required.");
+        }
+        const revenue = await this.provisionService.calculateRevenue(req.params.userId, req.body || {});
         return res.status(200).send({ revenue });
     }
 
     public async calculateRevenuesMonthly(req: Request, res: Response) {
+        if (!req.params.userId) {
+            throw new httpErrors.BadRequest("User ID is required.");
+        }
         const revenues = await this.provisionService.calculateRevenuesMonthly(req.params.userId);
+        return res.status(200).send(revenues);
+    }
+
+    public async calculateRevenueYearly(req: Request, res: Response) {
+        if (!req.params.userId) {
+            throw new httpErrors.BadRequest("User ID is required.");
+        }
+        const revenues = await this.provisionService.calculateRevenueYearly(req.params.userId);
         return res.status(200).send(revenues);
     }
 
