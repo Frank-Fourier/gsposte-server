@@ -214,7 +214,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 })
             )
         );
-        return await this.updateById(invoice.id, {
+        return this.updateById(invoice.id, {
             $set: { paid: true, paymentDate: Date.now() }
         });
     }
@@ -239,16 +239,14 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
 
         await letter.populate("sender recipients").execPopulate();
+        const price = letter.price || await this.priceService.calculatePrice(letter);
 
         try {
             // Call PosteWay to get the latest info
-            const { posteway } = await this.letterService.queryLetter(letter);
-            letter = await letter.update({ $set: { posteway: posteway }}).exec();
+            letter = await this.letterService.queryLetter(letter);
         } catch (err) {
             logger.warn(`[INVOICE ${letter.codePdf}] Failed to query letter on PosteWay!`, err);
         }
-
-        const price = await this.priceService.calculatePrice(letter);
 
         // Format envelopes dates
         letter.posteway.track.recipients = letter.posteway.track.recipients?.map(e => ({
@@ -271,7 +269,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         });
 
         // I wait until networkidle2 to let all the images on the HTML load before converting
-        return await this.pdf.htmlToPdf(html, "networkidle2");
+        return this.pdf.htmlToPdf(html, "networkidle2");
     }
 
     public formatCurrency(price: number): string {

@@ -21,7 +21,7 @@ export class UserService extends MongoRepository<User, UserDocument> {
     }
 
     public async activate(id: string): Promise<UserDocument> {
-        return await this.updateById(id, {
+        return this.updateById(id, {
             $set: { active: true }
         });
     }
@@ -38,7 +38,7 @@ export class UserService extends MongoRepository<User, UserDocument> {
             const parent = await this.getUserReferrer(user);
             if (!!parent) {
                 referrers.push(parent);
-                return await recursiveGetUserReferrer(parent, level + 1);
+                return recursiveGetUserReferrer(parent, level + 1);
             }
         };
 

@@ -44,5 +44,5 @@ export async function saveMockLetter(options: { user: string | UserDocument, sen
         options.codePdf || TEST_CODE_PDF,
         options.kind || LetterKind.RACCOMANDATA,
     )));
-    return await ioc.resolve(LetterService).updateById(letter.id, { $set: { sent: options.sent || false }});
+    return ioc.resolve(LetterService).updateById(letter.id, { $set: { sent: options.sent || false }});
 }

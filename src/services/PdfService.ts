@@ -215,7 +215,7 @@ export class PdfService {
         pdfDoc.setModificationDate(new Date());
 
         logger.info(`Formatted PDF for Postel from path: ${pdf_path}.`);
-        return await pdfDoc.saveAsBase64();
+        return pdfDoc.saveAsBase64();
     }
 
     /**

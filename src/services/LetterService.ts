@@ -386,15 +386,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      * @returns {Promise<LetterDocument>}
      */
     public async queryLetter(letter: LetterDocument): Promise<LetterDocument> {
-        if (letter.kind === LetterKind.LETTERA_SEMPLICE) {
-            return;
-        }
-
         logger.info(`===== QUERYING LETTER '${letter.codePdf}' =====`);
         const { orderId } = letter.posteway;
 
-        const track = await this.posteway.track("rol", orderId);
-        return await this.updateById(letter.id, { $set: { "posteway.track": track }}, false, false);
+        const track = await this.posteway.track(letter.kind !== LetterKind.LETTERA_SEMPLICE ? "rol" : "lol", orderId);
+        return this.updateById(letter.id, { $set: { "posteway.track": track }}, false, false);
     }
 
     /**

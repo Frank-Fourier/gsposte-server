@@ -24,7 +24,7 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
      * @returns {Promise<PriceDocument>} Found price range from database
      */
     public async getPriceForWeight(weight: number, kind: LetterKind): Promise<PriceDocument> {
-        return await this.findOne({
+        return this.findOne({
             minWeight: { $lte: weight },
             maxWeight: { $gte: weight },
             kind: kind
