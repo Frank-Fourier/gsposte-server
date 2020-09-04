@@ -25,6 +25,7 @@ import { InvoiceRoute } from "@routes/InvoiceRoute";
 import { TvReportRoute } from "@routes/TvReportRoute";
 import { StatsRoute } from "@routes/StatsRoute";
 import { ProvisionRoute } from "@routes/ProvisionRoute";
+import { NoticeRoute } from "@routes/NoticeRoute";
 
 import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
@@ -53,7 +54,8 @@ export class ExpressServer {
         ioc.resolve(InvoiceRoute),
         ioc.resolve(TvReportRoute),
         ioc.resolve(StatsRoute),
-        ioc.resolve(ProvisionRoute)
+        ioc.resolve(ProvisionRoute),
+        ioc.resolve(NoticeRoute),
     ];
 
     constructor(

@@ -2,9 +2,9 @@ import { Request, Response } from "express";
 import { inject, injectable, unmanaged } from "inversify";
 import { MongoRepository } from "@services/MongoRepository";
 import { AuthService } from "@services/AuthService";
-import httpErrors from "http-errors";
 import { Document } from "mongoose";
 import { UserRoles } from "@models/UserModel";
+import httpErrors from "http-errors";
 
 @injectable()
 export class CrudController {

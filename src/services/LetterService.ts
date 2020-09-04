@@ -3,6 +3,7 @@ import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { PDF_ROOT, PdfService } from "@services/PdfService";
 import { LetterKind } from "@services/PostelService";
 import { PriceService } from "@services/PriceService";
+import { NoticeService } from "@services/NoticeService";
 import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
 import { mapSenderToPerson, SenderDocument } from "@models/SenderModel";
@@ -16,7 +17,6 @@ import { ProvisionService } from "@services/ProvisionService";
 import winston from "winston";
 import moment from "moment";
 import fs from "fs";
-import { ws_message } from "@utils/websockets";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -25,6 +25,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     @inject(PosteWayService) private posteway: PosteWayService;
     @inject(PriceService) private priceService: PriceService;
     @inject(ProvisionService) private provisionService: ProvisionService;
+    @inject(NoticeService) private noticeService: NoticeService;
 
     constructor(private letterModel = LetterModel) {
         super(letterModel, letterDecoder, [
@@ -181,7 +182,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     logger.error(`Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
 
                     // Inform the user that there was an error
-                    ws_message(userId, {
+                    this.noticeService.save({
+                        user: userId,
                         title: "Errore durante l'invio della lettera",
                         content: `Errore durante la conferma della lettera '${letter.codePdf}' tramite PosteWay!`,
                         data: { error: err },
@@ -204,7 +206,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TRACK endpoint. Got this error: `, err);
 
                         // Inform the user that there was an error
-                        ws_message(userId, {
+                        this.noticeService.save({
+                            user: userId,
                             title: "Errore durante l'invio della lettera",
                             content: `Errore durante il tracking della lettera '${letter.codePdf}' tramite PosteWay!`,
                             data: {error: err},
@@ -235,7 +238,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     logger.error(`[LETTER ${letter.codePdf}] Error while updating the letter in Mongo! Got this error: `, err);
 
                     // Inform the user that there was an error
-                    ws_message(letter.user.toString(), {
+                    this.noticeService.save({
+                        user: userId,
                         title: "Errore durante l'aggiornamento della lettera",
                         content: `Errore durante l'aggiornamento della lettera '${letter.codePdf}' nel database!`,
                         data: { error: err },
@@ -258,7 +262,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
 
                     // Inform the user that there was an error
-                    ws_message(userId, {
+                    this.noticeService.save({
+                        user: userId,
                         title: "Creazione della provvigione fallita",
                         content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
                         data: { error: err },
@@ -270,7 +275,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
                 // Finally inform the client that this letter is ready
                 logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}. Informing WS client that the letter was sent...`);
-                ws_message(userId, {
+                this.noticeService.save({
+                    user: userId,
                     title: "Lettera inviata",
                     content: `La lettera '${letter.codePdf}' è stata inviata correttamente.`,
                     data: { letter: updated }
@@ -292,7 +298,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
 
                 // Inform the user that there was an error
-                ws_message(userId, {
+                this.noticeService.save({
+                    user: userId,
                     title: "Errore durante l'invio della lettera",
                     content: `La lettera '${letter.codePdf}' non ha alcun PDF associato. Effettuare nuovamente l'upload e riprovare.`,
                     data: { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` },
@@ -311,7 +318,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay UPLOAD endpoint. Got this error: `, err);
 
                 // Inform the user that there was an error
-                ws_message(userId, {
+                this.noticeService.save({
+                    user: userId,
                     title: "Errore durante l'invio della lettera",
                     content: `Errore durante l'upload del PDF della lettera '${letter.codePdf}' tramite PosteWay!`,
                     data: { error: err },
@@ -341,7 +349,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay SEND endpoint. Got this error: `, err);
 
                 // Inform the user that there was an error
-                ws_message(userId, {
+                this.noticeService.save({
+                    user: userId,
                     title: "Errore durante l'invio della lettera",
                     content: `Errore durante la richiesta di invio della lettera '${letter.codePdf}' tramite PosteWay!`,
                     data: { error: err },
@@ -356,7 +365,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 logger.error(`[LETTER ${letter.codePdf}] PosteWay SEND API result was not ok. Got this result: `, submit);
 
                 // Inform the user that there was an error
-                ws_message(userId, {
+                this.noticeService.save({
+                    user: userId,
                     title: "Errore durante l'invio della lettera",
                     content: "La lettera contiene dei campi non validi. Controllare la risposta e riprovare.",
                     data: { result: submit },
