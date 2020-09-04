@@ -30,7 +30,14 @@ export function createWebSocketServer(server: http.Server | https.Server): WebSo
         });
 
         ws.id = req.url.substr(req.url.lastIndexOf("/") + 1);
-        ws.send(`Hello there! Your session ID is ${ws.id}.`);
+        ws.send(JSON.stringify({
+            title: "Hello!",
+            content: `Hello there! Your session ID is ${ws.id}.`,
+            sender: DEFAULT_SENDER,
+            broadcast: false,
+            error: false,
+            data: {}
+        } as WSMessage));
         logger.debug(`[WebSocket] Client {${ws.id}} connected. Hello!`);
     });
     return wss;
