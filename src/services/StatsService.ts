@@ -123,7 +123,12 @@ export class StatsService {
      */
     public async fetchStats(user: string): Promise<Stats> {
         const fetchLetterStats = async (kind: LetterKind) => {
-            const letters = await this.letterService.find({ user: user, kind: kind });
+            const letters = await this.letterService.find({
+                user: user,
+                kind: kind,
+                sent: true,
+                error: { $ne: true }
+            });
             const sent = letters.filter(l => l.sent).length;
             return {
                 counts: {
