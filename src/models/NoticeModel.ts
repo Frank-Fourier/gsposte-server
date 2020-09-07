@@ -115,7 +115,7 @@ NoticeSchema.post("save", (notice: NoticeDocument) => {
         ws_broadcast(notice);
     } else {
         notice = notice.depopulate("user");
-        ws_message(notice.user as string, notice);
+        ws_message(notice.user.toString(), notice);
     }
 });
 
