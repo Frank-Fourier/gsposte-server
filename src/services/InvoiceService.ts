@@ -125,8 +125,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         const letters = await this.letterService.find({
             user: user,
             sent: true,
-            paid: false,
-            error: false,
+            paid: true,
+            error: { $ne: true },
             invoice: { $exists: false },
         });
         if (!letters || letters.length === 0) {
