@@ -167,7 +167,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         logger.info(`===== SENDING LETTER '${letter.codePdf}' =====`);
         let updated = await this.updateById(letter.id, { $set: { sent: true }});
         const userId = letter.depopulate("user").user.toString();
-        letter = await letter.populate("sender recipients");
+        letter = await letter.populate("sender recipients").execPopulate();
 
         const confirmAndTrackLetter = async (submit: SubmitResponse, kind: SubmitKind) => {
             try {
