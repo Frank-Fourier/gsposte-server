@@ -7,7 +7,7 @@ import { NoticeService } from "@services/NoticeService";
 import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
 import { mapSenderToPerson, SenderDocument } from "@models/SenderModel";
-import { mapRecipientToPerson } from "@models/RecipientModel";
+import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel";
 import { createLogFile, detachLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
@@ -167,6 +167,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         logger.info(`===== SENDING LETTER '${letter.codePdf}' =====`);
         let updated = await this.updateById(letter.id, { $set: { sent: true }});
         const userId = letter.depopulate("user").user.toString();
+        letter = await letter.populate("sender recipients");
 
         const confirmAndTrackLetter = async (submit: SubmitResponse, kind: SubmitKind) => {
             try {
@@ -335,7 +336,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 submit = await this.posteway.send({
                     kind: kind,
                     sender: mapSenderToPerson(letter.sender as SenderDocument),
-                    recipients: letter.recipients.map(mapRecipientToPerson),
+                    recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r, letter.subject)),
                     cid: cid,
                     options: {
                         bw: letter.bw || false,

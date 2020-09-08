@@ -15,6 +15,7 @@ export interface Person {
     postalOffice?: string
     postalBox?: string
     cf?: string
+    notes?: string
     address: {
         kind?: AddressKind
         street: string
@@ -23,6 +24,7 @@ export interface Person {
         zip: string
         province: string
         country?: string
+        notes?: string
     }
 }
 

@@ -93,12 +93,13 @@ export const senderDecoder: Decoder<Sender> = object({
     notes: optional(string()),
 });
 
-export function mapSenderToPerson(sender: SenderDocument): Person {
+export function mapSenderToPerson(sender: SenderDocument, notes?: string): Person {
     return {
         name: sender.name.split(" ")[0],
         surname: sender.name.split(" ")[1] || "",
         businessName: sender.businessName,
         cf: sender.cf,
+        notes: notes,
         address: {
             kind: "normal",
             street: sender.address?.street,
