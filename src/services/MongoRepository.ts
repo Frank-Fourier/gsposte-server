@@ -94,7 +94,7 @@ export class MongoRepository<DTO, Doc extends Document> {
 
     public async save(object: DTO): Promise<Doc> {
         try {
-            return await this.model.create(object);
+            return await this.model.create(object as any);
         } catch (err) {
             throw this.formatMongoError(err);
         }
