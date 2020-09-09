@@ -1,4 +1,4 @@
-import { DocumentQuery, Document, Model, Error } from "mongoose";
+import { DocumentQuery, Document, Model, Error, QueryPopulateOptions } from "mongoose";
 import { ObjectId } from "mongodb";
 import { injectable, unmanaged } from "inversify";
 import { Decoder } from "@mojotech/json-type-validation";
@@ -27,7 +27,7 @@ import httpErrors from "http-errors";
  *         description: Fields to select separated by spaces
  */
 export interface QueryOptions {
-    populate?: string
+    populate?: string | QueryPopulateOptions[]
     select?: string
     sort?: Object
 }

@@ -6,14 +6,13 @@ import { LetterService } from "@services/LetterService";
 import { PriceService } from "@services/PriceService";
 import { SenderService } from "@services/SenderService";
 import { generateSystemUser } from "@utils/system";
-import { assertSameInvoice, assertSameLetter, getSystemUser, importPrices, TEST_CODE_PDF } from "../test_utils";
+import { assertSameInvoice, assertSameLetter, getSystemUser, importPrices } from "../test_utils";
 import { UserDocument } from "@models/UserModel";
 import { cleanTestDB } from "@utils/mongo";
 import { saveMockLetter } from "../mocks/letter";
 import { generateMockSender } from "../mocks/sender";
-import { RecipientDocument } from "@models/RecipientModel";
+import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel";
 import { generateUUID } from "@utils/random";
-import fs from "fs";
 import { LetterDocument } from "@models/LetterModel";
 
 @suite ("InvoiceService") class InvoiceServiceTests {
@@ -45,12 +44,12 @@ import { LetterDocument } from "@models/LetterModel";
             await this.invoiceService.generateSingleInvoice([
                 await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
                 await saveMockLetter({ user: this.system.id, sender: (await this.senderService.save(generateMockSender(this.system.id))).id, sent: true }),
-            ])
+            ], await this.invoiceService.getLatestInvoiceNumber() + 1)
         } catch (err) {
             expect(err).to.exist;
         }
 
-        const { invoice, errors } = await this.invoiceService.generateSingleInvoice(letters);
+        const { invoice, errors } = await this.invoiceService.generateSingleInvoice(letters, await this.invoiceService.getLatestInvoiceNumber() + 1);
         invoice.depopulate("recipients");
 
         expect(errors.length).to.equal(0);
@@ -141,28 +140,36 @@ import { LetterDocument } from "@models/LetterModel";
     @test async "Should generate a letter invoice PDF correctly" () {
         const saved = await saveMockLetter({ user: this.system.id });
 
-        // Emulate the final behaviour of batchSendScheduledLetters()
+        // Emulate the final behaviour of sendLetter()
+        const requestId = generateUUID(), orderId = generateUUID().toUpperCase();
         await this.letterService.updateById(saved.id, {
             $set: {
                 sent: true,
-                uuid: generateUUID(),
                 price: await this.priceService.calculatePrice(saved),
-                stats: {
-                    status: 0,
-                    envelopes: saved.recipients.map((r: RecipientDocument, index: number) => {
-                        return {
-                            recipient: r.toObject(),
-                            id: parseInt(process.env.CURRENT_ENVELOPE_ID || "420") + index,
-                            status: 0
-                        }
-                    }).sort((a: any, b: any) => a.id - b.id)
+                posteway: {
+                    requestId: requestId,
+                    orderId: orderId,
+                    prices: {
+                        total: 0,
+                        details: null,
+                    },
+                    track: {
+                        requestId: requestId,
+                        orderStatus: "FAKELETTERSENTFROMTEST",
+                        requestStatus: "Mai inviata - TEST",
+                        recipients: saved.recipients.map((r: RecipientDocument, index) => ({
+                            id: (index + 1).toString(),
+                            person: mapRecipientToPerson(r)
+                        }))
+                    }
                 }
             }
         }, false, false);
 
         const letter = await this.letterService.findById(saved.id, { populate: "sender recipients" });
         const pdf = await this.invoiceService.generateLetterInvoicePDF(letter);
-        await fs.promises.writeFile(`test/assets/pdf/${TEST_CODE_PDF}/invoice.pdf`, pdf);
+        expect(pdf).to.exist;
+        // await fs.promises.writeFile(`test/assets/pdf/${TEST_CODE_PDF}/invoice.pdf`, pdf);
     }
 
     static after() { cleanTestDB(); }

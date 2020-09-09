@@ -70,7 +70,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 if (!letter.sent) {
                     throw new httpErrors.BadRequest("This letter is not sent so I won't include it in the invoice.");
                 }
-                if (!letter.error) {
+                if (letter.error) {
                     throw new httpErrors.BadRequest("This letter is in an error state so I won't include it in the invoice.");
                 }
 
@@ -91,9 +91,9 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             user: letters[0].user,
             sender: letters[0].sender,
             letters: letters.filter(l => l.sent),
-            taxable: parseFloat(taxableSum.toPrecision(2)),
-            iva: parseFloat(iva.toPrecision(2)),
-            total: parseFloat(total.toPrecision(2)),
+            taxable: parseFloat(taxableSum.toPrecision(4)),
+            iva: parseFloat(iva.toPrecision(4)),
+            total: parseFloat(total.toPrecision(4)),
         });
 
         if (!!number) {
@@ -125,7 +125,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         const letters = await this.letterService.find({
             user: user,
             sent: true,
-            paid: true,
+            paid: false,
             error: { $ne: true },
             invoice: { $exists: false },
         });

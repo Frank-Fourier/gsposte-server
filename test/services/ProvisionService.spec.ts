@@ -86,7 +86,7 @@ import { importPrices } from "../test_utils";
             const provisionC2B2 = await this.provisionService.generateProvision(letterC2B2);
 
             const revenue = await this.provisionService.calculateRevenue(this.userA.id);
-            expect(revenue).to.equal(
+            expect(revenue.amount).to.equal(
                 provisionA.referrers[0].amount
                 + provisionB1.referrers[1].amount
                 + provisionB2.referrers[1].amount
@@ -95,10 +95,67 @@ import { importPrices } from "../test_utils";
                 + provisionC1B2.referrers[2].amount
                 + provisionC2B2.referrers[2].amount
             );
-            console.log(revenue);
+        } catch (err) {
+            logger.error(err);
+            expect(err).not.to.exist;
+        }
+    }
+
+    @test async "Should calculate provision revenues by user yearly correctly" () {
+        try {
+            await this.generateUsers();
+
+            // FULL TREE
+            const letterA = await saveMockLetter({ user: this.userA.id });
+            const letterB1 = await saveMockLetter({ user: this.userB1.id });
+            const letterB2 = await saveMockLetter({ user: this.userB2.id });
+            const letterC1B1 = await saveMockLetter({ user: this.userC1B1.id });
+            const letterC2B1 = await saveMockLetter({ user: this.userC2B1.id });
+            const letterC1B2 = await saveMockLetter({ user: this.userC1B2.id });
+            const letterC2B2 = await saveMockLetter({ user: this.userC2B2.id });
+
+            await this.provisionService.generateProvision(letterA);
+            await this.provisionService.generateProvision(letterB1);
+            await this.provisionService.generateProvision(letterB2);
+            await this.provisionService.generateProvision(letterC1B1);
+            await this.provisionService.generateProvision(letterC2B1);
+            await this.provisionService.generateProvision(letterC1B2);
+            await this.provisionService.generateProvision(letterC2B2);
+
+            const { year, provisions } = await this.provisionService.calculateRevenueYearly(this.userA.id);
+            expect(provisions.length).to.equal(7);
+            expect(year).to.equal(new Date().getFullYear());
+        } catch (err) {
+            logger.error(err);
+            expect(err).not.to.exist;
+        }
+    }
+
+    @test async "Should calculate provision revenues by user monthly correctly" () {
+        try {
+            await this.generateUsers();
+
+            // FULL TREE
+            const letterA = await saveMockLetter({ user: this.userA.id });
+            const letterB1 = await saveMockLetter({ user: this.userB1.id });
+            const letterB2 = await saveMockLetter({ user: this.userB2.id });
+            const letterC1B1 = await saveMockLetter({ user: this.userC1B1.id });
+            const letterC2B1 = await saveMockLetter({ user: this.userC2B1.id });
+            const letterC1B2 = await saveMockLetter({ user: this.userC1B2.id });
+            const letterC2B2 = await saveMockLetter({ user: this.userC2B2.id });
+
+            await this.provisionService.generateProvision(letterA);
+            await this.provisionService.generateProvision(letterB1);
+            await this.provisionService.generateProvision(letterB2);
+            await this.provisionService.generateProvision(letterC1B1);
+            await this.provisionService.generateProvision(letterC2B1);
+            await this.provisionService.generateProvision(letterC1B2);
+            await this.provisionService.generateProvision(letterC2B2);
 
             const months = await this.provisionService.calculateRevenuesMonthly(this.userA.id);
-            console.log(months);
+            expect(months).to.exist;
+
+            console.log(JSON.stringify(months, null, 4));
         } catch (err) {
             logger.error(err);
             expect(err).not.to.exist;
