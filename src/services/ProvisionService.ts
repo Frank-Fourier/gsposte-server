@@ -218,7 +218,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         }, {
             populate: [{
                 path: "letter",
-                select: "sendAt"
+                select: "sendAt subject kind"
             }, {
                 path: "referrers.user",
                 select: "username"
