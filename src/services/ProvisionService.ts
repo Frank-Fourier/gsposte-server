@@ -8,10 +8,10 @@ import { UserService } from "@services/UserService";
 import { UserDocument } from "@models/UserModel";
 import { RevenueService } from "@services/RevenueService";
 import { Revenue } from "@models/RevenueModel";
+import { Schema } from "mongoose";
 import httpErrors from "http-errors";
 import moment from "moment";
 import provisionConfig from "../../provisions.json";
-import { Schema } from "mongoose";
 
 export interface ProvisionRanges {
     percents: number[]
