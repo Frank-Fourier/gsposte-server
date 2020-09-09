@@ -252,7 +252,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         }, {
             populate: [{
                 path: "provisions.letter",
-                select: "sendAt"
+                select: "sendAt subject kind"
             }, {
                 path: "provisions.referrers.user",
                 select: "username"
@@ -261,7 +261,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         const currentRevenue = await this.calculateRevenue(userId, { month: currentMonth }, {
             populate: [{
                 path: "letter",
-                select: "sendAt"
+                select: "sendAt subject kind"
             }, {
                 path: "referrers.user",
                 select: "username"
