@@ -1,6 +1,6 @@
 import { UserDocument } from "@models/UserModel";
 import { Document, model, Model, Schema } from "mongoose";
-import { boolean, Decoder, object, optional, string } from "@mojotech/json-type-validation";
+import { boolean, constant, Decoder, object, oneOf, optional, string } from "@mojotech/json-type-validation";
 import { ws_broadcast, ws_message } from "@utils/websockets";
 
 /**
@@ -35,6 +35,13 @@ import { ws_broadcast, ws_message } from "@utils/websockets";
  *         type: boolean
  *         description: True se questa notifica rappresenta un messaggio di errore da comunicare
  *         example: false
+ *       kind:
+ *         type: string
+ *         description: Tipo della notifica. Riguarda strettamente il contenuto della stessa
+ *         enum:
+ *           - "info"
+ *           - "letter"
+ *           - "payment"
  *       data:
  *         type: object
  *         description: Oggetto opzionale da allegare a questa notifica
@@ -53,6 +60,11 @@ import { ws_broadcast, ws_message } from "@utils/websockets";
  *             type: string
  *             example: 2020-01-02T18:16:24.892Z
  */
+export enum NoticeKind {
+    INFO = "info",
+    LETTER = "letter",
+    PAYMENT = "payment"
+}
 export interface Notice {
     user?: string | UserDocument
     title?: string
@@ -61,6 +73,7 @@ export interface Notice {
     read?: boolean
     broadcast?: boolean
     error?: boolean
+    kind?: NoticeKind
     data?: object
 }
 export interface NoticeDocument extends Notice, Document {
@@ -73,6 +86,11 @@ export const NoticeDecoder: Decoder<Notice> = object({
     read: optional(boolean()),
     broadcast: optional(boolean()),
     error: optional(boolean()),
+    kind: oneOf<NoticeKind>(
+        constant(NoticeKind.INFO),
+        constant(NoticeKind.LETTER),
+        constant(NoticeKind.PAYMENT),
+    ),
     data: optional(object()),
 });
 
@@ -105,18 +123,20 @@ export const NoticeSchema = new Schema<Notice>({
         type: Boolean,
         default: false,
     },
+    kind: {
+        type: String,
+        enum: [ NoticeKind.INFO, NoticeKind.LETTER, NoticeKind.PAYMENT ],
+        default: NoticeKind.INFO
+    },
     data: {
         type: Schema.Types.Mixed,
         default: {},
     }
 });
 NoticeSchema.post("save", (notice: NoticeDocument) => {
-    if (notice.broadcast) {
-        ws_broadcast(notice);
-    } else {
-        notice = notice.depopulate("user");
-        ws_message(notice.user.toString(), notice);
-    }
+    notice.broadcast
+        ? ws_broadcast(notice)
+        : ws_message(notice.depopulate("user").user.toString(), notice);
 });
 
 export const NoticeModel: Model<NoticeDocument> = model("Notice", NoticeSchema);

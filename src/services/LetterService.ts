@@ -17,6 +17,7 @@ import { ProvisionService } from "@services/ProvisionService";
 import winston from "winston";
 import moment from "moment";
 import fs from "fs";
+import { NoticeKind } from "@models/NoticeModel";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -162,7 +163,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
          * - Chiamo PosteWay per effettuare il tracking della lettera, se va in errore tiro e informo il WS client;
          * - Aggiorno l'oggetto letter salvato nel database per includere tutte le info che ho preso da PosteWay;
          * - Calcolo e salvo la provvigione, e la associo alla lettera;
-         * - Informo il WS client che la procedura di invio è andata a buon fine, ritornando la lettera aggiornata;
+         * - Informo il WS client che la procedura di invio è andata a buon fine, ritornando la lettera aggiornata.
          */
         logger.info(`===== SENDING LETTER '${letter.codePdf}' =====`);
         let updated = await this.updateById(letter.id, { $set: { sent: true }});
@@ -188,6 +189,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         title: "Errore durante l'invio della lettera",
                         content: `Errore durante la conferma della lettera '${letter.codePdf}' tramite PosteWay!`,
                         data: { error: err },
+                        kind: NoticeKind.LETTER,
                         error: true
                     });
 
@@ -211,7 +213,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             user: userId,
                             title: "Errore durante l'invio della lettera",
                             content: `Errore durante il tracking della lettera '${letter.codePdf}' tramite PosteWay!`,
-                            data: {error: err},
+                            data: { error: err },
+                            kind: NoticeKind.LETTER,
                             error: true
                         });
 
@@ -244,6 +247,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         title: "Errore durante l'aggiornamento della lettera",
                         content: `Errore durante l'aggiornamento della lettera '${letter.codePdf}' nel database!`,
                         data: { error: err },
+                        kind: NoticeKind.LETTER,
                         error: true
                     });
 
@@ -268,6 +272,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         title: "Creazione della provvigione fallita",
                         content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
                         data: { error: err },
+                        kind: NoticeKind.LETTER,
                         error: true
                     });
 
@@ -280,6 +285,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     user: userId,
                     title: "Lettera inviata",
                     content: `La lettera '${letter.codePdf}' è stata inviata correttamente.`,
+                    kind: NoticeKind.LETTER,
                     data: { letter: updated }
                 });
 
@@ -304,6 +310,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     title: "Errore durante l'invio della lettera",
                     content: `La lettera '${letter.codePdf}' non ha alcun PDF associato. Effettuare nuovamente l'upload e riprovare.`,
                     data: { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` },
+                    kind: NoticeKind.LETTER,
                     error: true
                 });
 
@@ -324,6 +331,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     title: "Errore durante l'invio della lettera",
                     content: `Errore durante l'upload del PDF della lettera '${letter.codePdf}' tramite PosteWay!`,
                     data: { error: err },
+                    kind: NoticeKind.LETTER,
                     error: true
                 });
 
@@ -355,6 +363,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     title: "Errore durante l'invio della lettera",
                     content: `Errore durante la richiesta di invio della lettera '${letter.codePdf}' tramite PosteWay!`,
                     data: { error: err },
+                    kind: NoticeKind.LETTER,
                     error: true
                 });
 
@@ -371,6 +380,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     title: "Errore durante l'invio della lettera",
                     content: "La lettera contiene dei campi non validi. Controllare la risposta e riprovare.",
                     data: { result: submit },
+                    kind: NoticeKind.LETTER,
                     error: true
                 });
 

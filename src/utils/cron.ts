@@ -31,7 +31,7 @@ export const revenuesJob = new CronJob(process.env.CRON_REVENUE, () => {
             users.forEach(user => {
                 provisionService.calculateRevenue(user.id, {
                     month: moment().subtract(5, "minutes").month()
-                }, true).then(revenue => {
+                }, {}, true).then(revenue => {
                     revenueService.save(revenue)
                         .then(rev => logger.info(`[Revenues CRON Job] Saved revenue for user '${user.username}' for previous month.`, rev))
                       .catch(err => logger.error(`[Revenues CRON Job] Failed to save revenue for user '${user.username}'.`, err));

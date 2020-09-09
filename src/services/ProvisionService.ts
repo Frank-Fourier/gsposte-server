@@ -1,4 +1,4 @@
-import { MongoQuery, MongoRepository } from "@services/MongoRepository";
+import { MongoQuery, MongoRepository, QueryOptions } from "@services/MongoRepository";
 import { Provision, provisionDecoder, ProvisionDocument, ProvisionModel } from "@models/ProvisionModel";
 import { provide } from "inversify-binding-decorators";
 import { LetterDocument } from "@models/LetterModel";
@@ -11,6 +11,7 @@ import { Revenue } from "@models/RevenueModel";
 import httpErrors from "http-errors";
 import moment from "moment";
 import provisionConfig from "../../provisions.json";
+import { Schema } from "mongoose";
 
 export interface ProvisionRanges {
     percents: number[]
@@ -180,20 +181,24 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      *
      * @param userId {string} User ID
      * @param query {MongoQuery<Provision> | any} Optional additional query done on Provision table
+     * @param options {QueryOptions} Optional query options
      * @param includeMonth {boolean} True if you want to save the current month
      * @returns {Promise<Revenue>} Revenue object
      */
-    public async calculateRevenue(userId: string, query?: MongoQuery<Provision> | any, includeMonth?: boolean): Promise<Revenue> {
+    public async calculateRevenue(userId: string, query?: MongoQuery<Provision> | any, options?: QueryOptions, includeMonth?: boolean): Promise<Revenue> {
         const provisions = await this.find({
             ...query,
             referrers: { $elemMatch: { user: userId } }
-        });
+        }, options || {});
         return {
             user: userId,
             year: new Date().getFullYear(),
-            month: includeMonth ? new Date().getMonth() : undefined,
             provisions: provisions,
-            amount: provisions.reduce<number>((acc, cur) => acc + cur.referrers.find(ref => ref.user.toString() === userId).amount, 0)
+            amount: provisions
+                .reduce<number>((acc, cur) => acc + cur.referrers.find(ref => (
+                    (ref.user instanceof Schema.Types.ObjectId ? ref.user.toString() : (ref.user as UserDocument).id.toString()) === userId
+                )).amount, 0),
+            ...(includeMonth ? { month: new Date().getMonth() } : {})
         };
     }
 
@@ -204,7 +209,21 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * @returns {Promise<RevenueMonths>} The object containing all months
      */
     public async calculateRevenueYearly(userId: string): Promise<RevenueYears> {
-        const revenue = await this.calculateRevenue(userId, { year: new Date().getFullYear() });
+        const year = new Date().getFullYear();
+        const revenue = await this.calculateRevenue(userId, {
+            createdAt: {
+                $gte: `${year}-01-01`,
+                $lte: `${year}-12-31`
+            }
+        }, {
+            populate: [{
+                path: "letter",
+                select: "sendAt"
+            }, {
+                path: "referrers.user",
+                select: "username"
+            }]
+        });
         return {
             year: revenue.year,
             total: revenue.amount,
@@ -230,8 +249,24 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
             user: userId,
             year: currentYear,
             month: { $lt: currentMonth }
-        }, { populate: "provisions" });
-        const currentRevenue = await this.calculateRevenue(userId, { month: currentMonth });
+        }, {
+            populate: [{
+                path: "provisions.letter",
+                select: "sendAt"
+            }, {
+                path: "provisions.referrers.user",
+                select: "username"
+            }]
+        });
+        const currentRevenue = await this.calculateRevenue(userId, { month: currentMonth }, {
+            populate: [{
+                path: "letter",
+                select: "sendAt"
+            }, {
+                path: "referrers.user",
+                select: "username"
+            }]
+        });
 
         const revenueMonths = { ...months };
         pastRevenues.forEach(pastRevenue => revenueMonths[Object.keys(months)[pastRevenue.month]] = {
