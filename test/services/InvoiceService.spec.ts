@@ -58,14 +58,15 @@ import { LetterDocument } from "@models/LetterModel";
             sender: sender.id,
             letters: letters,
             number: 1,
-            taxable: 5.50,
-            iva: 1.21,
-            total: 6.71,
+            taxable: 27.5,
+            iva: 6.05,
+            total: 33.55,
         }, invoice);
     }
 
     @test async "Should generate invoices for user correctly" () {
-        const [ sender1, sender2 ] = [
+        const [ sender1, sender2, sender3 ] = [
+            await this.senderService.save(generateMockSender(this.system.id)),
             await this.senderService.save(generateMockSender(this.system.id)),
             await this.senderService.save(generateMockSender(this.system.id)),
         ];
@@ -78,30 +79,46 @@ import { LetterDocument } from "@models/LetterModel";
             await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true }),
             await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true }),
         ];
-        const results = await this.invoiceService.generateInvoicesForUser(this.system.id);
-        results.forEach(r => r.invoice.depopulate("recipients"));
+        const thirdBatch = [
+            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true }),
+        ];
+        const results = await this.invoiceService.generateInvoices();
+        results[this.system.id].forEach(r => r.invoice.depopulate("recipients"));
 
-        expect(results.length).to.equal(2);
-        expect(results[0].errors.length).to.equal(0);
+        expect(results[this.system.id].length).to.equal(3);
+        expect(results[this.system.id][0].errors.length).to.equal(0);
         assertSameInvoice({
             user: this.system.id,
             sender: sender1.id,
             letters: firstBatch,
             number: 1,
-            taxable: 3.3,
-            iva: 0.726,
-            total: 4.026,
-        }, results[0].invoice);
-        expect(results[1].errors.length).to.equal(0);
+            taxable: 16.5,
+            iva: 3.63,
+            total: 20.13,
+        }, results[this.system.id][0].invoice);
+        expect(results[this.system.id][1].errors.length).to.equal(0);
         assertSameInvoice({
             user: this.system.id,
             sender: sender2.id,
             letters: secondBatch,
             number: 2,
-            taxable: 2.2,
-            iva: 0.484,
-            total: 2.684,
-        }, results[1].invoice);
+            taxable: 11,
+            iva: 2.42,
+            total: 13.42,
+        }, results[this.system.id][1].invoice);
+        expect(results[this.system.id][2].errors.length).to.equal(0);
+        assertSameInvoice({
+            user: this.system.id,
+            sender: sender3.id,
+            letters: thirdBatch,
+            number: 3,
+            taxable: 22,
+            iva: 4.84,
+            total: 26.84,
+        }, results[this.system.id][2].invoice);
     }
 
     @test async "Should not include already paid letters in new invoices" () {

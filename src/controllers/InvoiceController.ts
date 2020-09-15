@@ -3,7 +3,6 @@ import { inject } from "inversify";
 import { InvoiceService } from "@services/InvoiceService";
 import { LetterService } from "@services/LetterService";
 import { Request, Response } from "express";
-import httpErrors from "http-errors";
 
 export class InvoiceController extends CrudController {
 
@@ -16,16 +15,11 @@ export class InvoiceController extends CrudController {
 
     public async generateSingleInvoice(req: Request, res: Response) {
         await this.authService.adminOnly(req);
-        if (!(req.body instanceof Array)) {
-            throw new httpErrors.BadRequest("Body must be an array of letter ids!");
-        }
-
-        const letterIds = req.body as Array<string>;
-        const invoiceNumber = req.header("X-Invoice-Number");
+        const letterIds = req.body.letterIds as string[];
 
         const invoice = await this.invoiceService.generateSingleInvoice(
             await Promise.all(letterIds.map(id => this.letterService.findById(id))),
-            invoiceNumber ? parseInt(invoiceNumber) : undefined
+            req.body.startNumber
         );
 
         return res.status(201).send(invoice);
@@ -33,13 +27,13 @@ export class InvoiceController extends CrudController {
 
     public async generateInvoicesForUser(req: Request, res: Response) {
         await this.authService.adminOnly(req);
-        const invoices = await this.invoiceService.generateInvoicesForUser(req.params.id);
+        const invoices = await this.invoiceService.generateInvoicesForUser(req.params.id, req.body?.startNumber);
         return res.status(201).send(invoices);
     }
 
     public async generateInvoices(req: Request, res: Response) {
         await this.authService.adminOnly(req);
-        const invoices = await this.invoiceService.generateInvoices();
+        const invoices = await this.invoiceService.generateInvoices(req.body?.startNumber);
         return res.status(201).send(invoices);
     }
 

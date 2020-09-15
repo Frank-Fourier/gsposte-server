@@ -11,6 +11,47 @@ export class InvoiceRoute extends Route {
             /**
              * @swagger
              *
+             * /invoice/single:
+             *   post:
+             *     tags:
+             *       - Invoices
+             *     description: Generate a single invoice for a specific set of letters that share the same sender.
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: body
+             *         required: true
+             *         in: body
+             *         description: Array of letter ids and startNumber
+             *         properties:
+             *           startNumber:
+             *             type: number
+             *             example: 0
+             *           letters:
+             *             type: array
+             *             items:
+             *               type: string
+             *     responses:
+             *       201:
+             *         description: Invoice created and saved. Returns the invoice document.
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             *       403:
+             *         $ref: "#/responses/Forbidden"
+             */
+            {
+                path: "/single",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.invoiceController.generateSingleInvoice(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /invoice/user/{id}:
              *   post:
              *     tags:
@@ -25,6 +66,18 @@ export class InvoiceRoute extends Route {
              *         required: true
              *         in: path
              *         description: Mongo id of the user to generate invoices for
+             *       - name: Letter IDs and start number
+             *         required: true
+             *         in: body
+             *         description: Array of letter ids and startNumber
+             *         properties:
+             *           startNumber:
+             *             type: number
+             *             example: 0
+             *           letters:
+             *             type: array
+             *             items:
+             *               type: string
              *     responses:
              *       201:
              *         description: Invoice creation results (document + errors)
@@ -53,6 +106,15 @@ export class InvoiceRoute extends Route {
              *       - application/json
              *     security:
              *       - JWT: []
+             *     parameters:
+             *       - name: startNumber
+             *         required: true
+             *         in: body
+             *         description: startNumber
+             *         properties:
+             *           startNumber:
+             *             type: number
+             *             example: 0
              *     responses:
              *       201:
              *         description: Returns invoices as key-value pairs where the key is the user id and the value is the array of invoice creation results.
@@ -68,39 +130,6 @@ export class InvoiceRoute extends Route {
                 method: RequestMethod.POST,
                 requiresAuth: true,
                 handler: (req, res) => this.invoiceController.generateInvoices(req, res)
-            },
-            /**
-             * @swagger
-             *
-             * /invoice/single:
-             *   post:
-             *     tags:
-             *       - Invoices
-             *     description: Generate a single invoice for a specific set of letters that share the same sender.
-             *     produces:
-             *       - application/json
-             *     security:
-             *       - JWT: []
-             *     parameters:
-             *       - name: id
-             *         required: true
-             *         in: body
-             *         description: Array of letter ids
-             *     responses:
-             *       201:
-             *         description: Invoice created and saved. Returns the invoice document.
-             *       400:
-             *         $ref: "#/responses/BadRequest"
-             *       401:
-             *         $ref: "#/responses/Unauthorized"
-             *       403:
-             *         $ref: "#/responses/Forbidden"
-             */
-            {
-                path: "/single",
-                method: RequestMethod.POST,
-                requiresAuth: true,
-                handler: (req, res) => this.invoiceController.generateSingleInvoice(req, res)
             },
             /**
              * @swagger

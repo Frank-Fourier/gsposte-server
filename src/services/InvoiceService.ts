@@ -46,10 +46,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * and all the letters must have the same sender.
      *
      * @param letters {Array<LetterDocument>} Letters to generate an invoice from
-     * @param number {number} Optional invoice number. Will use the latest number + 1 if not passed
+     * @param number {number} Invoice number
      * @returns Promise resolving to the invoice created and any errors that occured during the process
      */
-    public async generateSingleInvoice(letters: Array<LetterDocument>, number?: number): Promise<{
+    public async generateSingleInvoice(letters: Array<LetterDocument>, number: number): Promise<{
         invoice: InvoiceDocument,
         errors: Array<{ letter: LetterDocument, error: Error | any }>
     }> {
@@ -74,8 +74,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                     throw new httpErrors.BadRequest("This letter is in an error state so I won't include it in the invoice.");
                 }
 
-                const taxable = await this.priceService.calculatePrice(letter);
-                if (taxable <= 0) {
+                const taxable = await this.priceService.calculatePrice(letter) * letter.recipients.length;
+                if (taxable <= 0 || isNaN(taxable)) {
                     throw new httpErrors.BadRequest("Can't create an invoice for a letter without a price!");
                 }
 
@@ -116,9 +116,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * Basically performs the aggregation and then calls the generateSingleInvoice function for each array.
      *
      * @param user {string} User id to search letters for
+     * @param startNumber {number} Invoice number to start generation from
      * @returns Array of results of generateSingleInvoice, one for each letter
      */
-    public async generateInvoicesForUser(user: string): Promise<Array<{
+    public async generateInvoicesForUser(user: string, startNumber?: number): Promise<Array<{
         invoice: InvoiceDocument,
         errors: Array<{ letter: LetterDocument, error: Error | any }>
     }>> {
@@ -139,10 +140,11 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             errors: Array<{ letter: LetterDocument, error: Error | any }>
         }> = [];
 
+        let lastNumber = startNumber || await this.getLatestInvoiceNumber();
         for (const letter of Object.values(aggregated)) {
-            const lastNumber = await this.getLatestInvoiceNumber();
             const invoice = await this.generateSingleInvoice(letter, lastNumber + 1);
             results.push(invoice);
+            lastNumber++;
         }
 
         return results;
@@ -151,9 +153,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     /**
      * The most generic flavor of generateSingleInvoice, generates all the possible invoices, for every single user!
      *
+     * @param startNumber {number} Optional invoice number to start from
      * @returns Key-value where each key is the user id, and each value is the array of results
      */
-    public async generateInvoices(): Promise<{
+    public async generateInvoices(startNumber?: number): Promise<{
         [key: string]: Array<{
             invoice: InvoiceDocument,
             errors: Array<{ letter: LetterDocument, error: Error | any }>
@@ -168,7 +171,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         } = {};
 
         for (const user of users) {
-            const res = await this.generateInvoicesForUser(user.id);
+            const res = await this.generateInvoicesForUser(user.id, startNumber);
             if (res.length > 0) {
                 results[user.id] = res;
             }
@@ -190,7 +193,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 $gte: `${year}-01-01`,
                 $lte: `${year}-12-31`
             }
-        }, { sort: { "createdAt": 1 } }));
+        }, { sort: { "createdAt": -1 } }));
         if (!invoices || invoices.length === 0) {
             return 0;
         }
