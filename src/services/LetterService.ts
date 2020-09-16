@@ -114,8 +114,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      */
     public async batchQueryLetters(): Promise<number> {
         // Filter only letters that are recent
-        const toQuery = (await this.find({ sent: true }, { populate: "sender recipients" }))
-            .filter(l => !!l.posteway && (moment().diff(l.sendAt, "months") <= 1));
+        const toQuery = (await this.find({
+            sent: true,
+            createdAt: { $gte: moment().subtract(3, "days").toDate() },
+            error: { $ne: true },
+            posteway: { $exists: true }
+        }, { populate: "sender recipients" }));
 
         if (toQuery.length === 0) {
             logger.info(`Query job has no letters to check! Waiting for the next CRON call...`);
