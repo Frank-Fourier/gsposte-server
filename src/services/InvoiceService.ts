@@ -13,13 +13,7 @@ import { MongoRepository } from "@services/MongoRepository";
 import httpErrors from "http-errors";
 import moment from "moment";
 import { logger } from "@utils/winston";
-
-const groupBy = <T>(array: Array<T>, property: (x: T) => string): { [key: string]: Array<T> } =>
-    array.reduce((memo: { [key: string]: Array<T> }, x: T) => {
-        if (!memo[property(x)]) memo[property(x)] = [];
-        memo[property(x)].push(x);
-        return memo;
-    }, {});
+import { groupBy } from "@utils/misc";
 
 @provide(InvoiceService)
 export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {

@@ -11,7 +11,7 @@ export class StatsRoute extends Route {
             /**
              * @swagger
              *
-             * /stats/{id}:
+             * /stats/{id}/{year}:
              *   get:
              *     tags:
              *       - Stats
@@ -25,6 +25,10 @@ export class StatsRoute extends Route {
              *         required: true
              *         in: path
              *         description: Mongo id of the user to get stats for
+             *       - name: year
+             *         required: false
+             *         in: path
+             *         description: Optional year to get the stats for. If omitted, it considers ALL the letters sent by this user
              *     responses:
              *       200:
              *         description: Stats
@@ -38,10 +42,45 @@ export class StatsRoute extends Route {
              *         description: You are not allowed to get statistics of other users!
              */
             {
-                path: "/:id",
+                path: "/:id/:year",
                 method: RequestMethod.GET,
                 requiresAuth: true,
                 handler: (req, res) => this.statsController.fetchStatsForUser(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /stats/system/{year}:
+             *   get:
+             *     tags:
+             *       - Stats
+             *     description: Fetch total system spent stats. This refers to prices directly outgoing to Poste Italiane. Only admins can do this!
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: year
+             *         required: false
+             *         in: path
+             *         description: Optional year to get the stats for. If omitted, it considers ALL the letters sent
+             *     responses:
+             *       200:
+             *         description: System spent stats
+             *         schema:
+             *           $ref: "#/definitions/SystemSpentStats"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             *       403:
+             *         description: You are not allowed to access this data
+             */
+            {
+                path: "/system/:year",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.statsController.fetchSystemSpentStats(req, res)
             }
         ]);
     }

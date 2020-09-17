@@ -14,7 +14,7 @@ import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
-import { StatusResponse, TrackResponse } from "../posteway";
+import { PriceResponse, TrackResponse } from "../posteway";
 import { ProvisionDocument } from "@models/ProvisionModel";
 
 /**
@@ -137,7 +137,7 @@ export interface LetterDocument extends Letter, Document {
         requestId?: string
         orderId?: string
         status?: string
-        prices?: StatusResponse
+        prices?: PriceResponse
         track?: TrackResponse
     }
     /** REMOVED IN FAVOR OF POSTEWAY
