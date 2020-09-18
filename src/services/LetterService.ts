@@ -18,6 +18,7 @@ import winston from "winston";
 import moment from "moment";
 import fs from "fs";
 import { NoticeKind } from "@models/NoticeModel";
+import { insert } from "@utils/misc";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -412,10 +413,18 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      */
     public async queryLetter(letter: LetterDocument): Promise<LetterDocument> {
         logger.info(`===== QUERYING LETTER '${letter.codePdf}' =====`);
-        const { orderId } = letter.posteway;
+        const { requestId, orderId } = letter.posteway;
 
         const track = await this.posteway.track(letter.kind !== LetterKind.LETTERA_SEMPLICE ? "rol" : "lol", orderId);
-        return this.updateById(letter.id, { $set: { "posteway.track": track }}, false, false);
+        const status = await this.posteway.status(letter.kind !== LetterKind.LETTERA_SEMPLICE ? "rol" : "lol", requestId).catch(() => null);
+
+       const temporary = {
+           // Do not update prices if the status call errored
+           ...(!!status ? { "posteway.prices": status.price } : {}),
+           "posteway.track": track,
+       };
+
+        return this.updateById(letter.id, temporary, false, false);
     }
 
     /**

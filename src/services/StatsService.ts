@@ -198,9 +198,9 @@ export class StatsService {
         });
 
         const stats = {
-            [LetterKind.LETTERA_SEMPLICE]: aggregateStats(lettersByKind[LetterKind.LETTERA_SEMPLICE]),
-            [LetterKind.RACCOMANDATA]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA]),
-            [LetterKind.RACCOMANDATA_AR]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_AR]),
+            [LetterKind.LETTERA_SEMPLICE]: aggregateStats(lettersByKind[LetterKind.LETTERA_SEMPLICE] || []),
+            [LetterKind.RACCOMANDATA]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA] || []),
+            [LetterKind.RACCOMANDATA_AR]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_AR] || []),
         };
 
         const totalSpent = Object.values(stats).reduce<number>((acc, s) => acc + s.spent, 0);
@@ -257,9 +257,9 @@ export class StatsService {
             }), { spent: { net: 0, tax: 0, tot: 0 } } as PosteSpent);
 
         const aggregated = {
-            [LetterKind.LETTERA_SEMPLICE]: aggregatePrices(lettersByKind[LetterKind.LETTERA_SEMPLICE]),
-            [LetterKind.RACCOMANDATA]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA]),
-            [LetterKind.RACCOMANDATA_AR]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_AR]),
+            [LetterKind.LETTERA_SEMPLICE]: aggregatePrices(lettersByKind[LetterKind.LETTERA_SEMPLICE] || []),
+            [LetterKind.RACCOMANDATA]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA] || []),
+            [LetterKind.RACCOMANDATA_AR]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_AR] || []),
         };
 
         return {
