@@ -283,7 +283,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         const html = compileFile(`${process.env.VIEWS_ROOT}/letters_invoice.pug`)({
             sender: (invoice.sender as SenderDocument).toObject(),
             number: `${invoice.number}/${createdAt.year()}`,
-            createdAt: createdAt.format("DD/MM"),
+            createdAt: createdAt.format("DD/MM/YYYY"),
             services: invoice.letters.map((letter: LetterDocument) => ({
                 name: `${letter.kind} Online`,
                 description: letter.subject,
@@ -291,6 +291,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 priceSingle: formatCurrency(letter.price),
                 total: formatCurrency(letter.price * letter.recipients.length),
             })),
+            taxable: formatCurrency(invoice.taxable),
+            iva: formatCurrency(invoice.iva),
             total: formatCurrency(invoice.total)
         });
 

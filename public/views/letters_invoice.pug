@@ -15,7 +15,6 @@ html(lang="it")
             }
             span {
                 font-size: 14px;
-                float: right;
             }
             img {
                 width: 200px;
@@ -37,6 +36,7 @@ html(lang="it")
             table {
                 border-collapse: collapse;
                 margin-top: 20px;
+                margin-bottom: 10px;
                 font-size: 14px;
             }
             td {
@@ -53,6 +53,7 @@ html(lang="it")
             .brand-text {
                 font-size: 10px;
             }
+            .float-right { float: right; }
     body
         div(class="header")
             img(src=`${process.env.SERVER_HOST || "http://localhost"}${process.env.NODE_ENV !== "production" ? `:${process.env.SERVER_PORT || "5000"}` : ""}${process.env.IMAGES_PATH || "/images"}/logo.png`)
@@ -89,10 +90,17 @@ html(lang="it")
                         td(width="10%") #{service.quantity}
                         td(width="10%") #{service.priceSingle}
                         td(width="5%") #{service.total}
-        p
-            | Totale servizi:
-            b  #{services.length}
+        span Totale servizi:
             |
-            span Totale Fattura (IVA inclusa):
-                |
-                b  #{total}
+            b  #{services.length}
+        span(class="float-right") Imponibile Totale:
+            |
+            b  #{taxable}
+        br
+        span(class="float-right") IVA (22%):
+            |
+            b  #{iva}
+        br
+        span(class="float-right") Totale:
+            |
+            b  #{total}
