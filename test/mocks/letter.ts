@@ -18,7 +18,7 @@ export function generateMockLetter(user: string | UserDocument, sender: string |
         user: user,
         sender: sender,
         recipients: recipients,
-        subject: faker.fake("{{company.companyName}} IMPORTANT TEST LETTERS"),
+        subject: faker.lorem.sentence(),
         kind: kind || LetterKind.LETTERA_SEMPLICE,
         codePdf: codePdf,
         notes: faker.lorem.sentence(),

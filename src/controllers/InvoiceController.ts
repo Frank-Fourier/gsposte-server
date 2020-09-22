@@ -1,8 +1,10 @@
 import { CrudController } from "@controllers/CrudController";
 import { inject } from "inversify";
-import { InvoiceService } from "@services/InvoiceService";
+import { INVOICES_ROOT, InvoiceService } from "@services/InvoiceService";
 import { LetterService } from "@services/LetterService";
 import { Request, Response } from "express";
+import { BadRequest } from "http-errors";
+import fs from "fs";
 
 export class InvoiceController extends CrudController {
 
@@ -42,6 +44,22 @@ export class InvoiceController extends CrudController {
         const toMark = await this.invoiceService.findById(req.params.id);
         const updated = await this.invoiceService.markInvoiceAsPaid(toMark);
         return res.status(201).send(updated);
+    }
+
+    public async generateInvoicePDF(req: Request, res: Response) {
+        if (!req.params.id) {
+            throw new BadRequest("Invoice ID is required");
+        }
+
+        const invoice = await this.invoiceService.findById(req.params.id);
+        const pdf = await this.invoiceService.generateInvoicePDF(invoice);
+        const path = `${INVOICES_ROOT}/invoice_${invoice.id}.pdf`;
+        await fs.promises.writeFile(path, pdf);
+
+        return res.status(201).send({
+            message: `Invoice PDF created correctly. Available at ${path}`,
+            url: `${process.env.SERVER_HOST}${(process.env.NODE_ENV === "production" ? "" : `:${process.env.SERVER_PORT}`)}/invoices/invoice_${invoice.id}.pdf`
+        });
     }
 
 }

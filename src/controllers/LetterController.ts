@@ -5,7 +5,7 @@ import { LetterService } from "@services/LetterService";
 import { InvoiceService } from "@services/InvoiceService";
 import { Request, Response } from "express";
 import { PDF_ROOT } from "@services/PdfService";
-import httpErrors from "http-errors";
+import httpErrors, { BadRequest } from "http-errors";
 import fs from "fs";
 
 @provide(LetterService)
@@ -29,6 +29,9 @@ export class LetterController extends CrudController {
     }
 
     public async generateInvoice(req: Request, res: Response) {
+        if (!req.params.id) {
+            throw new BadRequest("Letter ID is required");
+        }
         const letter = (await this.letterService.findById(req.params.id)).depopulate("user");
 
         // const user = await this.authService.getUserFromRequest(req);

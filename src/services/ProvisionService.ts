@@ -3,7 +3,7 @@ import { Provision, provisionDecoder, ProvisionDocument, ProvisionModel } from "
 import { provide } from "inversify-binding-decorators";
 import { LetterDocument } from "@models/LetterModel";
 import { inject } from "inversify";
-import { PriceService } from "@services/PriceService";
+import { PriceService, WeightRanges } from "@services/PriceService";
 import { UserService } from "@services/UserService";
 import { UserDocument } from "@models/UserModel";
 import { RevenueService } from "@services/RevenueService";
@@ -23,7 +23,6 @@ export interface ProvisionRanges {
         }
     }
 }
-export type Ranges = "0-20" | "21-50" | "51-100";
 
 /**
  * @swagger
@@ -153,10 +152,10 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
 
         // Calculate the amount of total provision
         const { weight } = await this.priceService.calculateWeight(letter);
-        const amountKey = Object.keys(ranges[letter.kind]).filter((range: Ranges) => {
+        const amountKey = Object.keys(ranges[letter.kind]).filter((range: WeightRanges) => {
             const [ lower, upper ] = range.split("-");
             return parseFloat(lower) <= weight && parseFloat(upper) >= weight;
-        })[0] as Ranges;
+        })[0] as WeightRanges;
 
         const revenue = ranges[letter.kind][amountKey] * letter.recipients.length;
         const spent = letter.price * letter.recipients.length;

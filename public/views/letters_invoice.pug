@@ -1,0 +1,98 @@
+html(lang="it")
+    head
+        title Fattura nr. #{number}
+        style(type="text/css").
+            @page {
+                margin: 10mm 15mm 15mm;
+                size: A4;
+            }
+            body {
+                font-family: Calibri, serif;
+                -webkit-print-color-adjust: exact;
+            }
+            p {
+                font-size: 14px;
+            }
+            span {
+                font-size: 14px;
+                float: right;
+            }
+            img {
+                width: 200px;
+                float: left;
+                margin-right: 20px;
+            }
+            .header {}
+            .sender {
+                font-size: 14px;
+                padding-bottom: 20px;
+            }
+            .invoice-info {
+                padding: 15px 0 15px 0;
+                font-size: 18px;
+                border-top: 1px solid #8A8A8A;
+                border-bottom: 1px solid #8A8A8A;
+                margin-bottom: 40px;
+            }
+            table {
+                border-collapse: collapse;
+                margin-top: 20px;
+                font-size: 14px;
+            }
+            td {
+                text-align: left;
+                padding: 5px 5px 5px 0;
+                border-bottom: 1px dashed #8A8A8A;
+            }
+            th {
+                text-align: left;
+                border-bottom: 2px solid black;
+            }
+            tr:nth-child(even) { background: rgb(237, 241, 245) }
+            td:last-child { text-align: right }
+            .brand-text {
+                font-size: 10px;
+            }
+    body
+        div(class="header")
+            img(src=`${process.env.SERVER_HOST || "http://localhost"}${process.env.NODE_ENV !== "production" ? `:${process.env.SERVER_PORT || "5000"}` : ""}${process.env.IMAGES_PATH || "/images"}/logo.png`)
+            p(class="brand-text") General Services soc. coop. cons. a r.l.
+                br
+                | Via Metastasio, 2 - 70033 Corato (BA)
+                br
+                | www.gserviceitalia.it - info@gserviceitalia.it
+                br
+                | AGENZIA DI RECAPITO AUTORIZZATA: OMF-18/3514
+            // img(class="logo-poste" src=`${process.env.SERVER_HOST || "http://localhost"}:${process.env.SERVER_PORT || "5000"}${process.env.IMAGES_PATH || "/images"}/poste-italiane.svg`)
+        br
+        h2 Spett.
+        p(class="sender") #{sender.name.toUpperCase() || "-"}
+            br
+            | #{sender.address.street.toUpperCase() || "-"}
+            br
+            | #{sender.address.zip} #{sender.address.city.toUpperCase()} (#{sender.address.province.toUpperCase()})
+        p(class="invoice-info") Fattura nr. #{number} del #{createdAt}
+        table
+            thead
+                th #
+                th Servizio
+                th Descrizione
+                th Quantità
+                th Costo
+                th Imponibile
+            tbody
+                each service, index in services
+                    tr
+                        td(width="5%") #{index + 1}
+                        td(width="30%") #{service.name}
+                        td(width="30%") #{service.description}
+                        td(width="10%") #{service.quantity}
+                        td(width="10%") #{service.priceSingle}
+                        td(width="5%") #{service.total}
+        p
+            | Totale servizi:
+            b  #{services.length}
+            |
+            span Totale Fattura (IVA inclusa):
+                |
+                b  #{total}

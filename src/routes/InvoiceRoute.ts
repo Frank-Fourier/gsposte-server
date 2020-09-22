@@ -201,6 +201,37 @@ export class InvoiceRoute extends Route {
             /**
              * @swagger
              *
+             * /invoice/pdf/{id}:
+             *   post:
+             *     tags:
+             *       - Invoices
+             *     description: Generate a PDF starting from an invoice.
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: id
+             *         required: true
+             *         in: path
+             *         description: Mongo id of the invoice to generate PDF for
+             *     responses:
+             *       201:
+             *         description: PDF generated, returns the URL to access the resource.
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/pdf/:id",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.invoiceController.generateInvoicePDF(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /invoice/{id}:
              *   get:
              *     tags:

@@ -14,6 +14,7 @@ import { generateMockSender } from "../mocks/sender";
 import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel";
 import { generateUUID } from "@utils/random";
 import { LetterDocument } from "@models/LetterModel";
+import fs from "fs";
 
 @suite ("InvoiceService") class InvoiceServiceTests {
 
@@ -49,8 +50,9 @@ import { LetterDocument } from "@models/LetterModel";
             expect(err).to.exist;
         }
 
-        const { invoice, errors } = await this.invoiceService.generateSingleInvoice(letters, await this.invoiceService.getLatestInvoiceNumber() + 1);
-        invoice.depopulate("recipients");
+        const { invoice, errors } = await this.invoiceService.generateSingleInvoice(
+            letters, await this.invoiceService.getLatestInvoiceNumber() + 1
+        );
 
         expect(errors.length).to.equal(0);
         assertSameInvoice({
@@ -187,6 +189,27 @@ import { LetterDocument } from "@models/LetterModel";
         const pdf = await this.invoiceService.generateLetterInvoicePDF(letter);
         expect(pdf).to.exist;
         // await fs.promises.writeFile(`test/assets/pdf/${TEST_CODE_PDF}/invoice.pdf`, pdf);
+    }
+
+    @timeout(60000)
+    @test async "Should generate PDF for invoice correctly" () {
+        const sender = await this.senderService.save(generateMockSender(this.system.id));
+        const letters = [
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }),
+        ];
+
+        const { invoice, errors } = await this.invoiceService.generateSingleInvoice(
+            letters, await this.invoiceService.getLatestInvoiceNumber() + 1
+        );
+
+        expect(errors.length).to.equal(0);
+        const pdf = await this.invoiceService.generateInvoicePDF(invoice);
+        expect(pdf).to.exist;
+        await fs.promises.writeFile(`test/assets/pdf/invoices/fattooooora.pdf`, pdf);
     }
 
     static after() { cleanTestDB(); }

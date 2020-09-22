@@ -13,7 +13,9 @@ import { MongoRepository } from "@services/MongoRepository";
 import httpErrors from "http-errors";
 import moment from "moment";
 import { logger } from "@utils/winston";
-import { groupBy } from "@utils/misc";
+import { formatCurrency, groupBy } from "@utils/misc";
+
+export const INVOICES_ROOT = process.env.INVOICES_ROOT || "public/invoices";
 
 @provide(InvoiceService)
 export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
@@ -55,7 +57,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         let taxableSum = 0;
 
         for (const letter of letters) {
-            await letter.depopulate("sender user");
+            letter.depopulate("sender user");
             if (letter.sender.toString() !== letters[0].sender.toString()) {
                 throw new httpErrors.BadRequest("Letters to generate an invoice from must all have the same sender!");
             }
@@ -217,9 +219,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     }
 
     /**
-     * Generates an invoice for a letter. If the letter has not completed stats yet, it is a partial invoice.
-     * You can't generate an invoice for letters that are not yet sent!
-     * Please note that this does not generate a real invoice, rather a note for a single letter. "Distinta"
+     * Generates an invoice for a letter. You can't generate an invoice for letters that are not yet sent!
+     * Please note that this does not generate a real invoice, rather a note for a single letter, a "distinta"
      *
      * @param letter {LetterDocument} Letter to generate invoice from
      * @returns {Promise<Buffer>} Promise resolving to the PDF file as Buffer
@@ -261,17 +262,40 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             partial: false,
             codePdf: letter.codePdf,
             kind: letter.kind,
-            price: this.formatCurrency(price),
-            total: this.formatCurrency(price * letter.posteway.track.recipients.length),
+            price: formatCurrency(price),
+            total: formatCurrency(price * letter.posteway.track.recipients.length),
         });
 
         // I wait until networkidle2 to let all the images on the HTML load before converting
         return this.pdf.htmlToPdf(html, "networkidle2");
     }
 
-    public formatCurrency(price: number): string {
-        const [ int, decimal ] = price.toPrecision(3).split(".");
-        return `${int},${decimal?.padEnd(2, "0") || "00"} €`;
+    /**
+     * Generates a PDF representing the invoice.
+     *
+     * @param invoice {InvoiceDocument} Invoice to generate PDF from
+     * @returns {Promise<Buffer>} Promise resolving to the PDF file as Buffer
+     */
+    public async generateInvoicePDF(invoice: InvoiceDocument): Promise<Buffer> {
+        await invoice.populate("sender letters").execPopulate();
+        const createdAt = moment(invoice.toObject()["createdAt"]);
+
+        const html = compileFile(`${process.env.VIEWS_ROOT}/letters_invoice.pug`)({
+            sender: (invoice.sender as SenderDocument).toObject(),
+            number: `${invoice.number}/${createdAt.year()}`,
+            createdAt: createdAt.format("DD/MM"),
+            services: invoice.letters.map((letter: LetterDocument) => ({
+                name: `${letter.kind} Online`,
+                description: letter.subject,
+                quantity: letter.recipients.length,
+                priceSingle: formatCurrency(letter.price),
+                total: formatCurrency(letter.price * letter.recipients.length),
+            })),
+            total: formatCurrency(invoice.total)
+        });
+
+        // I wait until networkidle2 to let all the images on the HTML load before converting
+        return this.pdf.htmlToPdf(html, "networkidle2");
     }
 
 }

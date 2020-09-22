@@ -102,8 +102,6 @@ export class LetterRoute extends Route {
              *         $ref: "#/responses/BadRequest"
              *       401:
              *         $ref: "#/responses/Unauthorized"
-             *       403:
-             *         description: You are not allowed to generate invoices for other users!
              */
             {
                 path: "/invoice/:id",

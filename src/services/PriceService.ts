@@ -7,6 +7,8 @@ import { inject } from "inversify";
 import { PdfService } from "@services/PdfService";
 import { logger } from "@utils/winston";
 
+export type WeightRanges = "0-20" | "21-50" | "51-100";
+
 @provide(PriceService)
 export class PriceService extends MongoRepository<Price, PriceDocument> {
 

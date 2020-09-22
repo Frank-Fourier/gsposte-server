@@ -10,6 +10,7 @@ test/assets/pdf/GSTESTPDF21/postel.pdf
 test/assets/pdf/GSTESTPDF21/invoice.pdf
 test/assets/*.html
 test/assets/.~lock*
+test/assets/pdf/invoices/
 
 # Log files
 *.log
