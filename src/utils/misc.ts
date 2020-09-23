@@ -46,5 +46,5 @@ export function insert(condition: boolean, obj: object, defaultValue?: any): obj
  */
 export function formatCurrency(price: number): string {
     const [ int, decimal ] = price.toFixed(2).split(".");
-    return `${int},${decimal?.padEnd(2, "0") || "00"} €`;
+    return `€ ${int},${decimal?.padEnd(2, "0") || "00"}`;
 }
