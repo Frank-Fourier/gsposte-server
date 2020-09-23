@@ -87,9 +87,9 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             user: letters[0].user,
             sender: letters[0].sender,
             letters: letters.filter(l => l.sent),
-            taxable: parseFloat(taxableSum.toPrecision(4)),
-            iva: parseFloat(iva.toPrecision(4)),
-            total: parseFloat(total.toPrecision(4)),
+            taxable: parseFloat(taxableSum.toFixed(2)),
+            iva: parseFloat(iva.toFixed(2)),
+            total: parseFloat(total.toFixed(2)),
         });
 
         if (!!number) {
