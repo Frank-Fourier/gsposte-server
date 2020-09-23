@@ -13,6 +13,7 @@ import httpErrors from "http-errors";
 import fs from "fs";
 import fetch from "node-fetch";
 import puppeteer, { LoadEvent, PDFOptions } from "puppeteer";
+import { insert } from "@utils/misc";
 
 export const PDF_ROOT = process.env.PDF_ROOT || "public/pdf";
 
@@ -272,7 +273,7 @@ export class PdfService {
             // Otherwise it will just crash on launch...
             args: process.env.NODE_ENV === "production" ? [ "--disable-dev-shm-usage", "--no-sandbox" ] : [],
             // On Docker I need to specify that I want to use my own Chromium
-            ...(process.env.NODE_ENV === "production" ? { executablePath: "/usr/bin/chromium-browser" } : {}),
+            ...insert(process.env.NODE_ENV === "production", { executablePath: "/usr/bin/chromium-browser" }),
             // Ignore HTTPS errors in development/test environments
             ignoreHTTPSErrors: process.env.NODE_ENV !== "production"
         });

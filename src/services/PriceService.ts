@@ -44,7 +44,9 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
         const paperWeight = parseFloat(process.env.PAPER_WEIGHT || "5");
         let pages = 1;
         try {
-            pages = (await this.pdf.metadata(`public/pdf/${letter.codePdf}/original.pdf`)).pages;
+            // Get pages from posteway.prices if it's there, otherwise invoke pdfinfo to get it
+            pages = letter.posteway?.prices?.pages ??
+                (await this.pdf.metadata(`public/pdf/${letter.codePdf}/original.pdf`)).pages;
         } catch (err) {
             // Ignore errors
             logger.error(`Error while getting PDF pages for letter ${letter.codePdf}!`, err);

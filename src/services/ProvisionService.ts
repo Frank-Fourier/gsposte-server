@@ -12,6 +12,7 @@ import { Schema } from "mongoose";
 import httpErrors from "http-errors";
 import moment from "moment";
 import provisionConfig from "../../provisions.json";
+import { insert } from "@utils/misc";
 
 export interface ProvisionRanges {
     percents: number[]
@@ -196,8 +197,8 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
             amount: provisions
                 .reduce<number>((acc, cur) => acc + cur.referrers.find(ref => (
                     (ref.user instanceof Schema.Types.ObjectId ? ref.user.toString() : (ref.user as UserDocument).id.toString()) === userId
-                )).amount, 0),
-            ...(includeMonth ? { month: new Date().getMonth() } : {})
+                ))?.amount ?? 0, 0),
+            ...insert(includeMonth, { month: new Date().getMonth() })
         };
     }
 
