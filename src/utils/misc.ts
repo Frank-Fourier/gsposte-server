@@ -45,6 +45,6 @@ export function insert(condition: boolean, obj: object, defaultValue?: any): obj
  * @example formatted = formatCurrency(34.1256); // formatted = "34,125 €"
  */
 export function formatCurrency(price: number): string {
-    const [ int, decimal ] = price.toPrecision(3).split(".");
+    const [ int, decimal ] = price.toFixed(3).split(".");
     return `${int},${decimal?.padEnd(2, "0") || "00"} €`;
 }
