@@ -14,11 +14,10 @@ import { sleep } from "@utils/sleep";
 import { ConfirmResponse, SubmitKind, SubmitResponse, TrackResponse } from "../posteway";
 import { isTestEnv } from "@utils/system";
 import { ProvisionService } from "@services/ProvisionService";
+import { NoticeKind } from "@models/NoticeModel";
 import winston from "winston";
 import moment from "moment";
 import fs from "fs";
-import { NoticeKind } from "@models/NoticeModel";
-import { insert } from "@utils/misc";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -51,7 +50,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
         const updated = await (await super.updateById(id, updateBody, upsert, runValidators)).populate("sender recipients").execPopulate();
-        if (updateBody.recipients || updateBody.kind) {
+        if (updateBody.recipients || updateBody.kind || updateBody.codePdf) {
             const price = await this.priceService.calculatePrice(updated);
             await updated.updateOne({ $set: { price: price }}).exec();
             updated.price = price;
@@ -62,7 +61,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     public async updateOne(query: MongoQuery<Letter & LetterDocument>, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
         const updated = await (await super.updateOne(query, updateBody, upsert, runValidators)).populate("sender recipients").execPopulate();
-        if (updateBody.recipients || updateBody.kind) {
+        if (updateBody.recipients || updateBody.kind || updateBody.codePdf) {
             const price = await this.priceService.calculatePrice(updated);
             await updated.updateOne({ $set: { price: price }}).exec();
             updated.price = price;

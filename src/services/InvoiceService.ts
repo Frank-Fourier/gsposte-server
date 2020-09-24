@@ -70,7 +70,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                     throw new httpErrors.BadRequest("This letter is in an error state so I won't include it in the invoice.");
                 }
 
-                const taxable = await this.priceService.calculatePrice(letter) * letter.recipients.length;
+                const taxable = (letter.price || await this.priceService.calculatePrice(letter)) * letter.recipients.length;
                 if (taxable <= 0 || isNaN(taxable)) {
                     throw new httpErrors.BadRequest("Can't create an invoice for a letter without a price!");
                 }
