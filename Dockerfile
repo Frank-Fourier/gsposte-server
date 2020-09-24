@@ -24,10 +24,11 @@ RUN apk add --no-cache \
         imagemagick \
         ghostscript
 
-# Copy package.json
+# Copy package.json and lockfile
 COPY package.json .
+COPY yarn.lock .
 
-# Install dependencies through Yarn
+# Install dependencies
 RUN yarn
 
 # Copy source files
