@@ -168,6 +168,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
         for (const user of users) {
             const res = await this.generateInvoicesForUser(user.id, startNumber);
+            startNumber += res.length;
             if (res.length > 0) {
                 results[user.id] = res;
             }
