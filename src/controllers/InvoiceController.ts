@@ -21,7 +21,7 @@ export class InvoiceController extends CrudController {
 
         const invoice = await this.invoiceService.generateSingleInvoice(
             await Promise.all(letterIds.map(id => this.letterService.findById(id))),
-            req.body.startNumber
+            req.body.startNumber ? (req.body.startNumber - 1) : null
         );
 
         return res.status(201).send(invoice);
@@ -29,13 +29,17 @@ export class InvoiceController extends CrudController {
 
     public async generateInvoicesForUser(req: Request, res: Response) {
         await this.authService.adminOnly(req);
-        const invoices = await this.invoiceService.generateInvoicesForUser(req.params.id, req.body?.startNumber);
+        const invoices = await this.invoiceService.generateInvoicesForUser(
+            req.params.id, req.body?.startNumber ? (req.body?.startNumber - 1) : null
+        );
         return res.status(201).send(invoices);
     }
 
     public async generateInvoices(req: Request, res: Response) {
         await this.authService.adminOnly(req);
-        const invoices = await this.invoiceService.generateInvoices(req.body?.startNumber);
+        const invoices = await this.invoiceService.generateInvoices(
+            req.body?.startNumber ? (req.body?.startNumber - 1) : null
+        );
         return res.status(201).send(invoices);
     }
 
