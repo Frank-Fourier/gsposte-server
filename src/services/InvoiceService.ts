@@ -199,23 +199,24 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     }
 
     /**
-     * Marks an invoice as paid. This means that its 'paid' property becomes true, as well as all the
-     * 'paid' properties of the letters associated with this invoice.
+     * Toggle an invoice paid property. This means that its 'paid' property becomes true, as well as all the
+     * 'paid' properties of the letters associated with this invoice. The viceversa is also true: if paid was true,
+     * it will become false.
      *
-     * @param invoice {InvoiceDocument} Invoice to mark as paid
+     * @param invoice {InvoiceDocument} Invoice to toggle paid
      * @returns {Promise<InvoiceDocument>} Promise resolving to the updated invoice document
      */
-    public async markInvoiceAsPaid(invoice: InvoiceDocument): Promise<InvoiceDocument> {
+    public async toggleInvoicePaid(invoice: InvoiceDocument): Promise<InvoiceDocument> {
         invoice = await invoice.populate("letters").execPopulate();
         await Promise.all(
-            invoice.letters.map(letter =>
+            invoice.letters.map((letter: LetterDocument) =>
                 this.letterService.updateById((letter as LetterDocument).id, {
-                    $set: { paid: true }
+                    $set: { paid: !letter.paid }
                 })
             )
         );
         return this.updateById(invoice.id, {
-            $set: { paid: true, paymentDate: Date.now() }
+            $set: { paid: !invoice.paid, paymentDate: Date.now() }
         });
     }
 

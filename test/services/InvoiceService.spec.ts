@@ -135,7 +135,7 @@ import fs from "fs";
         const [ { invoice } ] = await this.invoiceService.generateInvoicesForUser(this.system.id);
 
         // The client has now paid this invoice! Wow!
-        await this.invoiceService.markInvoiceAsPaid(invoice);
+        await this.invoiceService.toggleInvoicePaid(invoice);
 
         // But wait! Now the client sends another 3 letters with another sender and makes an invoice for them!
         const newSender = await this.senderService.save(generateMockSender(this.system.id));

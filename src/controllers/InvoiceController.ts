@@ -43,10 +43,10 @@ export class InvoiceController extends CrudController {
         return res.status(201).send(invoices);
     }
 
-    public async markInvoiceAsPaid(req: Request, res: Response) {
+    public async toggleInvoicePaid(req: Request, res: Response) {
         await this.authService.adminOnly(req);
         const toMark = await this.invoiceService.findById(req.params.id);
-        const updated = await this.invoiceService.markInvoiceAsPaid(toMark);
+        const updated = await this.invoiceService.toggleInvoicePaid(toMark);
         return res.status(201).send(updated);
     }
 

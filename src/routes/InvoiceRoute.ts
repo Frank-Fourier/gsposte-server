@@ -134,11 +134,11 @@ export class InvoiceRoute extends Route {
             /**
              * @swagger
              *
-             * /invoice/pay/{id}:
+             * /invoice/pay/toggle/{id}:
              *   post:
              *     tags:
              *       - Invoices
-             *     description: Marks an invoice as paid. It will also mark as paid all of its associated letters.
+             *     description: Toggle invoice paid flag. It will also toggle the paid flag of all its associated letters.
              *     produces:
              *       - application/json
              *     security:
@@ -147,7 +147,7 @@ export class InvoiceRoute extends Route {
              *       - name: id
              *         required: true
              *         in: path
-             *         description: Mongo id of the invoice to pay
+             *         description: Mongo id of the invoice to toggle paid flag for
              *     responses:
              *       201:
              *         description: Invoice document updated
@@ -159,10 +159,10 @@ export class InvoiceRoute extends Route {
              *         $ref: "#/responses/Forbidden"
              */
             {
-                path: "/pay/:id",
+                path: "/pay/toggle/:id",
                 method: RequestMethod.POST,
                 requiresAuth: true,
-                handler: (req, res) => this.invoiceController.markInvoiceAsPaid(req, res)
+                handler: (req, res) => this.invoiceController.toggleInvoicePaid(req, res)
             },
             /**
              * @swagger
