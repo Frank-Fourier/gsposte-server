@@ -22,7 +22,11 @@ RUN apk add --no-cache \
         ttf-freefont \
         poppler-utils \
         imagemagick \
-        ghostscript
+        ghostscript \
+        tzdata
+RUN cp /usr/share/zoneinfo/Europe/Rome /etc/localtime
+RUN echo "Europe/Rome" > /etc/timezone
+RUN apk del tzdata
 
 # Copy package.json and lockfile
 COPY package.json .
