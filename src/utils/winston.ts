@@ -4,23 +4,24 @@ export const logger = winston.createLogger();
 const { combine, colorize, timestamp, splat, printf } = winston.format;
 const colorizer = colorize({ colors: { info: 'blue' } });
 
-export const createLogFile = (filename: string, level = "info") => {
-    const l = winston.createLogger();
-    l.add(new winston.transports.File({
-        level: level,
-        dirname: process.env.LOG_ROOT || "public/logs",
-        filename: filename,
-        format: combine(
-            timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSS" }),
-            splat(),
-            printf(({ timestamp, level, message, ...args }) =>
-                `[${timestamp}] ${level.toUpperCase()}: ${message} ${Object.keys(args).length ? JSON.stringify(args, null, 2) : ""}`
-            )
-        ),
-    }));
-    return l;
-};
-export const detachLogFile = (logger: winston.Logger) => logger.clear();
+export const createLogFile = (filename: string, level = "info") =>
+    winston.createLogger({
+        transports: [
+            new winston.transports.File({
+                level: level,
+                dirname: process.env.LOG_ROOT || "public/logs",
+                filename: filename,
+                format: combine(
+                    timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSS" }),
+                    splat(),
+                    printf(({ timestamp, level, message, ...args }) =>
+                        `[${timestamp}] ${level.toUpperCase()}: ${message} ${Object.keys(args).length ? JSON.stringify(args, null, 2) : ""}`
+                    )
+                ),
+            })
+        ]
+    });
+export const detachLogFile = (logger: winston.Logger) => logger.close();
 
 logger.add(new winston.transports.Console({
     level: process.env.NODE_ENV === "production" ? "info" : (process.env.NODE_ENV === "development" ? "debug" : "error"),
@@ -34,5 +35,16 @@ logger.add(new winston.transports.Console({
 }));
 
 if (process.env.NODE_ENV === "production") {
-    logger.add(createLogFile("errors.log", "error"));
+    logger.add(new winston.transports.File({
+        level: "error",
+        dirname: process.env.LOG_ROOT || "public/logs",
+        filename: "errors.log",
+        format: combine(
+            timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSS" }),
+            splat(),
+            printf(({ timestamp, level, message, ...args }) =>
+                `[${timestamp}] ${level.toUpperCase()}: ${message} ${Object.keys(args).length ? JSON.stringify(args, null, 2) : ""}`
+            )
+        ),
+    }));
 }
