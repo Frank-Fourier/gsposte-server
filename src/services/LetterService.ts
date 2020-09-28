@@ -347,8 +347,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             try {
                 submit = await this.posteway.send({
                     kind: kind,
-                    sender: mapSenderToPerson(letter.sender as SenderDocument),
-                    recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r, letter.subject)),
+                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.subject),
+                    recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r)),
                     cid: cid,
                     options: {
                         bw: letter.bw || false,
