@@ -132,6 +132,11 @@ export const NoticeSchema = new Schema<Notice>({
         type: Schema.Types.Mixed,
         default: {},
     }
+}, {
+    timestamps: {
+        createdAt: true,
+        updatedAt: true,
+    }
 });
 NoticeSchema.post("save", (notice: NoticeDocument) => {
     notice.broadcast
