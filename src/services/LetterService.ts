@@ -11,7 +11,7 @@ import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel"
 import { createLogFile, detachLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
-import { ConfirmResponse, SubmitKind, SubmitResponse, TrackResponse } from "../posteway";
+import { ConfirmResponse, StatusResponse, SubmitKind, SubmitResponse, TrackResponse } from "../posteway";
 import { isTestEnv } from "@utils/system";
 import { ProvisionService } from "@services/ProvisionService";
 import { NoticeKind } from "@models/NoticeModel";
@@ -178,6 +178,33 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             try {
                 // Wait 60 seconds so I can be sure that the confirm endpoint will work
                 await sleep(60000);
+
+                // Before confirming, call status to check if everything went good
+                let statusResponse: StatusResponse;
+                try {
+                    statusResponse = await this.posteway.status(kind, submit.request.requestId);
+
+                    // If the status is not R - Prezzato, don't even bother...
+                    if (!statusResponse.status.startsWith("R")) {
+                        logFile?.error(`Unexpected status response. Expected 'R - Prezzato', got '${statusResponse.status}'. Request ID = ${statusResponse.request.requestId}`);
+                        logger.error(`Unexpected status response. Expected 'R - Prezzato', got '${statusResponse.status}'. Request ID = ${statusResponse.request.requestId}`);
+
+                        // Inform the user that there was an error
+                        this.noticeService.save({
+                            user: userId,
+                            title: "Errore durante l'invio della lettera",
+                            content: `Errore durante la conferma della lettera '${letter.codePdf}' tramite PosteWay. L'invio non è stato accettato da Poste Italiane, che ha risposto con il codice '${statusResponse.status}'`,
+                            data: { requestId: statusResponse.request.requestId, status: statusResponse.status },
+                            kind: NoticeKind.LETTER,
+                            error: true
+                        });
+
+                        return;
+                    }
+                } catch (err) {
+                    logFile?.error(`Error while calling PosteWay STATUS endpoint. This error will be ignored: `, err);
+                    logger.error(`Error while calling PosteWay STATUS endpoint. This error will be ignored: `, err);
+                }
 
                 // Confirm the request to get the Order ID
                 let confirm: ConfirmResponse;

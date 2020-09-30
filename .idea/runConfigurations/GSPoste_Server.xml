@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="GSPoste Server" type="NodeJSConfigurationType" path-to-js-file="dist/src/index.js" working-dir="$PROJECT_DIR$">
+  <configuration default="false" name="GSPoste Server" type="NodeJSConfigurationType" path-to-node="$USER_HOME$/.nvm/versions/node/v13.14.0/bin/node" path-to-js-file="dist/src/index.js" working-dir="$PROJECT_DIR$">
     <envs>
       <env name="NODE_ENV" value="development" />
     </envs>
