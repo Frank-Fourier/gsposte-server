@@ -2,6 +2,8 @@
  * MISC UTILITY FUNCTIONS
  */
 
+import { Document, Schema } from "mongoose";
+
 /**
  * Groups an array by a specific key.
  * Returns an object where each key has its own grouped array.
@@ -47,4 +49,15 @@ export function insert(condition: boolean, obj: object, defaultValue?: any): obj
 export function formatCurrency(price: number): string {
     const [ int, decimal ] = price.toFixed(2).split(".");
     return `€ ${int},${decimal?.padEnd(2, "0") || "00"}`;
+}
+
+/**
+ * If the argument is a non-populated object id, returns its string representation.
+ * Otherwise, returns its id directly
+ *
+ * @param docOrId {ObjectId | Document}
+ * @returns {string}
+ */
+export function getDocumentId(docOrId: Schema.Types.ObjectId | Document | any): string {
+    return docOrId instanceof Schema.Types.ObjectId ? docOrId.toString() : (docOrId as Document).id.toString()
 }
