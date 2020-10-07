@@ -1,5 +1,6 @@
 import { Document, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
+import { Address as PosteWayAddress } from "../../posteway";
 
 /**
  * @swagger
@@ -55,6 +56,17 @@ export const addressDecoder: Decoder<Address> = object({
     province: string(),
     country: optional(string()),
 });
+
+export function mapAddressToPosteWayAddress(address: Address | AddressDocument): PosteWayAddress {
+    return {
+        kind: "normal",
+        street: address.street,
+        city: address.city,
+        zip: address.zip,
+        province: address.province,
+        country: address.country
+    }
+}
 
 export const AddressSchema = new Schema<Address>({
     street: {

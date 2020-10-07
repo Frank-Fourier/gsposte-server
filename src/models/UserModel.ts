@@ -3,6 +3,7 @@ import { encryptPasswordSync } from "@utils/crypto";
 import { array, constant, Decoder, object, oneOf, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
 import { generateRandomCode } from "@utils/random";
+import { Address, addressDecoder, AddressDocument } from "@models/schemas/AddressSchema";
 
 export enum UserRoles {
     ROLE_USER = "ROLE_USER",
@@ -78,11 +79,13 @@ export interface User {
     referFrom?: string
     referCode?: string
     active?: boolean
+    address?: Address
     roles?: Array<UserRoles>
     isAdmin?: () => boolean;
     isTvManager?: () => boolean;
 }
 export interface UserDocument extends User, Document {
+    address?: AddressDocument
 }
 export const userDecoder: Decoder<User> = object({
     username: string(),
@@ -91,6 +94,7 @@ export const userDecoder: Decoder<User> = object({
     iva: string(),
     referFrom: optional(string()),
     referCode: optional(string()),
+    address: optional(addressDecoder),
     roles: optional(array(oneOf(
         constant(UserRoles.ROLE_USER),
         constant(UserRoles.ROLE_TV_MANAGER),

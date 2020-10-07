@@ -1,7 +1,13 @@
 import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
-import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
+import {
+    Address,
+    addressDecoder,
+    AddressDocument,
+    AddressSchema,
+    mapAddressToPosteWayAddress
+} from "@models/schemas/AddressSchema";
 import { Person } from "../posteway";
 
 /**
@@ -70,6 +76,7 @@ export interface Sender {
     name: string
     description: string
     address: Address
+    addressAR?: Address
     businessName: string
     invoiceCode: string
     iva?: string
@@ -79,12 +86,14 @@ export interface Sender {
 }
 export interface SenderDocument extends Sender, Document {
     address: AddressDocument
+    addressAR?: AddressDocument
 }
 export const senderDecoder: Decoder<Sender> = object({
     user: optional(string()),
     name: string(),
     description: string(),
     address: addressDecoder,
+    addressAR: addressDecoder,
     businessName: string(),
     invoiceCode: string(),
     iva: optional(string()),
@@ -93,21 +102,14 @@ export const senderDecoder: Decoder<Sender> = object({
     notes: optional(string()),
 });
 
-export function mapSenderToPerson(sender: SenderDocument, notes?: string): Person {
+export function mapSenderToPerson(sender: SenderDocument, notes?: string, useAddressAR?: boolean): Person {
     return {
         name: sender.name.split(" ")[0],
         surname: sender.name.split(" ")[1] || "",
         businessName: sender.businessName,
         cf: sender.cf,
         notes: notes,
-        address: {
-            kind: "normal",
-            street: sender.address?.street,
-            city: sender.address?.city,
-            zip: sender.address?.zip,
-            province: sender.address?.province,
-            country: sender.address?.country
-        }
+        address: mapAddressToPosteWayAddress(useAddressAR ? sender.addressAR : sender.address)
     }
 }
 

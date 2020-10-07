@@ -14,7 +14,7 @@ import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
-import { PriceResponse, TrackResponse } from "../posteway";
+import { Person, PriceResponse, TrackResponse } from "../posteway";
 import { ProvisionDocument } from "@models/ProvisionModel";
 
 /**
@@ -43,6 +43,17 @@ import { ProvisionDocument } from "@models/ProvisionModel";
  *           type: string
  *         example: [ "5c882af86327cf472976f2ls4", "5b32481679f2b3215c530eaf", "5c2cdf122bbc2920aa205e64" ]
  *         description: Array of Recipient ids
+ *       recipientAR:
+ *         type: object
+ *         properties:
+ *           name:
+ *             type: string
+ *           surname:
+ *             type: string
+ *           businessName:
+ *             type: string
+ *           address:
+ *             $ref: "#/definitions/Address"
  *       subject:
  *         type: string
  *         example: Important Campaign!
@@ -118,6 +129,7 @@ export interface Letter {
     user?: string | UserDocument
     sender: string | SenderDocument
     recipients: Array<string | RecipientDocument>
+    recipientAR?: Person
     subject: string
     sendAt?: Date | string
     kind: LetterKind

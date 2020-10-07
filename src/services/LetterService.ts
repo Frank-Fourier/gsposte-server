@@ -376,6 +376,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     kind: kind,
                     sender: mapSenderToPerson(letter.sender as SenderDocument, letter.subject),
                     recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r)),
+                    recipientAR: {
+                        ...letter.recipientAR,
+                        notes: letter.subject
+                    } || (
+                        (letter.sender as SenderDocument).addressAR
+                            ? mapSenderToPerson(letter.sender as SenderDocument, letter.subject, true)
+                            : undefined
+                    ),
                     cid: cid,
                     options: {
                         bw: letter.bw || false,

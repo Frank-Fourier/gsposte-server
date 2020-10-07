@@ -8,6 +8,17 @@ export interface Request {
     guid?: string
 }
 
+export interface Address {
+    kind?: AddressKind
+    street: string
+    city: string
+    fraction?: string
+    zip: string
+    province: string
+    country?: string
+    notes?: string
+}
+
 export interface Person {
     name?: string
     surname?: string
@@ -16,16 +27,7 @@ export interface Person {
     postalBox?: string
     cf?: string
     notes?: string
-    address: {
-        kind?: AddressKind
-        street: string
-        city: string
-        fraction?: string
-        zip: string
-        province: string
-        country?: string
-        notes?: string
-    }
+    address: Address
 }
 
 export interface Price {
@@ -75,6 +77,7 @@ export interface Submit {
     kind: SubmitKind
     sender: Person
     recipients: Person[]
+    recipientAR?: Person
     cid: string
     options?: {
         bw?: boolean

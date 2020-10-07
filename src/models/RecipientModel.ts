@@ -1,7 +1,13 @@
 import { UserDocument } from "@models/UserModel";
 import { Document, model, Model, Schema } from "mongoose";
 import { Decoder, object, optional, string } from "@mojotech/json-type-validation";
-import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
+import {
+    Address,
+    addressDecoder,
+    AddressDocument,
+    AddressSchema,
+    mapAddressToPosteWayAddress
+} from "@models/schemas/AddressSchema";
 import { Person } from "../posteway";
 import { encryptPasswordSync } from "@utils/crypto";
 import { TvUser, tvUserDecoder } from "@models/TvUserModel";
@@ -73,14 +79,7 @@ export function mapRecipientToPerson(recipient: RecipientDocument, notes?: strin
         surname: recipient.fullName.substring(recipient.fullName.indexOf(" ") + 1),
         cf: recipient.cf,
         notes: notes,
-        address: {
-            kind: "normal",
-            street: recipient.address?.street,
-            city: recipient.address?.city,
-            zip: recipient.address?.zip,
-            province: recipient.address?.province,
-            country: recipient.address?.country
-        }
+        address: mapAddressToPosteWayAddress(recipient.address)
     }
 }
 
