@@ -43,6 +43,8 @@ export enum UserRoles {
  *         type: string
  *         description: Referral code (used to refer other people)
  *         example: GSK6UJDIUI
+ *       address:
+ *         $ref: "#/definitions/Address"
  *       roles:
  *         type: array
  *         example: [ "ROLE_USER" ]

@@ -34,6 +34,8 @@ import { Person } from "../posteway";
  *         example: One of your school teachers, later discovered to have a part-time maid job. She embodies the Temperance arcana.
  *       address:
  *         $ref: "#/definitions/Address"
+ *       addressAR:
+ *         $ref: "#/definitions/Address"
  *       businessName:
  *         type: string
  *         example: Le Mie Palle SRL
