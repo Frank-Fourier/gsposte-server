@@ -3,7 +3,7 @@ import { encryptPasswordSync } from "@utils/crypto";
 import { array, constant, Decoder, object, oneOf, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
 import { generateRandomCode } from "@utils/random";
-import { Address, addressDecoder, AddressDocument } from "@models/schemas/AddressSchema";
+import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
 
 export enum UserRoles {
     ROLE_USER = "ROLE_USER",
@@ -163,6 +163,9 @@ export const UserSchema = new Schema<User>({
     active: {
         type: Boolean,
         default: false,
+    },
+    address: {
+        type: AddressSchema
     },
     roles: {
         type: [ String ],

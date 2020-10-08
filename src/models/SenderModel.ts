@@ -95,7 +95,7 @@ export const senderDecoder: Decoder<Sender> = object({
     name: string(),
     description: string(),
     address: addressDecoder,
-    addressAR: addressDecoder,
+    addressAR: optional(addressDecoder),
     businessName: string(),
     invoiceCode: string(),
     iva: optional(string()),
@@ -134,6 +134,9 @@ export const SenderSchema = new Schema<Sender>({
     address: {
         type: AddressSchema,
         required: "Address is required."
+    },
+    addressAR: {
+        type: AddressSchema,
     },
     businessName: {
         type: String,

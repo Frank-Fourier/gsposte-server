@@ -16,6 +16,7 @@ import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
 import { Person, PriceResponse, TrackResponse } from "../posteway";
 import { ProvisionDocument } from "@models/ProvisionModel";
+import { AddressSchema } from "@models/schemas/AddressSchema";
 
 /**
  * @swagger
@@ -200,6 +201,21 @@ export const LetterSchema = new Schema<Letter>({
         ref: "Recipient",
         required: "Recipients are required.",
     }],
+    recipientAR: new Schema({
+        name: {
+            type: String,
+        },
+        surname: {
+            type: String,
+        },
+        businessName: {
+            type: String,
+        },
+        address: {
+            type: AddressSchema,
+            required: "Recipient AR address is required.",
+        },
+    }),
     subject: {
         type: String,
         required: "Subject is required.",
