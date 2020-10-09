@@ -16,7 +16,7 @@ import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
 import { Person, PriceResponse, TrackResponse } from "../posteway";
 import { ProvisionDocument } from "@models/ProvisionModel";
-import { AddressSchema } from "@models/schemas/AddressSchema";
+import { addressDecoder, AddressSchema } from "@models/schemas/AddressSchema";
 
 /**
  * @swagger
@@ -172,6 +172,13 @@ export const letterDecoder: Decoder<Letter> = object({
     user: optional(string()),
     sender: string(),
     recipients: array(string()),
+    recipientAR: optional(object({
+        name: optional(string()),
+        surname: optional(string()),
+        businessName: optional(string()),
+        notes: optional(string()),
+        address: addressDecoder
+    })),
     subject: string(),
     sendAt: optional(string()),
     kind: oneOf(
