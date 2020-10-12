@@ -10,6 +10,7 @@ import { MunicipalityDocument } from "@models/MunicipalityModel";
 import { AddressDocument } from "@models/schemas/AddressSchema";
 import { Request, Response } from "express";
 import { CellValidator, ImportResponse, uploadXLSX } from "@utils/xlsx-uploader";
+import { insert } from "@utils/misc";
 
 /**
  * @swagger
@@ -176,7 +177,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                         password: rowPassword
                     }
                 } : {}),
-                cf: rowCf,
+                ...insert(!!rowCf, { cf: rowCf }),
                 notes: "Contatto importato da Excel."
             };
 
