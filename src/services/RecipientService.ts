@@ -208,12 +208,14 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                 // Upsert rubric if needed
                 if (rowRubric) {
                     const rubric = await this.rubricService.updateOne({
+                        user: userId,
                         name: { $regex: `^${rowRubric}$`, $options: "i" }
                     }, {
                         $addToSet: { recipients: saved.id }
                     }, true, false);
 
                     !rubric.name && await rubric.updateOne({ $set: {
+                        user: userId,
                         name: rowRubric,
                         notes: `Rubrica creata da file ${fileName ? `'${fileName}'` : "Excel"}`
                     }}).exec();
