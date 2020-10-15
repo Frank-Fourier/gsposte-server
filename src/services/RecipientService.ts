@@ -202,7 +202,8 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                 const saved = await this.updateOne({
                     user: userId,
                     fullName: recipient.fullName,
-                    address: recipient.address
+                    "address.street": recipient.address.street,
+                    "address.city": recipient.address.city,
                 }, recipient, true);
 
                 // Upsert rubric if needed
