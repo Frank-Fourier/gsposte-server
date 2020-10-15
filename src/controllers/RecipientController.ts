@@ -20,7 +20,7 @@ export class RecipientController extends CrudController {
         const xlsx = await fs.promises.readFile(`${process.env.XLSX_ROOT}/${file}`);
 
         // Start the import process
-        const result = await this.recipientService.importFromXLSX(xlsx, user.id);
+        const result = await this.recipientService.importFromXLSX(xlsx, user.id, file);
 
         // If it went good, delete the file from the system and return
         await fs.promises.unlink(`${process.env.XLSX_ROOT}/${file}`);

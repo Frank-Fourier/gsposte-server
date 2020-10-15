@@ -2,21 +2,21 @@ import { suite, test } from "mocha-typescript";
 import { expect } from "chai";
 import { ioc } from "@ioc";
 import { RecipientService } from "@services/RecipientService";
-import { MunicipalityService } from "@services/MunicipalityService";
+import { RubricService } from "@services/RubricService";
 import { UserDocument } from "@models/UserModel";
 import { RecipientDocument } from "@models/RecipientModel";
 import { generateSystemUser } from "@utils/system";
 import { assertSameRecipient, getSystemUser, importMunicipalities } from "../test_utils";
 import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
+import fs from "fs";
 // @ts-ignore
 import faker from "faker/locale/it";
-import fs from "fs";
 
 @suite ("RecipientService") class RecipientServiceTests {
 
     recipientService = ioc.resolve(RecipientService);
-    municipalityService = ioc.resolve(MunicipalityService);
+    rubricService = ioc.resolve(RubricService);
     system: UserDocument;
 
     static async before() { await generateSystemUser(); }
@@ -166,8 +166,8 @@ import fs from "fs";
         // Import municipalities into test database
         await importMunicipalities();
 
-        const xlsx_standard = await fs.promises.readFile("test/assets/import_standard.xlsx");
-        let res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id);
+        const xlsx_standard = await fs.promises.readFile("test/assets/xlsx/import_standard.xlsx");
+        let res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id, "import_standard.xlsx");
 
         expect(res.imported.length).to.equal(2);
 
@@ -199,13 +199,55 @@ import fs from "fs";
         expect(res.errors[1].row).to.equal(5);
         expect(res.errors[1].description).to.equal("Il campo 'Comune' è obbligatorio");
 
-        const xlsx_errors = await fs.promises.readFile("test/assets/import_errors.xlsx");
-        res = await this.recipientService.importFromXLSX(xlsx_errors, this.system.id);
+        const xlsx_errors = await fs.promises.readFile("test/assets/xlsx/import_errors.xlsx");
+        res = await this.recipientService.importFromXLSX(xlsx_errors, this.system.id, "import_errors.xlsx");
 
         console.log(JSON.stringify(res, null, 2));
         expect(res.imported.length).to.equal(1);
         expect(res.imported[0].fullName).to.equal("Pop☆Step");
         expect(res.errors.length).to.equal(6);
+    }
+
+    @test async "Should import recipients with rubrics from XLSX correctly" () {
+        // Import municipalities into test database
+        await importMunicipalities();
+
+        const silvio = await this.recipientService.save({
+            user: this.system.id,
+            fullName: "Silvio Troia",
+            address: {
+                street: "Via Sebastiano 52",
+                city: "Acerno",
+                zip: "84042",
+                province: "SA"
+            }
+        });
+
+        await this.rubricService.save({
+            user: this.system.id,
+            name: "Rubrica Esistente",
+            recipients: [ silvio.id ]
+        });
+
+        const xlsx_standard = await fs.promises.readFile("test/assets/xlsx/import_rubrics.xlsx");
+        const res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id, "import_rubrics.xlsx");
+        expect(res.imported.length).to.equal(6);
+        expect(res.errors.length).to.equal(0);
+
+        const rubrics = await this.rubricService.findAll();
+        expect(rubrics.length).to.equal(3);
+        expect(rubrics[0].name).to.equal("Rubrica Esistente");
+        expect(rubrics[1].name).to.equal("test rubrica 1");
+        expect(rubrics[2].name).to.equal("altra rubrica");
+
+        const [ carmine, silvio_imported, flavio, paolo, fabio, giovanni ] = res.imported;
+        expect(silvio_imported.id).to.equal(silvio.id);
+        expect(rubrics[0].recipients).to.have.members([ silvio.id, fabio.id ]);
+        expect(rubrics[1].recipients).to.have.members([ carmine.id, silvio.id ]);
+        expect(rubrics[2].recipients).to.have.members([ flavio.id, paolo.id ]);
+        expect(giovanni.id).to.exist;
+
+        // console.log(JSON.stringify(await Promise.all(rubrics.map(r => r.populate("recipients").execPopulate())), null, 2));
     }
 
     static after() { cleanTestDB(); }

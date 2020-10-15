@@ -11,6 +11,7 @@ import { AddressDocument } from "@models/schemas/AddressSchema";
 import { Request, Response } from "express";
 import { CellValidator, ImportResponse, uploadXLSX } from "@utils/xlsx-uploader";
 import { insert } from "@utils/misc";
+import { RubricService } from "@services/RubricService";
 
 /**
  * @swagger
@@ -37,10 +38,24 @@ import { insert } from "@utils/misc";
  */
 export type RecipientsImportResponse = ImportResponse<RecipientDocument>
 
+export interface RecipientXLSX {
+    DENOMINAZIONE: string
+    INDIRIZZO: string
+    CAP: string
+    COMUNE: string
+    PROVINCIA: string
+    USERNAME?: string
+    PASSWORD?: string
+    EMAIL?: string
+    "CODICE FISCALE"?: string
+    RUBRICA: string
+}
+
 @provide(RecipientService)
 export class RecipientService extends MongoRepository<Recipient, RecipientDocument> {
 
     @inject(MunicipalityService) private municipalityService: MunicipalityService;
+    @inject(RubricService) private rubricService: RubricService;
 
     constructor(private recipientModel = RecipientModel) {
         super(recipientModel, recipientDecoder, [
@@ -79,9 +94,10 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
      *
      * @param xlsx {Buffer} Entire XLSX document
      * @param userId {string} Owner of the imported recipients
+     * @param fileName {string} [Optional] Original XLSX document file name
      * @returns {Promise<{ imported: Array<RecipientDocument>, errors: Array<{ row: number, description: string, data?: any }> }> } Promise resolved when the whole document is traversed and contacts are imported. Contains all the errors that occured during the process.
      */
-    public async importFromXLSX(xlsx: Buffer, userId: string): Promise<RecipientsImportResponse> {
+    public async importFromXLSX(xlsx: Buffer, userId: string, fileName?: string): Promise<RecipientsImportResponse> {
         logger.info(`Requested an import of recipients from XLSX.`);
 
         const imported: Array<RecipientDocument> = [];
@@ -106,19 +122,20 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
 
         const sheetJson = utils.sheet_to_json(sheet);
         for (let row = 0; row < sheetJson.length; ++row) {
-            const value = Object.values(sheetJson[row]);
-            const cellValue = (col: number) => value[col] ? String(value[col]) : null;
+            const data: RecipientXLSX = sheetJson[row] as RecipientXLSX;
+            const cellValue = (columnName: keyof RecipientXLSX) => data[columnName] ? String(data[columnName]) : null;
 
             // DENOMINAZIONE, INDIRIZZO, CAP, COMUNE, PROVINCIA
-            const rowName     = cellValue(0),
-                  rowStreet   = cellValue(1),
-                  rowZip      = cellValue(2),
-                  rowCityName = cellValue(3),
+            const rowName     = cellValue("DENOMINAZIONE"),
+                  rowStreet   = cellValue("INDIRIZZO"),
+                  rowZip      = cellValue("CAP"),
+                  rowCityName = cellValue("COMUNE"),
                   // rowProvince = cellValue(4), -- not used
-                  rowUsername = cellValue(5),
-                  rowPassword = cellValue(6),
-                  rowEmail    = cellValue(7),
-                  rowCf       = cellValue(8);
+                  rowUsername = cellValue("USERNAME"),
+                  rowPassword = cellValue("PASSWORD"),
+                  rowEmail    = cellValue("EMAIL"),
+                  rowCf       = cellValue("CODICE FISCALE"),
+                  rowRubric   = cellValue("RUBRICA");
 
             const validateCell = (val: string, validators: CellValidator[]) =>
                 validators.filter(v => !v(val).valid).map(nv => {
@@ -126,11 +143,11 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     return nv;
                 }).length === 0;
 
-            if (!validateCell(rowName, [ validators.notEmpty("Denominazione"), validators.maxLength("Denominazione", 40) ])) continue;
-            if (!validateCell(rowStreet, [ validators.notEmpty("Indirizzo"), validators.maxLength("Indirizzo", 40) ])) continue;
+            if (!validateCell(rowName, [ validators.notEmpty("DENONIMAZIONE"), validators.maxLength("DENONIMAZIONE", 40) ])) continue;
+            if (!validateCell(rowStreet, [ validators.notEmpty("INDIRIZZO"), validators.maxLength("INDIRIZZO", 40) ])) continue;
             if (!validateCell(rowZip, [ validators.notEmpty("CAP"), validators.maxLength("CAP", 5) ])) continue;
-            if (!validateCell(rowCityName, [ validators.notEmpty("Comune"), validators.maxLength("Comune", 40) ])) continue;
-            if (!validateCell(rowCf, [ validators.maxLength("Codice Fiscale", 16) ])) continue;
+            if (!validateCell(rowCityName, [ validators.notEmpty("COMUNE"), validators.maxLength("COMUNE", 40) ])) continue;
+            if (!validateCell(rowCf, [ validators.maxLength("CODICE FISCALE", 16) ])) continue;
 
             // Query municipality
             let municipality: MunicipalityDocument = null;
@@ -178,11 +195,30 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     }
                 } : {}),
                 ...insert(!!rowCf, { cf: rowCf }),
-                notes: "Contatto importato da Excel."
+                notes: `Contatto importato da file ${fileName ? `'${fileName}'` : "Excel"}`
             };
 
             try {
-                const saved = await this.save(recipient);
+                const saved = await this.updateOne({
+                    user: userId,
+                    fullName: recipient.fullName,
+                    address: recipient.address
+                }, recipient, true);
+
+                // Upsert rubric if needed
+                if (rowRubric) {
+                    const rubric = await this.rubricService.updateOne({
+                        name: { $regex: `^${rowRubric}$`, $options: "i" }
+                    }, {
+                        $addToSet: { recipients: saved.id }
+                    }, true, false);
+
+                    !rubric.name && await rubric.updateOne({ $set: {
+                        name: rowRubric,
+                        notes: `Rubrica creata da file ${fileName ? `'${fileName}'` : "Excel"}`
+                    }}).exec();
+                }
+
                 imported.push(saved);
             } catch (err) {
                 if (err.status === 409) {
@@ -213,22 +249,25 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
      * @param query {MongoQuery<RecipientDocument>} Filter recipients to export
      * @returns {Promise<Buffer>} Promise resolving to exported XLSX file as buffer
      */
-    public async exportToXLSX(query: MongoQuery<RecipientDocument> | object): Promise<Buffer> {
+    public async exportToXLSX(query: MongoQuery<RecipientDocument> | object = {}): Promise<Buffer> {
         logger.info(`Requested an export of recipients to XLSX.`);
         const recipients = await this.find(query);
 
         const workbook = utils.book_new();
-        const worksheet = utils.json_to_sheet(recipients.map(rec => ({
-            DENOMINAZIONE: rec.fullName,
-            INDIRIZZO: rec.address.street,
-            CAP: rec.address.zip,
-            COMUNE: rec.address.city,
-            PROVINCIA: rec.address.province,
-            USERNAME: rec.tv?.username,
-            EMAIL: rec.tv?.email,
-            "CODICE FISCALE": rec.cf,
-        })), {
-            header: [ "DENOMINAZIONE", "INDIRIZZO", "CAP", "COMUNE", "PROVINCIA", "USERNAME", "EMAIL", "CODICE FISCALE" ]
+        const worksheet = utils.json_to_sheet(
+            await Promise.all(recipients.map(async rec => ({
+                DENOMINAZIONE: rec.fullName,
+                INDIRIZZO: rec.address.street,
+                CAP: rec.address.zip,
+                COMUNE: rec.address.city,
+                PROVINCIA: rec.address.province,
+                USERNAME: rec.tv?.username,
+                PASSWORD: "**********",
+                EMAIL: rec.tv?.email,
+                "CODICE FISCALE": rec.cf,
+                RUBRICA: await this.rubricService.findOne({ recipients: { $in: [ rec.id ] } })
+            }))), {
+            header: [ "DENOMINAZIONE", "INDIRIZZO", "CAP", "COMUNE", "PROVINCIA", "USERNAME", "PASSWORD", "EMAIL", "CODICE FISCALE", "RUBRICA" ]
         });
         worksheet["!cols"] = [
             { wch: 20 }, // DENOMINAZIONE
@@ -239,6 +278,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             { wch: 20 }, // USERNAME
             { wch: 30 }, // EMAIL
             { wch: 30 }, // CODICE FISCALE
+            { wch: 30 }, // RUBRICA
         ];
 
         utils.book_append_sheet(workbook, worksheet, "Anagrafiche");

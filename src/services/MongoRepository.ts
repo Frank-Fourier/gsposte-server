@@ -203,7 +203,7 @@ export class MongoRepository<DTO, Doc extends Document> {
                 upsert: upsert,
                 setDefaultsOnInsert: true,
                 context: "query"
-            }).orFail().exec();
+            }).exec();
         } catch (err) {
             throw this.formatMongoError(err);
         }

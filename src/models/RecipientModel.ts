@@ -102,10 +102,12 @@ export const RecipientSchema = new Schema<Recipient>({
         username: {
             type: String,
             unique: true,
+            sparse: true,
         },
         email: {
             type: String,
             unique: true,
+            sparse: true,
             trim: true,
             lowercase: true,
         },
