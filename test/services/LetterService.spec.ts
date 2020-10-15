@@ -10,12 +10,11 @@ import { LetterDocument } from "@models/LetterModel";
 import { RecipientDocument } from "@models/RecipientModel";
 import { SenderDocument } from "@models/SenderModel";
 import { generateSystemUser } from "@utils/system";
-import { assertSameLetter, getSystemUser, TEST_CODE_PDF } from "../test_utils";
+import { assertSameLetter, getSystemUser, importPrices, TEST_CODE_PDF } from "../test_utils";
 import { generateMockLetter } from "../mocks/letter";
 import { generateMockSender } from "../mocks/sender";
 import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
-import { logger } from "@utils/winston";
 // @ts-ignore
 import faker from "faker/locale/it";
 
@@ -247,29 +246,32 @@ import faker from "faker/locale/it";
     }
 
     @timeout(120000)
-    @test async "Should run the upload batch job correctly" () {
-        logger.transports.forEach(trans => trans.level = "info");
+    @test async "Should send letter correctly" () {
+        await importPrices();
 
         const letter = await this.letterService.save(generateMockLetter(
             this.system.id,
-            await this.senderService.save(generateMockSender(this.system.id)), [
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+            await this.senderService.save(generateMockSender(this.system.id)),
+            [
+                (await this.recipientService.save({
+                    user: this.system.id,
+                    fullName: "Zanzariello Piero & Lentini Concetta",
+                    address: {
+                        street: "Via Molise n.07",
+                        city: "Brindisi",
+                        zip: "72100",
+                        province: "BR",
+                        country: "IT"
+                    }
+                })).id,
             ],
             TEST_CODE_PDF
         ), false);
-        await this.pdf.formatAndSavePdf(letter);
 
-        let errors = 0;
-        try {
-            errors = await this.letterService.batchSendScheduledLetters();
-        } catch (err) {
-            expect(err).not.to.exist;
-        }
-        expect(errors).to.equal(0);
+        const sent = await this.letterService.sendLetter(letter);
 
-        logger.transports.forEach(trans => trans.level = "error");
+        // If I'm here, it means sendLetter didn't throw so the routine is waiting 60 seconds
+        expect(sent).to.exist;
     }
 
     static after() { cleanTestDB(); }
