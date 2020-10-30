@@ -12,6 +12,7 @@ export function generateMockUser(referFrom?: string): User {
         password: faker.internet.password(),
         referFrom: referFrom,
         iva: "06998950726",
+        phone: "3281426266",
     };
 }
 
@@ -31,4 +32,5 @@ export const userGiovanni: User = {
     email: "giovanni.orciuolo1999@gmail.com",
     password: "Expurosion!!!!",
     iva: "06998950726",
+    phone: "3281426266",
 };
