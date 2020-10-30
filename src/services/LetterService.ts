@@ -286,7 +286,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 }
 
                 logFile?.info("That's all folks!");
-                logFile?.close();
                 logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
 
                 // Everything went fine, generate provision
@@ -321,6 +320,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 });
 
                 logger.info(`[LETTER ${letter.codePdf}] Send routine completed correctly!`);
+                logFile?.close();
             } catch (err) {
                 await this.updateById(letter.id, { $set: { error: true }});
             }
