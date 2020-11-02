@@ -21,6 +21,7 @@ export enum UserRoles {
  *       - username
  *       - email
  *       - iva
+ *       - phone
  *       - password
  *     properties:
  *       username:
@@ -35,6 +36,9 @@ export enum UserRoles {
  *       iva:
  *         type: string
  *         example: 06998950726
+ *       phone:
+ *          type: string
+ *          example: 3281234567
  *       referFrom:
  *         type: string
  *         description: Referral code (got from someone else)
@@ -78,6 +82,7 @@ export interface User {
     email: string
     password: string
     iva: string
+    phone: string
     referFrom?: string
     referCode?: string
     active?: boolean
@@ -94,6 +99,7 @@ export const userDecoder: Decoder<User> = object({
     email: string(),
     password: string(),
     iva: string(),
+    phone: string(),
     referFrom: optional(string()),
     referCode: optional(string()),
     address: optional(addressDecoder),
@@ -152,6 +158,11 @@ export const UserSchema = new Schema<User>({
         type: String,
         minlength: 11,
         maxlength: 16,
+    },
+    phone: {
+        type: String,
+        minlength: 6,
+        maxlength: 13,
     },
     referFrom: {
         type: String
