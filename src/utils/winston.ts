@@ -21,7 +21,6 @@ export const createLogFile = (filename: string, level = "info") =>
             })
         ]
     });
-export const detachLogFile = (logger: winston.Logger) => logger.close();
 
 logger.add(new winston.transports.Console({
     level: process.env.NODE_ENV === "production" ? "info" : (process.env.NODE_ENV === "development" ? "debug" : "error"),

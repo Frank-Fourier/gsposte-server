@@ -6,7 +6,6 @@ import { inject } from "inversify";
 import { PriceService, WeightRanges } from "@services/PriceService";
 import { UserService } from "@services/UserService";
 import { UserDocument } from "@models/UserModel";
-import httpErrors from "http-errors";
 import moment from "moment";
 import provisionConfig from "../../provisions.json";
 import { getDocumentId } from "@utils/misc";
@@ -148,7 +147,8 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      */
     public async generateProvision(letter: LetterDocument): Promise<ProvisionDocument> {
         if (!!letter.provision) {
-            throw new httpErrors.BadRequest("This letter has a provision already. Can't generate it again.");
+            // Just return the already existing provision
+            return (await letter.populate("provision").execPopulate()).provision as ProvisionDocument;
         }
 
         const { percents, ranges } = provisionConfig as ProvisionRanges;

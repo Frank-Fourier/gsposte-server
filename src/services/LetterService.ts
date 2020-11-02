@@ -8,7 +8,7 @@ import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/Lett
 import { inject } from "inversify";
 import { mapSenderToPerson, SenderDocument } from "@models/SenderModel";
 import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel";
-import { createLogFile, detachLogFile, logger } from "@utils/winston";
+import { createLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
 import { ConfirmResponse, StatusResponse, SubmitKind, SubmitResponse, TrackResponse } from "../posteway";
@@ -95,10 +95,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 await this.sendLetter(letter, logFile);
             } catch (err) {
                 logger.error(`ARGH! Got an error while trying to send letter '${letter.codePdf}'!`, err);
-                logFile.error(`ARGH! Got an error while sending this letter!`, err);
                 errors++;
             } finally {
-                detachLogFile(logFile);
+                logFile.close();
             }
         }
 
@@ -320,7 +319,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 });
 
                 logger.info(`[LETTER ${letter.codePdf}] Send routine completed correctly!`);
-                logFile?.close();
             } catch (err) {
                 await this.updateById(letter.id, { $set: { error: true }});
             }
