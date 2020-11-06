@@ -11,6 +11,7 @@ import {
 import { Person } from "../posteway";
 import { encryptPasswordSync } from "@utils/crypto";
 import { TvUser, tvUserDecoder } from "@models/TvUserModel";
+import { insert } from "@utils/misc";
 
 /**
  * @swagger
@@ -74,9 +75,14 @@ export const recipientDecoder: Decoder<Recipient> = object({
 });
 
 export function mapRecipientToPerson(recipient: RecipientDocument, notes?: string): Person {
+    const hasSpace = recipient.fullName.includes(" ");
     return {
-        name: recipient.fullName.split(" ")[0],
-        surname: recipient.fullName.substring(recipient.fullName.indexOf(" ") + 1),
+        ...insert(hasSpace, {
+            name: recipient.fullName.split(" ")[0],
+            surname: recipient.fullName.substring(recipient.fullName.indexOf(" ") + 1),
+        }, {
+            businessName: recipient.fullName
+        }),
         cf: recipient.cf,
         notes: notes,
         address: mapAddressToPosteWayAddress(recipient.address)
