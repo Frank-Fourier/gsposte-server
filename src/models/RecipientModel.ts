@@ -79,7 +79,7 @@ export function mapRecipientToPerson(recipient: RecipientDocument, notes?: strin
     return {
         ...insert(hasSpace, {
             name: recipient.fullName.split(" ")[0],
-            surname: recipient.fullName.substring(recipient.fullName.indexOf(" ") + 1),
+            surname: recipient.fullName.split(" ")[1] || ""
         }, {
             businessName: recipient.fullName
         }),

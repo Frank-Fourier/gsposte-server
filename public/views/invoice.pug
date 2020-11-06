@@ -68,7 +68,7 @@ html(lang="it")
             // img(class="logo-poste" src=`${process.env.SERVER_HOST || "http://localhost"}:${process.env.SERVER_PORT || "5000"}${process.env.IMAGES_PATH || "/images"}/poste-italiane.svg`)
         br
         h2 Spett.
-        p(class="sender") #{sender.name.toUpperCase() || "-"}
+        p(class="sender") #{sender.name ? sender.name.toUpperCase() : (sender.businessName ? sender.businessName.toUpperCase() : "-")}
             br
             | #{sender.address.street.toUpperCase() || "-"}
             br
@@ -93,7 +93,7 @@ html(lang="it")
                             td(width="12.5%") #{recipient.tracking.date || "-"}
                         if kind === "LETTERA SEMPLICE"
                             td(width="12.5%") #{dateSent || "-"}
-                        td(width="40%") #{recipient.person.name.toUpperCase() + " " + recipient.person.surname.toUpperCase()}
+                        td(width="40%") #{(recipient.person.name ? recipient.person.name.toUpperCase() : recipient.person.businessName.toUpperCase()) + " " + (recipient.person.surname ? recipient.person.surname.toUpperCase() : "")}
                             br
                             | #{recipient.person.address.street || "-"}
                         td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.zip || "-"}
