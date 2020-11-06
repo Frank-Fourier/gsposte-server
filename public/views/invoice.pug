@@ -35,6 +35,7 @@ html(lang="it")
                 margin-bottom: 40px;
             }
             .recipients-table {
+                width: 100%;
                 margin-top: 20px;
                 font-size: 14px;
             }
@@ -57,7 +58,7 @@ html(lang="it")
             }
     body
         div(class="header")
-            img(src=`${process.env.SERVER_HOST || "http://localhost"}${process.env.NODE_ENV === "development" ? `:${process.env.SERVER_PORT || "5000"}` : ""}${process.env.IMAGES_PATH || "/images"}/logo.png`)
+            img(src=`${process.env.SERVER_HOST || "http://localhost"}${process.env.NODE_ENV !== "production" ? `:${process.env.SERVER_PORT || "5000"}` : ""}${process.env.IMAGES_PATH || "/images"}/logo.png`)
             p(class="brand-text") General Services soc. coop. cons. a r.l.
                 br
                 | Via Metastasio, 2 - 70033 Corato (BA)

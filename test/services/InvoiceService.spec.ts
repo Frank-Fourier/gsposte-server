@@ -6,7 +6,7 @@ import { LetterService } from "@services/LetterService";
 import { PriceService } from "@services/PriceService";
 import { SenderService } from "@services/SenderService";
 import { generateSystemUser } from "@utils/system";
-import { assertSameInvoice, assertSameLetter, getSystemUser, importPrices } from "../test_utils";
+import { assertSameInvoice, assertSameLetter, getSystemUser, importPrices, TEST_CODE_PDF } from "../test_utils";
 import { UserDocument } from "@models/UserModel";
 import { cleanTestDB } from "@utils/mongo";
 import { saveMockLetter } from "../mocks/letter";
@@ -15,6 +15,7 @@ import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel"
 import { generateUUID } from "@utils/random";
 import { LetterDocument } from "@models/LetterModel";
 import fs from "fs";
+import { LetterKind } from "@services/PostelService";
 
 @suite ("InvoiceService") class InvoiceServiceTests {
 
@@ -24,7 +25,10 @@ import fs from "fs";
     senderService = ioc.resolve(SenderService);
     system: UserDocument;
 
-    static async before() { await generateSystemUser(); await importPrices(); }
+    static async before() {
+        await generateSystemUser();
+        await importPrices();
+    }
     async before() {
         this.system = await getSystemUser();
         await this.letterService.deleteAll();
@@ -157,7 +161,7 @@ import fs from "fs";
 
     @timeout(60000)
     @test async "Should generate a letter invoice PDF correctly" () {
-        const saved = await saveMockLetter({ user: this.system.id });
+        const saved = await saveMockLetter({ user: this.system.id, kind: LetterKind.RACCOMANDATA_AR });
 
         // Emulate the final behaviour of sendLetter()
         const requestId = generateUUID(), orderId = generateUUID().toUpperCase();
@@ -176,11 +180,16 @@ import fs from "fs";
                         requestId: requestId,
                         orderStatus: "FAKELETTERSENTFROMTEST",
                         requestStatus: "Mai inviata - TEST",
-                        recipients: saved.recipients.map((r: RecipientDocument, index) => ({
-                            id: (index + 1).toString(),
-                            person: mapRecipientToPerson(r)
+                        recipients: saved.recipients.map((r: RecipientDocument) => ({
+                            person: mapRecipientToPerson(r),
+                            tracking: {
+                                number: "617845434905",
+                                statusCode: "01",
+                                description: "consegnato",
+                                date: "07/09/2020 00:00:00"
+                            }
                         }))
-                    }
+                    },
                 }
             }
         }, false, false);
@@ -188,7 +197,7 @@ import fs from "fs";
         const letter = await this.letterService.findById(saved.id, { populate: "sender recipients" });
         const pdf = await this.invoiceService.generateLetterInvoicePDF(letter);
         expect(pdf).to.exist;
-        // await fs.promises.writeFile(`test/assets/pdf/${TEST_CODE_PDF}/invoice.pdf`, pdf);
+        await fs.promises.writeFile(`test/assets/pdf/${TEST_CODE_PDF}/invoice.pdf`, pdf);
     }
 
     @timeout(60000)
