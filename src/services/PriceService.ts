@@ -49,7 +49,12 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
                 (await this.pdf.metadata(`public/pdf/${letter.codePdf}/original.pdf`)).pages;
         } catch (err) {
             // Ignore errors
-            logger.error(`Error while getting PDF pages for letter ${letter.codePdf}!`, err);
+            logger.error(`Error while getting PDF pages for letter ${letter.codePdf}! Setting pages to 1.`, err);
+        }
+
+        if (pages === undefined || pages === null) {
+            logger.warn(`Page count for letter ${letter.codePdf} is undefined or null. Setting pages to 1.`);
+            pages = 1;
         }
 
         if (letter.backSide) {

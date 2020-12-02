@@ -36,6 +36,8 @@ import { Person } from "../posteway";
  *         $ref: "#/definitions/Address"
  *       addressAR:
  *         $ref: "#/definitions/Address"
+ *       addressBill:
+ *         $ref: "#/definitions/Address"
  *       businessName:
  *         type: string
  *         example: Le Mie Palle SRL
@@ -79,6 +81,7 @@ export interface Sender {
     description: string
     address: Address
     addressAR?: Address
+    addressBill?: Address
     businessName: string
     invoiceCode: string
     iva?: string
@@ -89,6 +92,7 @@ export interface Sender {
 export interface SenderDocument extends Sender, Document {
     address: AddressDocument
     addressAR?: AddressDocument
+    addressBill?: AddressDocument
 }
 export const senderDecoder: Decoder<Sender> = object({
     user: optional(string()),
@@ -96,6 +100,7 @@ export const senderDecoder: Decoder<Sender> = object({
     description: string(),
     address: addressDecoder,
     addressAR: optional(addressDecoder),
+    addressBill: optional(addressDecoder),
     businessName: string(),
     invoiceCode: string(),
     iva: optional(string()),
@@ -136,6 +141,9 @@ export const SenderSchema = new Schema<Sender>({
         required: "Address is required."
     },
     addressAR: {
+        type: AddressSchema,
+    },
+    addressBill: {
         type: AddressSchema,
     },
     businessName: {

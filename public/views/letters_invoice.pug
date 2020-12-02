@@ -69,10 +69,11 @@ html(lang="it")
         br
         h2 Spett.
         p(class="sender") #{sender.name ? sender.name.toUpperCase() : (sender.businessName ? sender.businessName.toUpperCase() : "-")}
+            - const senderAddress = sender.addressBill || sender.address;
             br
-            | #{sender.address.street.toUpperCase() || "-"}
+            | #{senderAddress.street.toUpperCase() || "-"}
             br
-            | #{sender.address.zip} #{sender.address.city.toUpperCase()} (#{sender.address.province.toUpperCase()})
+            | #{senderAddress.zip} #{senderAddress.city.toUpperCase()} (#{senderAddress.province.toUpperCase()})
             if sender.iva
                 br
                 | P.IVA #{sender.iva}
