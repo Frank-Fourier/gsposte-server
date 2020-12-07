@@ -198,6 +198,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             error: true
                         });
 
+                        await this.updateById(letter.id, { $set: { error: true }});
                         return;
                     }
                 } catch (err) {
