@@ -11,6 +11,7 @@ export function generateMockSender(user: string | UserDocument): Sender {
         name: faker.fake("{{name.firstName}} {{name.lastName}}"),
         description: faker.lorem.sentence(),
         address: generateMockAddress(),
+        addressBill: generateMockAddress(),
         iva: faker.random.alphaNumeric(11),
         cf: faker.random.alphaNumeric(16),
         email: faker.internet.email(),
