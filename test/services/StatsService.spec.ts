@@ -7,8 +7,8 @@ import { generateSystemUser } from "@utils/system";
 import { getSystemUser, importMunicipalities, importPrices } from "../test_utils";
 import { UserDocument } from "@models/UserModel";
 import { saveMockLetter } from "../mocks/letter";
-import { LetterKind } from "@services/PostelService";
 import { logger } from "@utils/winston";
+import { LetterKind } from "@models/LetterModel";
 
 @suite ("StatsService") class StatsServiceTests {
 

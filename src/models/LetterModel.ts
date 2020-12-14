@@ -10,13 +10,19 @@ import {
     boolean
 } from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
-import { LetterKind } from "@services/PostelService";
 import { SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
 import { Person, PriceResponse, TrackResponse } from "../posteway";
 import { ProvisionDocument } from "@models/ProvisionModel";
 import { addressDecoder, AddressSchema } from "@models/schemas/AddressSchema";
+
+export enum LetterKind {
+    "LETTERA_SEMPLICE" = "LETTERA SEMPLICE",
+    "LETTERA_PRIORITARIA" = "LETTERA PRIORITARIA",
+    "RACCOMANDATA" = "RACCOMANDATA",
+    "RACCOMANDATA_AR" = "RACCOMANDATA AR"
+}
 
 /**
  * @swagger

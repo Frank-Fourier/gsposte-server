@@ -1,7 +1,7 @@
 // @ts-ignore
 import faker from "faker/locale/it";
 import { Price } from "@models/PriceModel";
-import { LetterKind } from "@services/PostelService";
+import { LetterKind } from "@models/LetterModel";
 
 export function generateMockPrice(): Price {
     const min = faker.random.number(150);

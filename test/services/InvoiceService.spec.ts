@@ -13,9 +13,8 @@ import { saveMockLetter } from "../mocks/letter";
 import { generateMockSender } from "../mocks/sender";
 import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel";
 import { generateUUID } from "@utils/random";
-import { LetterDocument } from "@models/LetterModel";
+import { LetterDocument, LetterKind } from "@models/LetterModel";
 import fs from "fs";
-import { LetterKind } from "@services/PostelService";
 
 @suite ("InvoiceService") class InvoiceServiceTests {
 

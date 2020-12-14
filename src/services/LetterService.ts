@@ -1,10 +1,9 @@
 import { provide } from "inversify-binding-decorators";
 import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { PDF_ROOT, PdfService } from "@services/PdfService";
-import { LetterKind } from "@services/PostelService";
 import { PriceService } from "@services/PriceService";
 import { NoticeService } from "@services/NoticeService";
-import { Letter, letterDecoder, LetterDocument, LetterModel } from "@models/LetterModel";
+import { Letter, letterDecoder, LetterDocument, LetterKind, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
 import { mapSenderToPerson, SenderDocument } from "@models/SenderModel";
 import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel";
@@ -326,7 +325,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         };
 
         try {
-            const kind = letter.kind === LetterKind.LETTERA_SEMPLICE ? "lol" : "rol";
+            const kind = (letter.kind === LetterKind.LETTERA_SEMPLICE || letter.kind === LetterKind.LETTERA_PRIORITARIA) ? "lol" : "rol";
             const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
             const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
 
@@ -389,6 +388,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         backSide: letter.backSide || true,
                         foreign: false, // Needs to be mapped based on recipients
                         ar: letter.kind === LetterKind.RACCOMANDATA_AR,
+                        priority: letter.kind === LetterKind.LETTERA_PRIORITARIA,
                     }
                 });
             } catch (err) {

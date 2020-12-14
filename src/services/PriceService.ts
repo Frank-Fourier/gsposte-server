@@ -1,8 +1,7 @@
 import { MongoRepository } from "@services/MongoRepository";
 import { Price, priceDecoder, PriceDocument, PriceModel } from "@models/PriceModel";
 import { provide } from "inversify-binding-decorators";
-import { LetterDocument } from "@models/LetterModel";
-import { LetterKind } from "@services/PostelService";
+import { LetterDocument, LetterKind } from "@models/LetterModel";
 import { inject } from "inversify";
 import { PdfService } from "@services/PdfService";
 import { logger } from "@utils/winston";

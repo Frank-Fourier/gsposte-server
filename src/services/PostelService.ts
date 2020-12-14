@@ -5,6 +5,7 @@ import { Address } from "@models/schemas/AddressSchema";
 import { toJson, toXml } from "xml2json";
 import fetch, { Response } from "node-fetch";
 import httpErrors from "http-errors";
+import { LetterKind } from "@models/LetterModel";
 
 export const POSTEL_API = "https://postpdx.postel.it";
 
@@ -188,13 +189,9 @@ export interface MpxQueryResponse {
     }>
 }
 
-export enum LetterKind {
-    "LETTERA_SEMPLICE" = "LETTERA SEMPLICE",
-    "RACCOMANDATA" = "RACCOMANDATA",
-    "RACCOMANDATA_AR" = "RACCOMANDATA AR"
-}
 export const WorkProcessID = {
     "LETTERA SEMPLICE": "1089028",
+    "LETTERA PRIORITARIA": "0",
     "RACCOMANDATA": "1089026",
     "RACCOMANDATA AR": "1089024",
 };

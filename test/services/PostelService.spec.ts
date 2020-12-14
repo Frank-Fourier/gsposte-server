@@ -4,7 +4,7 @@ import { ioc } from "@ioc";
 import { generateSystemUser } from "@utils/system";
 import { getSystemUser } from "../test_utils";
 import { UserDocument } from "@models/UserModel";
-import { LetterKind, PostelService, MpxUploadOptions } from "@services/PostelService";
+import { PostelService, MpxUploadOptions } from "@services/PostelService";
 import { SenderService } from "@services/SenderService";
 import { RecipientService } from "@services/RecipientService";
 import { cleanTestDB } from "@utils/mongo";
@@ -12,6 +12,7 @@ import { generateMockSender } from "../mocks/sender";
 import { generateMockRecipient } from "../mocks/recipient";
 import { PdfService } from "@services/PdfService";
 import { generateUUID } from "@utils/random";
+import { LetterKind } from "@models/LetterModel";
 
 /**
  * Since I can't use my fucking own unique EnvelopeID, and Postel doesn't have a test environment (wtf!!!), I will

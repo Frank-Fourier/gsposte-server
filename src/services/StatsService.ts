@@ -1,12 +1,11 @@
 import { provide } from "inversify-binding-decorators";
-import { LetterKind } from "@services/PostelService";
 import { inject } from "inversify";
 import { LetterService } from "@services/LetterService";
 import { RubricService } from "@services/RubricService";
 import { RecipientService } from "@services/RecipientService";
 import { UserDocument } from "@models/UserModel";
 import { groupBy, insert } from "@utils/misc";
-import { LetterDocument } from "@models/LetterModel";
+import { LetterDocument, LetterKind } from "@models/LetterModel";
 import { Price } from "../posteway";
 
 /**
@@ -88,6 +87,7 @@ export interface Stats {
     year?: number
     letters: {
         [LetterKind.LETTERA_SEMPLICE]: LetterStats
+        [LetterKind.LETTERA_PRIORITARIA]: LetterStats
         [LetterKind.RACCOMANDATA]: LetterStats
         [LetterKind.RACCOMANDATA_AR]: LetterStats
     }
@@ -100,6 +100,7 @@ export interface Stats {
     spent: {
         total: number
         [LetterKind.LETTERA_SEMPLICE]: number
+        [LetterKind.LETTERA_PRIORITARIA]: number
         [LetterKind.RACCOMANDATA]: number
         [LetterKind.RACCOMANDATA_AR]: number
     }
@@ -199,6 +200,7 @@ export class StatsService {
 
         const stats = {
             [LetterKind.LETTERA_SEMPLICE]: aggregateStats(lettersByKind[LetterKind.LETTERA_SEMPLICE] || []),
+            [LetterKind.LETTERA_PRIORITARIA]: aggregateStats(lettersByKind[LetterKind.LETTERA_PRIORITARIA] || []),
             [LetterKind.RACCOMANDATA]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA] || []),
             [LetterKind.RACCOMANDATA_AR]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_AR] || []),
         };
@@ -208,6 +210,7 @@ export class StatsService {
             year: year,
             letters: {
                 [LetterKind.LETTERA_SEMPLICE]: stats[LetterKind.LETTERA_SEMPLICE].counts,
+                [LetterKind.LETTERA_PRIORITARIA]: stats[LetterKind.LETTERA_PRIORITARIA].counts,
                 [LetterKind.RACCOMANDATA]: stats[LetterKind.RACCOMANDATA].counts,
                 [LetterKind.RACCOMANDATA_AR]: stats[LetterKind.RACCOMANDATA_AR].counts
             },
@@ -220,6 +223,7 @@ export class StatsService {
             spent: {
                 total: totalSpent,
                 [LetterKind.LETTERA_SEMPLICE]: ((stats[LetterKind.LETTERA_SEMPLICE].spent) / totalSpent) * 100,
+                [LetterKind.LETTERA_PRIORITARIA]: ((stats[LetterKind.LETTERA_SEMPLICE].spent) / totalSpent) * 100,
                 [LetterKind.RACCOMANDATA]: ((stats[LetterKind.RACCOMANDATA].spent) / totalSpent) * 100,
                 [LetterKind.RACCOMANDATA_AR]: ((stats[LetterKind.RACCOMANDATA_AR].spent) / totalSpent) * 100
             }
@@ -258,6 +262,7 @@ export class StatsService {
 
         const aggregated = {
             [LetterKind.LETTERA_SEMPLICE]: aggregatePrices(lettersByKind[LetterKind.LETTERA_SEMPLICE] || []),
+            [LetterKind.LETTERA_PRIORITARIA]: aggregatePrices(lettersByKind[LetterKind.LETTERA_PRIORITARIA] || []),
             [LetterKind.RACCOMANDATA]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA] || []),
             [LetterKind.RACCOMANDATA_AR]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_AR] || []),
         };

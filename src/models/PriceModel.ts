@@ -1,6 +1,6 @@
-import { LetterKind } from "@services/PostelService";
 import { constant, Decoder, number, object, oneOf, optional } from "@mojotech/json-type-validation";
 import { Document, model, Model, Schema } from "mongoose";
+import { LetterKind } from "@models/LetterModel";
 
 /**
  * @swagger
