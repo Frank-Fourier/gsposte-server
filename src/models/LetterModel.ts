@@ -241,7 +241,7 @@ export const LetterSchema = new Schema<Letter>({
     },
     kind: {
         type: String,
-        enum: [ LetterKind.LETTERA_SEMPLICE, LetterKind.RACCOMANDATA, LetterKind.RACCOMANDATA_AR ],
+        enum: [ LetterKind.LETTERA_SEMPLICE, LetterKind.LETTERA_PRIORITARIA, LetterKind.RACCOMANDATA, LetterKind.RACCOMANDATA_AR ],
         required: "Letter kind is required.",
     },
     codePdf: {
