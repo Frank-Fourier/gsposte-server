@@ -189,6 +189,7 @@ export const letterDecoder: Decoder<Letter> = object({
     sendAt: optional(string()),
     kind: oneOf(
         constant(LetterKind.LETTERA_SEMPLICE),
+        constant(LetterKind.LETTERA_PRIORITARIA),
         constant(LetterKind.RACCOMANDATA),
         constant(LetterKind.RACCOMANDATA_AR),
     ),
