@@ -13,7 +13,7 @@ import { MongoRepository } from "@services/MongoRepository";
 import httpErrors from "http-errors";
 import moment from "moment";
 import { logger } from "@utils/winston";
-import { formatCurrency, groupBy } from "@utils/misc";
+import { formatCurrency, groupBy, insert } from "@utils/misc";
 
 export const INVOICES_ROOT = process.env.INVOICES_ROOT || "public/invoices";
 
@@ -249,12 +249,14 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
 
         // Format envelopes dates
-        letter.posteway.track.recipients = letter.posteway.track.recipients?.map(e => ({
-            ...e,
-            tracking: e.tracking ? {
-                ...e.tracking,
-                date: e.tracking.date ? moment(e.tracking.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : null
-            } : undefined,
+        letter.posteway.track.recipients = letter.posteway.track.recipients?.map(r => ({
+            ...r,
+            ...insert(!!r.tracking, {
+                tracking: {
+                    ...r.tracking,
+                    date: r.tracking.date ? moment(r.tracking.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : null
+                }
+            })
         }));
 
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({

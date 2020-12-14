@@ -231,25 +231,23 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
                 // Call track and recipients to get the info I need to fill the posteway object on document
                 let track: TrackResponse;
-                if (kind !== "lol") {
-                    try {
-                        track = await this.posteway.track(kind, confirm.orderId);
-                    } catch (err) {
-                        logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
-                        logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TRACK endpoint. Got this error: `, err);
+                try {
+                    track = await this.posteway.track(kind, confirm.orderId);
+                } catch (err) {
+                    logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
+                    logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TRACK endpoint. Got this error: `, err);
 
-                        // Inform the user that there was an error
-                        this.noticeService.save({
-                            user: userId,
-                            title: "Errore durante l'invio della lettera",
-                            content: `Errore durante il tracking della lettera '${letter.codePdf}' tramite PosteWay!`,
-                            data: { error: err },
-                            kind: NoticeKind.LETTER,
-                            error: true
-                        });
+                    // Inform the user that there was an error
+                    this.noticeService.save({
+                        user: userId,
+                        title: "Errore durante l'invio della lettera",
+                        content: `Errore durante il tracking della lettera '${letter.codePdf}' tramite PosteWay!`,
+                        data: { error: err },
+                        kind: NoticeKind.LETTER,
+                        error: true
+                    });
 
-                        throw err;
-                    }
+                    throw err;
                 }
 
                 try {

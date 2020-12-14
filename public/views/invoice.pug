@@ -75,6 +75,7 @@ html(lang="it")
             br
             | #{sender.address.zip} #{sender.address.city.toUpperCase()} (#{sender.address.province.toUpperCase()})
         p(class="invoice-info") Distinta #{partial ? "parziale" : ""} #{codePdf} #{dateSent ? `del ${dateSent}` : ""}
+        - const isRaccomandata = () => kind !== "LETTERA SEMPLICE" && kind !== "LETTERA PRIORITARIA"
         table(class="recipients-table")
             thead
                 th #
@@ -83,26 +84,26 @@ html(lang="it")
                 th CAP
                 th Città
                 th Prov.
-                if kind !== "LETTERA SEMPLICE"
+                if isRaccomandata()
                     th Tracking
                 th Impon.
             tbody
                 each recipient, index in (posteway.track.recipients)
                     tr
                         td(width="5%") #{index + 1}
-                        if kind !== "LETTERA SEMPLICE"
+                        if isRaccomandata()
                             td(width="12.5%") #{recipient.tracking.date || "-"}
-                        if kind === "LETTERA SEMPLICE"
+                        if !isRaccomandata()
                             td(width="12.5%") #{dateSent || "-"}
                         td(width="40%") #{(recipient.person.name ? recipient.person.name.toUpperCase() : recipient.person.businessName.toUpperCase()) + " " + (recipient.person.surname ? recipient.person.surname.toUpperCase() : "")}
                             br
                             | #{recipient.person.address.street || "-"}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.zip || "-"}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.city.toUpperCase() || "-"}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{recipient.person.address.province.toUpperCase() || "-"}
-                        if kind !== "LETTERA SEMPLICE"
+                        td(width=`${isRaccomandata() ? "8.5%" : "10.625%"}`) #{recipient.person.address.zip || "-"}
+                        td(width=`${isRaccomandata() ? "8.5%" : "10.625%"}`) #{recipient.person.address.city.toUpperCase() || "-"}
+                        td(width=`${isRaccomandata() ? "8.5%" : "10.625%"}`) #{recipient.person.address.province.toUpperCase() || "-"}
+                        if isRaccomandata()
                             td(width="8.5%") #{recipient.tracking.number || "-"}
-                        td(width=`${kind !== "LETTERA SEMPLICE" ? "8.5%" : "10.625%"}`) #{price || "-"}
+                        td(width=`${isRaccomandata() ? "8.5%" : "10.625%"}`) #{price || "-"}
         p
             | Tot. Prodotti:
             b  #{posteway.track.recipients.length}
