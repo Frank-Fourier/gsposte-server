@@ -76,7 +76,6 @@ html(lang="it")
             | #{sender.address.zip} #{sender.address.city.toUpperCase()} (#{sender.address.province.toUpperCase()})
         p(class="invoice-info") Distinta #{partial ? "parziale" : ""} #{codePdf} #{dateSent ? `del ${dateSent}` : ""}
         - const isRaccomandata = () => kind !== "LETTERA SEMPLICE" && kind !== "LETTERA PRIORITARIA"
-        - const isEmpty = (str) => str !== null && str !== undefined
         table(class="recipients-table")
             thead
                 th #
@@ -96,7 +95,7 @@ html(lang="it")
                             td(width="12.5%") #{recipient.tracking.date || "-"}
                         if !isRaccomandata()
                             td(width="12.5%") #{dateSent || "-"}
-                        td(width="40%") #{(!isEmpty(recipient.person.name) ? recipient.person.name.toUpperCase() : (!isEmpty(recipient.person.businessName) ? recipient.person.businessName.toUpperCase() : "")) + " " + (!isEmpty(recipient.person.surname) ? recipient.person.surname.toUpperCase() : "")}
+                        td(width="40%") #{recipient.person.fullName}
                             br
                             | #{recipient.person.address.street || "-"}
                         td(width=`${isRaccomandata() ? "8.5%" : "10.625%"}`) #{recipient.person.address.zip || "-"}
