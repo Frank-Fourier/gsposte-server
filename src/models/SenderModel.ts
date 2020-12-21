@@ -9,6 +9,7 @@ import {
     mapAddressToPosteWayAddress
 } from "@models/schemas/AddressSchema";
 import { Person } from "../posteway";
+import { insert } from "@utils/misc";
 
 /**
  * @swagger
@@ -110,10 +111,11 @@ export const senderDecoder: Decoder<Sender> = object({
 });
 
 export function mapSenderToPerson(sender: SenderDocument, notes?: string, useAddressAR?: boolean): Person {
+    const fullNameTrimmed = sender.name.trim().replace(/[\s]+/g, " ");
     return {
-        name: sender.name.split(" ")[0],
-        surname: sender.name.split(" ")[1] || "",
-        businessName: sender.businessName,
+        name: fullNameTrimmed.split(" ")[0],
+        surname: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
+        businessName: sender.businessName?.trim(),
         cf: sender.cf,
         notes: notes,
         address: mapAddressToPosteWayAddress(useAddressAR ? sender.addressAR : sender.address)

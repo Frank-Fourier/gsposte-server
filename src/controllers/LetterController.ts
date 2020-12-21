@@ -60,5 +60,4 @@ export class LetterController extends CrudController {
         const doc = await this.letterService.queryLetter(letter);
         return res.status(200).send(doc);
     }
-
 }
