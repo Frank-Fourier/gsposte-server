@@ -75,13 +75,14 @@ export const recipientDecoder: Decoder<Recipient> = object({
 });
 
 export function mapRecipientToPerson(recipient: RecipientDocument, notes?: string): Person {
-    const hasSpace = recipient.fullName.includes(" ");
+    const fullNameTrimmed = recipient.fullName.trim().replace(/[\s]+/g, " ");
+    const hasSpace = fullNameTrimmed.includes(" ");
     return {
         ...insert(hasSpace, {
-            name: recipient.fullName.split(" ")[0],
-            surname: recipient.fullName.split(" ")[1] || ""
+            name: fullNameTrimmed.split(" ")[0],
+            surname: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || ""
         }, {
-            businessName: recipient.fullName
+            businessName: fullNameTrimmed
         }),
         cf: recipient.cf,
         notes: notes,
