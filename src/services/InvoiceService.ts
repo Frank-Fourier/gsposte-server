@@ -251,6 +251,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         // Format envelopes dates
         letter.posteway.track.recipients = letter.posteway.track.recipients?.map(r => ({
             ...r,
+            person: {
+                ...r.person,
+                fullName: `${r.person.name?.toUpperCase() ?? (r.person.businessName?.toUpperCase() ?? "")} ${r.person.surname?.toUpperCase() ?? ""}`,
+            },
             ...insert(!!r.tracking, {
                 tracking: {
                     ...r.tracking,
