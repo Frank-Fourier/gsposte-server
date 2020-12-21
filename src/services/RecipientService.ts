@@ -179,22 +179,22 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             // Create the new recipient to import
             const recipient: Recipient = {
                 user: userId,
-                fullName: rowName,
+                fullName: rowName.trim(),
                 address: {
-                    street: rowStreet,
+                    street: rowStreet.trim(),
                     city: municipality.name,
-                    zip: rowZip,
+                    zip: rowZip.trim(),
                     province: municipality.province,
                     country: municipality.country
                 },
                 ...(!!rowUsername && !!rowPassword? {
                     tv: {
-                        username: rowUsername,
-                        email: rowEmail || "",
-                        password: rowPassword
+                        username: rowUsername.trim(),
+                        email: rowEmail?.trim() ?? "",
+                        password: rowPassword.trim()
                     }
                 } : {}),
-                ...insert(!!rowCf, { cf: rowCf }),
+                ...insert(!!rowCf, { cf: rowCf.trim() }),
                 notes: `Contatto importato da file ${fileName ? `'${fileName}'` : "Excel"}`
             };
 
