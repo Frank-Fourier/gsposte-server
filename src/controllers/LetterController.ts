@@ -4,9 +4,7 @@ import { CrudController } from "@controllers/CrudController";
 import { LetterService } from "@services/LetterService";
 import { InvoiceService } from "@services/InvoiceService";
 import { Request, Response } from "express";
-import { PDF_ROOT } from "@services/PdfService";
 import httpErrors, { BadRequest } from "http-errors";
-import fs from "fs";
 
 @provide(LetterService)
 export class LetterController extends CrudController {
@@ -39,9 +37,7 @@ export class LetterController extends CrudController {
         //     throw new httpErrors.Forbidden("You are not authorized to generate invoices for other users!");
         // }
 
-        const pdf = await this.invoiceService.generateLetterInvoicePDF(letter);
-        const path = `${PDF_ROOT}/${letter.codePdf}/invoice.pdf`;
-        await fs.promises.writeFile(path, pdf);
+        const path = await this.invoiceService.generateLetterInvoicePDF(letter);
 
         return res.status(201).send({
             message: `Invoice created correctly. Available at ${path}`,

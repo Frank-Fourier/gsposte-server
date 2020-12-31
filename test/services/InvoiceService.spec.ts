@@ -194,9 +194,8 @@ import fs from "fs";
         }, false, false);
 
         const letter = await this.letterService.findById(saved.id, { populate: "sender recipients" });
-        const pdf = await this.invoiceService.generateLetterInvoicePDF(letter);
+        const pdf = await this.invoiceService.generateLetterInvoicePDF(letter, `test/assets/pdf/${TEST_CODE_PDF}`);
         expect(pdf).to.exist;
-        await fs.promises.writeFile(`test/assets/pdf/${TEST_CODE_PDF}/invoice.pdf`, pdf);
     }
 
     @timeout(60000)
