@@ -50,7 +50,7 @@ export class ProvisionController {
         if (!req.params.userId) {
             throw new httpErrors.BadRequest("User ID is required.");
         }
-        const revenues = await this.provisionService.calculateRevenueYearly(req.params.userId);
+        const revenues = await this.provisionService.calculateRevenueYearly(req.params.userId, parseInt(req.query.year));
         return res.status(200).send(revenues);
     }
 
