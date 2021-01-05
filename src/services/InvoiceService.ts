@@ -1,6 +1,6 @@
 import { provide } from "inversify-binding-decorators";
 import { inject } from "inversify";
-import { PdfService } from "@services/PdfService";
+import { PDF_ROOT, PdfService } from "@services/PdfService";
 import { LetterDocument } from "@models/LetterModel";
 import { SenderDocument } from "@models/SenderModel";
 import { Invoice, invoiceDecoder, InvoiceDocument, InvoiceModel } from "@models/InvoiceModel";
@@ -14,6 +14,7 @@ import httpErrors from "http-errors";
 import moment from "moment";
 import { logger } from "@utils/winston";
 import { formatCurrency, groupBy, insert } from "@utils/misc";
+import fs from "fs";
 
 export const INVOICES_ROOT = process.env.INVOICES_ROOT || "public/invoices";
 
@@ -225,9 +226,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * Please note that this does not generate a real invoice, rather a note for a single letter, a "distinta"
      *
      * @param letter {LetterDocument} Letter to generate invoice from
-     * @returns {Promise<Buffer>} Promise resolving to the PDF file as Buffer
+     * @param root {string} Optional path root
+     * @returns {Promise<Buffer>} Promise resolvingu to the PDF file path
      */
-    public async generateLetterInvoicePDF(letter: LetterDocument): Promise<Buffer> {
+    public async generateLetterInvoicePDF(letter: LetterDocument, root?: string): Promise<string> {
         if (!letter.sent) {
             throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
         }
@@ -236,6 +238,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
         if (!letter.posteway) {
             throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
+        }
+
+        // Avoid generating PDF again if it's already there
+        const path = `${root ? root : `${PDF_ROOT}/${letter.codePdf}`}/invoice.pdf`;
+        if (fs.existsSync(path)) {
+            return path;
         }
 
         await letter.populate("sender recipients").execPopulate();
@@ -275,7 +283,9 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         });
 
         // I wait until networkidle2 to let all the images on the HTML load before converting
-        return this.pdf.htmlToPdf(html, "networkidle2");
+        const pdf = this.pdf.htmlToPdf(html, "networkidle2");
+        await fs.promises.writeFile(path, pdf);
+        return path;
     }
 
     /**

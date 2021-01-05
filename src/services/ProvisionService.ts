@@ -186,16 +186,17 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * @param query {MongoQuery<Provision> | any} Optional additional query done on Provision table
      * @param options {QueryOptions} Optional query options
      * @param month {number} Optional specific month to pass in the revenue
+     * @param year
      * @returns {Promise<Revenue>} Revenue object
      */
-    public async calculateRevenue(userId: string, query?: MongoQuery<Provision> | any, options?: QueryOptions, month?: number): Promise<Revenue> {
+    public async calculateRevenue(userId: string, query?: MongoQuery<Provision> | any, options?: QueryOptions, month?: number, year?: number): Promise<Revenue> {
         const provisions = await this.find({
             ...query,
             referrers: { $elemMatch: { user: userId } }
         }, options || {});
         return {
             user: userId,
-            year: new Date().getFullYear(),
+            year: year || new Date().getFullYear(),
             month: month,
             provisions: provisions,
             amount: provisions
@@ -209,14 +210,15 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * Calculates the current year's revenue for a single user
      *
      * @param userId {string} User ID
+     * @param year {number} Optional year
      * @returns {Promise<RevenueMonths>} The object containing all months
      */
-    public async calculateRevenueYearly(userId: string): Promise<RevenueYears> {
-        const year = new Date().getFullYear();
+    public async calculateRevenueYearly(userId: string, year?: number): Promise<RevenueYears> {
+        year = Number.isNaN(year) ? new Date().getFullYear() : year;
         const revenue = await this.calculateRevenue(userId, {
             createdAt: {
-                $gte: `${year}-01-01`,
-                $lte: `${year}-12-31`
+                $gte: new Date(year, 1, 1),
+                $lte: new Date(year, 11, 31)
             }
         }, {
             populate: [{
@@ -226,10 +228,10 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
                 path: "referrers.user",
                 select: "username"
             }]
-        });
+        }, undefined, year);
         return {
             year: revenue.year,
-            total: revenue.amount,
+            total: parseFloat(revenue.amount.toFixed(2)),
             provisions: revenue.provisions as ProvisionDocument[]
         }
     }
