@@ -283,7 +283,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         });
 
         // I wait until networkidle2 to let all the images on the HTML load before converting
-        const pdf = this.pdf.htmlToPdf(html, "networkidle2");
+        const pdf = await this.pdf.htmlToPdf(html, "networkidle2");
         await fs.promises.writeFile(path, pdf);
         return path;
     }
