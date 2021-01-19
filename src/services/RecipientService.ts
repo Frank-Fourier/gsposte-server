@@ -10,7 +10,6 @@ import { MunicipalityDocument } from "@models/MunicipalityModel";
 import { AddressDocument } from "@models/schemas/AddressSchema";
 import { Request, Response } from "express";
 import { CellValidator, ImportResponse, uploadXLSX } from "@utils/xlsx-uploader";
-import { insert } from "@utils/misc";
 import { RubricService } from "@services/RubricService";
 
 /**
@@ -187,14 +186,14 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     province: municipality.province,
                     country: municipality.country
                 },
-                ...insert(!!rowUsername && !!rowPassword, {
+                ...(rowUsername && rowPassword ? {
                     tv: {
-                        username: rowUsername?.trim(),
-                        email: rowEmail?.trim() ?? "",
-                        password: rowPassword?.trim()
+                        username: rowUsername.trim(),
+                        email: rowEmail?.trim(),
+                        password: rowPassword.trim()
                     }
-                }),
-                ...insert(!!rowCf, { cf: rowCf?.trim() }),
+                } : {}),
+                ...(rowCf ? { cf: rowCf.trim() } : {}),
                 notes: `Contatto importato da file ${fileName ? `'${fileName}'` : "Excel"}`
             };
 
