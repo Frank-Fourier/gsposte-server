@@ -187,14 +187,14 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     province: municipality.province,
                     country: municipality.country
                 },
-                ...(!!rowUsername && !!rowPassword? {
+                ...insert(!!rowUsername && !!rowPassword, {
                     tv: {
-                        username: rowUsername.trim(),
+                        username: rowUsername?.trim(),
                         email: rowEmail?.trim() ?? "",
-                        password: rowPassword.trim()
+                        password: rowPassword?.trim()
                     }
-                } : {}),
-                ...insert(!!rowCf, { cf: rowCf.trim() }),
+                }),
+                ...insert(!!rowCf, { cf: rowCf?.trim() }),
                 notes: `Contatto importato da file ${fileName ? `'${fileName}'` : "Excel"}`
             };
 
