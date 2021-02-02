@@ -123,7 +123,8 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
         const sheetJson = utils.sheet_to_json(sheet);
         for (let row = 0; row < sheetJson.length; ++row) {
             const data: RecipientXLSX = sheetJson[row] as RecipientXLSX;
-            const cellValue = (columnName: keyof RecipientXLSX) => data[columnName] ? String(data[columnName]) : null;
+            const cellValue = (columnName: keyof RecipientXLSX) =>
+                data[columnName] ? String(data[columnName]).trim() : null;
 
             // DENOMINAZIONE, INDIRIZZO, CAP, COMUNE, PROVINCIA
             const rowName     = cellValue("DENOMINAZIONE"),
