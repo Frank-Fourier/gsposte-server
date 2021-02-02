@@ -112,10 +112,15 @@ export const senderDecoder: Decoder<Sender> = object({
 
 export function mapSenderToPerson(sender: SenderDocument, notes?: string, useAddressAR?: boolean): Person {
     const fullNameTrimmed = sender.name.trim().replace(/[\s]+/g, " ");
+    const hasSpace = fullNameTrimmed.includes(" ");
     return {
-        name: fullNameTrimmed.split(" ")[0],
-        surname: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
-        businessName: sender.businessName?.trim(),
+        ...insert(hasSpace, {
+            name: fullNameTrimmed.split(" ")[0],
+            surname: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
+            businessName: sender.businessName?.trim(),
+        }, {
+            businessName: sender.businessName?.trim(),
+        }),
         cf: sender.cf,
         notes: notes,
         address: mapAddressToPosteWayAddress(useAddressAR ? sender.addressAR : sender.address)
