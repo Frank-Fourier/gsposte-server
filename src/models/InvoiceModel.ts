@@ -4,6 +4,11 @@ import { SenderDocument } from "@models/SenderModel";
 import { Document, model, Model, Schema } from "mongoose";
 import { array, Decoder, number, object, optional, string } from "@mojotech/json-type-validation";
 
+export interface InvoiceFIC {
+    id: number
+    token: string
+}
+
 /**
  * @swagger
  *
@@ -75,6 +80,9 @@ export interface InvoiceDocument extends Invoice, Document {
     paid: boolean
     number: number
     paymentDate?: Date | string
+    fic: InvoiceFIC
+    createdAt?: Date
+    updatedAt?: Date
 }
 export const invoiceDecoder: Decoder<Invoice> = object({
     user: optional(string()),
@@ -122,7 +130,18 @@ export const InvoiceSchema = new Schema({
     },
     paymentDate: {
         type: Date,
-    }
+    },
+    fic: new Schema<InvoiceFIC>({
+        success: {
+            type: Boolean
+        },
+        id: {
+            type: Number
+        },
+        token: {
+            type: String
+        },
+    }),
 }, {
     timestamps: {
         createdAt: true,
