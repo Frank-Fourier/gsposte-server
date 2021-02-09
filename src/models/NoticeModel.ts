@@ -63,7 +63,8 @@ import { ws_broadcast, ws_message } from "@utils/websockets";
 export enum NoticeKind {
     INFO = "info",
     LETTER = "letter",
-    PAYMENT = "payment"
+    PAYMENT = "payment",
+    FIC_EXPORT = "fic_export",
 }
 export interface Notice {
     user?: string | UserDocument

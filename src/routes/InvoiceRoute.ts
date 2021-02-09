@@ -296,6 +296,89 @@ export class InvoiceRoute extends Route {
                 method: RequestMethod.DELETE,
                 requiresAuth: true,
                 handler: (req, res) => this.invoiceController.deleteById(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /invoice/export/bulk:
+             *   post:
+             *     tags:
+             *       - Invoices
+             *     description: Bulk export all invoices to Fatture in Cloud
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     responses:
+             *       200:
+             *         description: Exported invoice
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/export/bulk",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.invoiceController.bulkExportToFIC(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /invoice/export/flags:
+             *   get:
+             *     tags:
+             *       - Invoices
+             *     description: Get export flags
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     responses:
+             *       200:
+             *         description: Export flags
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/export/flags",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.invoiceController.getExportFlags(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /invoice/export/single/{id}:
+             *   post:
+             *     tags:
+             *       - Invoices
+             *     description: Export single invoice to Fatture in Cloud
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: id
+             *         required: true
+             *         in: path
+             *         description: Mongo id of the invoice to export
+             *     responses:
+             *       200:
+             *         description: Exported invoice
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/export/single/:id",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.invoiceController.exportOneToFIC(req, res)
             }
         ]);
     }

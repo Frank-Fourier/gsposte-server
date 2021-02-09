@@ -66,4 +66,29 @@ export class InvoiceController extends CrudController {
         });
     }
 
+    public async exportOneToFIC(req: Request, res: Response) {
+        const user = await this.authService.adminOnly(req);
+        if (!req.params.id) {
+            throw new BadRequest("Invoice ID is required");
+        }
+
+        const invoice = await this.invoiceService.findById(req.params.id);
+        const exported = await this.invoiceService.exportToFIC(user, invoice);
+
+        return res.status(200).send(exported);
+    }
+
+    public async bulkExportToFIC(req: Request, res: Response) {
+        const user = await this.authService.adminOnly(req);
+        await this.invoiceService.bulkExportToFIC(user, true);
+        return res.status(200).send({
+            message: "Started export process on FIC"
+        });
+    }
+
+    public async getExportFlags(req: Request, res: Response) {
+        await this.authService.adminOnly(req);
+        return res.status(200).send(this.invoiceService.getExportFlags());
+    }
+
 }

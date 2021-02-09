@@ -10,15 +10,30 @@ import { UserService } from "@services/UserService";
 import { compileFile } from "pug";
 import { Document } from "mongoose";
 import { MongoRepository } from "@services/MongoRepository";
-import { BadRequest, InternalServerError, Forbidden } from "http-errors";
-import moment from "moment";
+import { BadRequest, Forbidden, InternalServerError } from "http-errors";
 import { logger } from "@utils/winston";
 import { formatCurrency, groupBy, insert } from "@utils/misc";
-import fs from "fs";
 import { FICService } from "@services/FICService";
 import { FIC } from "@models/fattureincloud/Documenti";
+import moment from "moment";
+import fs from "fs";
+import { sleep } from "@utils/sleep";
+import { UserDocument } from "@models/UserModel";
+import { ws_message } from "@utils/websockets";
+import { NoticeKind } from "@models/NoticeModel";
+import { NoticeService } from "@services/NoticeService";
 
 export const INVOICES_ROOT = process.env.INVOICES_ROOT || "public/invoices";
+export interface InvoiceBulkExportResponse {
+    exported: Array<InvoiceDocument>
+    errors: Array<{ invoice: InvoiceDocument, error: any }>
+}
+export interface ExportFlags {
+    exporting: boolean
+    exported: number
+    to_export: number
+    progress: number
+}
 
 @provide(InvoiceService)
 export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
@@ -28,6 +43,14 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     @inject(UserService) private userService: UserService;
     @inject(LetterService) private letterService: LetterService;
     @inject(FICService) private fic: FICService;
+    @inject(NoticeService) private noticeService: NoticeService;
+
+    private exportFlags: ExportFlags = {
+        exporting: false,
+        exported: 0,
+        to_export: 0,
+        progress: 0,
+    }
 
     constructor(private invoiceModel = InvoiceModel) {
         super(invoiceModel, invoiceDecoder, [ "number" ]);
@@ -326,10 +349,15 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * Requires credentials to be defined in process environment, populates FIC field on success.
      * Throws if external FIC API call fails.
      *
+     * @param exporter {UserDocument} Who is exporting this invoice (must be an admin)
      * @param invoice {InvoiceDocument} Invoice to export
      * @returns {Promise<InvoiceDocument>} Promise resolving to the same invoice with FIC field
      */
-    public async exportToFIC(invoice: InvoiceDocument): Promise<InvoiceDocument> {
+    public async exportToFIC(exporter: UserDocument, invoice: InvoiceDocument): Promise<InvoiceDocument> {
+        if (!exporter.isAdmin()) {
+            throw new Forbidden("You can't export documents to FIC!");
+        }
+
         if (!!invoice.fic) {
             // Already exported
             return invoice;
@@ -349,6 +377,92 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             token: response.token,
         };
         return invoice.save();
+    }
+
+    /**
+     * Finds all invoices that do not have a FIC field and exports them to FIC by calling exportToFIC().
+     * Returns an object containing what was exported and what wasn't due to an error.
+     * Since FIC has a shitty hourly quota, this method will take a long ass time to execute, due to sleeps.
+     * Progress will be pushed to the WebSockets channel.
+     *
+     * @param exporter {UserDocument} Who is exporting these invoices (must be an admin)
+     * @param wait {boolean} True if you want to sleep 7.5 secs between each request
+     * @returns {Promise<void>} Resolves after starting the process because the export process is async
+     */
+    public async bulkExportToFIC(exporter: UserDocument, wait = true): Promise<void> {
+        if (!exporter.isAdmin()) {
+            throw new Forbidden("You can't export documents to FIC!");
+        }
+        if (this.exportFlags.exporting) {
+            throw new BadRequest("A export is already in progress.");
+        }
+
+        const toExport = await this.find({
+            fic: { $exists: false }
+        });
+
+        logger.info(`STARTED BULK EXPORT TO FATTURE IN CLOUD OF ${toExport.length} INVOICES!`);
+        const response: InvoiceBulkExportResponse = { exported: [], errors: [] };
+        this.exportFlags.exporting = true;
+
+        // Fatture in Cloud maximum quota is:
+        // 30 requests per minute
+        // 500 requests per hour
+        // So sleeping 7.5 seconds should keep us under the quota
+        (async () => {
+            for (const invoice of toExport) {
+                try {
+                    const exported = await this.exportToFIC(exporter, invoice);
+                    this.exportFlags = {
+                        exporting: true,
+                        exported: response.exported.length,
+                        to_export: toExport.length,
+                        progress: parseFloat(((response.exported.length / toExport.length) * 100).toFixed(2)),
+                    }
+
+                    response.exported.push(exported);
+                    ws_message(exported.id, {
+                        kind: NoticeKind.FIC_EXPORT,
+                        error: false,
+                        data: this.exportFlags
+                    });
+
+                    wait && await sleep(7500);
+                } catch (err) {
+                    const e = err as FIC.Error;
+                    response.errors.push(err);
+                    this.noticeService.save({
+                        user: exporter.id,
+                        title: "Fattura non esportata",
+                        content: `Non è stato possibile esportare la fattura nr.${invoice.number}/${moment(invoice.createdAt).year()} a causa di un problema. Fatture in Cloud ha restituito il seguente errore: ${e.error} [${e.error_code}]`,
+                        data: err,
+                        kind: NoticeKind.FIC_EXPORT,
+                        error: true
+                    });
+                }
+            }
+
+            logger.info(`DONE! I EXPORTED ${response.exported.length} INVOICES TO FATTURE IN CLOUD! GOT ${response.errors.length} ERRORS.`);
+            this.exportFlags = {
+                exporting: false,
+                exported: 0,
+                to_export: 0,
+                progress: 0
+            };
+
+            this.noticeService.save({
+                user: exporter.id,
+                title: "Fatture esportate correttamente",
+                content: `Sono state esportate ${response.exported.length} fatture su Fatture in Cloud. Durante il processo si sono verificati ${response.errors.length} errori.`,
+                data: response,
+                kind: NoticeKind.INFO,
+                error: false
+            });
+        })();
+    }
+
+    public getExportFlags() {
+        return this.exportFlags;
     }
 
 }

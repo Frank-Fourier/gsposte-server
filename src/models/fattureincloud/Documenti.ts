@@ -183,7 +183,7 @@ export namespace FIC {
             cf: cf,
             autocompila_anagrafica: true,
             salva_anagrafica: !isTestEnv(),
-            numero: `${invoice.number.toString()}P`,
+            numero: !isTestEnv() ? `${invoice.number.toString()}P` : "P",
             data: moment(invoice.createdAt).format("DD/MM/YYYY"),
             valuta: "EUR",
             nascondi_scadenza: false,

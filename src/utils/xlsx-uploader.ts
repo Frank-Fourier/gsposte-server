@@ -6,7 +6,7 @@ import { Document } from "mongoose";
 
 export type CellValidator = (value: string, ...params: any[]) => { valid: boolean, error: string };
 export interface ImportResponse<T extends Document> {
-    imported: Array<T>,
+    imported: Array<T>
     errors: Array<{ row: number, description: string, data?: any }>
 }
 

@@ -195,6 +195,7 @@ export class AuthService {
         if (!user.isAdmin()) {
             throw new httpErrors.Forbidden("Only admins can make this call. You are not an admin.");
         }
+        return user;
     }
 
     private async comparePasswords(password: string, candidate: string) {
