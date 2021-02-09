@@ -10,11 +10,13 @@ import { UserService } from "@services/UserService";
 import { compileFile } from "pug";
 import { Document } from "mongoose";
 import { MongoRepository } from "@services/MongoRepository";
-import httpErrors from "http-errors";
+import { BadRequest, InternalServerError, Forbidden } from "http-errors";
 import moment from "moment";
 import { logger } from "@utils/winston";
 import { formatCurrency, groupBy, insert } from "@utils/misc";
 import fs from "fs";
+import { FICService } from "@services/FICService";
+import { FIC } from "@models/fattureincloud/Documenti";
 
 export const INVOICES_ROOT = process.env.INVOICES_ROOT || "public/invoices";
 
@@ -25,6 +27,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     @inject(PriceService) private priceService: PriceService;
     @inject(UserService) private userService: UserService;
     @inject(LetterService) private letterService: LetterService;
+    @inject(FICService) private fic: FICService;
 
     constructor(private invoiceModel = InvoiceModel) {
         super(invoiceModel, invoiceDecoder, [ "number" ]);
@@ -51,7 +54,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         errors: Array<{ letter: LetterDocument, error: Error | any }>
     }> {
         if (letters.length === 0) {
-            throw new httpErrors.BadRequest("Letters array is empty! Can't generate invoice.");
+            throw new BadRequest("Letters array is empty! Can't generate invoice.");
         }
 
         const errors: Array<{ letter: LetterDocument, error: Error | any }> = [];
@@ -60,20 +63,20 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         for (const letter of letters) {
             letter.depopulate("sender user");
             if (letter.sender.toString() !== letters[0].sender.toString()) {
-                throw new httpErrors.BadRequest("Letters to generate an invoice from must all have the same sender!");
+                throw new BadRequest("Letters to generate an invoice from must all have the same sender!");
             }
 
             try {
                 if (!letter.sent) {
-                    throw new httpErrors.BadRequest("This letter is not sent so I won't include it in the invoice.");
+                    throw new BadRequest("This letter is not sent so I won't include it in the invoice.");
                 }
                 if (letter.error) {
-                    throw new httpErrors.BadRequest("This letter is in an error state so I won't include it in the invoice.");
+                    throw new BadRequest("This letter is in an error state so I won't include it in the invoice.");
                 }
 
                 const taxable = (letter.price || await this.priceService.calculatePrice(letter)) * letter.recipients.length;
                 if (taxable <= 0 || isNaN(taxable)) {
-                    throw new httpErrors.BadRequest("Can't create an invoice for a letter without a price!");
+                    throw new BadRequest("Can't create an invoice for a letter without a price!");
                 }
 
                 taxableSum += taxable;
@@ -231,13 +234,13 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async generateLetterInvoicePDF(letter: LetterDocument, root?: string): Promise<string> {
         if (!letter.sent) {
-            throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
+            throw new Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
         }
         if (letter.error) {
-            throw new httpErrors.Forbidden("You are not allowed to create an invoice for an errored letter!");
+            throw new Forbidden("You are not allowed to create an invoice for an errored letter!");
         }
         if (!letter.posteway) {
-            throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
+            throw new BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
         }
 
         // Avoid generating PDF again if it's already there
@@ -316,6 +319,36 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
         // I wait until networkidle2 to let all the images on the HTML load before converting
         return this.pdf.htmlToPdf(html, "networkidle2");
+    }
+
+    /**
+     * Exports an invoice to Fatture in Cloud account.
+     * Requires credentials to be defined in process environment, populates FIC field on success.
+     * Throws if external FIC API call fails.
+     *
+     * @param invoice {InvoiceDocument} Invoice to export
+     * @returns {Promise<InvoiceDocument>} Promise resolving to the same invoice with FIC field
+     */
+    public async exportToFIC(invoice: InvoiceDocument): Promise<InvoiceDocument> {
+        if (!!invoice.fic) {
+            // Already exported
+            return invoice;
+        }
+
+        const result = await this.fic.documenti.fatture.nuovo(
+            await FIC.mapInvoiceToFattura(invoice)
+        );
+        if (!(result as FIC.NuovoDocumentoResponse).success) {
+            const err = result as FIC.Error;
+            throw new InternalServerError(`Errore Fatture in Cloud [${err.error_code}]: ${err.error}`);
+        }
+
+        const response = result as FIC.NuovoDocumentoResponse;
+        invoice.fic = {
+            id: response.new_id,
+            token: response.token,
+        };
+        return invoice.save();
     }
 
 }
