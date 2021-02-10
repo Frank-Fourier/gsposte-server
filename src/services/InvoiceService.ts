@@ -429,12 +429,11 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
                     wait && await sleep(7500);
                 } catch (err) {
-                    const e = err as FIC.Error;
                     response.errors.push(err);
                     await this.noticeService.save({
                         user: exporter.id,
                         title: "Fattura non esportata",
-                        content: `Non è stato possibile esportare la fattura nr.${invoice.number}/${moment(invoice.createdAt).year()} a causa di un problema. Fatture in Cloud ha restituito il seguente errore: ${e.error} [${e.error_code}]`,
+                        content: `Non è stato possibile esportare la fattura nr.${invoice.number}/${moment(invoice.createdAt).year()} a causa di un problema. ${err.message}`,
                         data: err,
                         kind: NoticeKind.FIC_EXPORT,
                         error: true
