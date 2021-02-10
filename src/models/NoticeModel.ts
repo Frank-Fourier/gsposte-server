@@ -126,7 +126,7 @@ export const NoticeSchema = new Schema<Notice>({
     },
     kind: {
         type: String,
-        enum: [ NoticeKind.INFO, NoticeKind.LETTER, NoticeKind.PAYMENT ],
+        enum: [ NoticeKind.INFO, NoticeKind.LETTER, NoticeKind.PAYMENT, NoticeKind.FIC_EXPORT ],
         default: NoticeKind.INFO
     },
     data: {
