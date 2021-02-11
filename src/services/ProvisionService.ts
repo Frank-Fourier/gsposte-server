@@ -255,7 +255,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         const revenues = await Promise.all([ ...Array(currentMonth + 1).keys() ].map(month =>
             this.calculateRevenue(userId, {
                 month: month,
-                year: {
+                createdAt: {
                     $gte: new Date(year, 0, 1),
                     $lte: new Date(year, 11, 31)
                 }
