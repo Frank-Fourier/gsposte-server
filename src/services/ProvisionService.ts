@@ -253,7 +253,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
             .reduce((o, key) => ({ ...o, [key]: defaultRevenueMonth }), {} as Months);
 
         const revenues = await Promise.all([ ...Array(currentMonth + 1).keys() ].map(month =>
-            this.calculateRevenue(userId, { month }, {
+            this.calculateRevenue(userId, { month, year }, {
                 populate: [{
                     path: "letter",
                     select: "sendAt subject kind"

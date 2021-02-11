@@ -50,7 +50,7 @@ import { importPrices } from "../test_utils";
             expect((provision.referrers[1].user as UserDocument).id).to.equal(this.userB1.id);
             expect((provision.referrers[2].user as UserDocument).id).to.equal(this.userA.id);
 
-            expect(provision.spent).to.equal(5.5);
+            expect(provision.spent).to.equal(8.5);
             expect(provision.revenue).to.equal(0.75);
             expect(provision.referrers[0].amount).to.equal(0.6);
             expect(provision.referrers[1].amount).to.equal(0.075);
