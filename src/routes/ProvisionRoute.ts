@@ -134,6 +134,10 @@ export class ProvisionRoute extends Route {
              *         required: true
              *         in: path
              *         description: Mongo id of the user to aggregate revenues of
+             *       - name: year
+             *         required: false
+             *         in: query
+             *         description: Reference year (defaults to current year)
              *     responses:
              *       200:
              *         description: Aggregated monthly revenues for a user

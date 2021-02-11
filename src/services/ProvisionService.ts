@@ -217,7 +217,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         year = Number.isNaN(year) ? new Date().getFullYear() : year;
         const revenue = await this.calculateRevenue(userId, {
             createdAt: {
-                $gte: new Date(year, 1, 1),
+                $gte: new Date(year, 0, 1),
                 $lte: new Date(year, 11, 31)
             }
         }, {
@@ -241,11 +241,12 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * and forms a final object containing all revenues for each month for a specific user
      *
      * @param userId {string} User ID
+     * @param year {number} Reference year
      * @returns {Promise<RevenueMonths>} The object containing all months
      */
-    public async calculateRevenuesMonthly(userId: string): Promise<RevenueMonths> {
+    public async calculateRevenuesMonthly(userId: string, year: number): Promise<RevenueMonths> {
         const defaultRevenueMonth: RevenueMonth = { amount: 0, provisions: [] };
-        const currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth();
+        const currentMonth = year === new Date().getFullYear() ? new Date().getMonth() : 11;
 
         const months: Months = moment().locale("en").localeData().monthsShort()
             .map(m => m.toLowerCase())
@@ -260,7 +261,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
                     path: "referrers.user",
                     select: "username"
                 }]
-            }, month)
+            }, month, year)
         ));
 
         const revenueMonths = { ...months };
@@ -270,7 +271,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         });
 
         return {
-            year: currentYear,
+            year: year,
             total: Object.values(revenueMonths).reduce<number>((acc: number, cur: RevenueMonth) => acc + cur.amount, 0),
             ...revenueMonths
         };

@@ -152,7 +152,7 @@ import { importPrices } from "../test_utils";
             await this.provisionService.generateProvision(letterC1B2);
             await this.provisionService.generateProvision(letterC2B2);
 
-            const months = await this.provisionService.calculateRevenuesMonthly(this.userA.id);
+            const months = await this.provisionService.calculateRevenuesMonthly(this.userA.id, new Date().getFullYear());
             expect(months).to.exist;
 
             console.log(JSON.stringify(months, null, 4));

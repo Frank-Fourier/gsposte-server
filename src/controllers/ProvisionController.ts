@@ -42,7 +42,9 @@ export class ProvisionController {
         if (!req.params.userId) {
             throw new httpErrors.BadRequest("User ID is required.");
         }
-        const revenues = await this.provisionService.calculateRevenuesMonthly(req.params.userId);
+        const year = !!req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+
+        const revenues = await this.provisionService.calculateRevenuesMonthly(req.params.userId, year);
         return res.status(200).send(revenues);
     }
 
@@ -50,7 +52,9 @@ export class ProvisionController {
         if (!req.params.userId) {
             throw new httpErrors.BadRequest("User ID is required.");
         }
-        const revenues = await this.provisionService.calculateRevenueYearly(req.params.userId, parseInt(req.query.year));
+        const year = !!req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+
+        const revenues = await this.provisionService.calculateRevenueYearly(req.params.userId, year);
         return res.status(200).send(revenues);
     }
 
