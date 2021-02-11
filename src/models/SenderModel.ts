@@ -22,6 +22,7 @@ import { insert } from "@utils/misc";
  *       - description
  *       - address
  *       - businessName
+ *       - invoiceCode
  *     properties:
  *       user:
  *         type: string
@@ -86,11 +87,10 @@ export interface Sender {
     addressAR?: Address
     addressBill?: Address
     businessName: string
-    invoiceCode?: string
+    invoiceCode: string
     iva?: string
     cf?: string
     email?: string
-    pec?: string
     notes?: string
 }
 export interface SenderDocument extends Sender, Document {
@@ -106,11 +106,10 @@ export const senderDecoder: Decoder<Sender> = object({
     addressAR: optional(addressDecoder),
     addressBill: optional(addressDecoder),
     businessName: string(),
-    invoiceCode: optional(string()),
+    invoiceCode: string(),
     iva: optional(string()),
     cf: optional(string()),
     email: optional(string()),
-    pec: optional(string()),
     notes: optional(string()),
 });
 
@@ -159,10 +158,11 @@ export const SenderSchema = new Schema<Sender>({
     },
     businessName: {
         type: String,
-        required: "Business name is required",
+        required: "Business name is required.",
     },
     invoiceCode: {
         type: String,
+        required: "SDI Code is required.",
     },
     iva: {
         type: String,
@@ -173,12 +173,6 @@ export const SenderSchema = new Schema<Sender>({
         maxlength: 16,
     },
     email: {
-        type: String,
-        trim: true,
-        lowercase: true,
-        maxlength: 100,
-    },
-    pec: {
         type: String,
         trim: true,
         lowercase: true,
