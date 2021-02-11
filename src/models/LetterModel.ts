@@ -159,6 +159,8 @@ export interface LetterDocument extends Letter, Document {
         prices?: PriceResponse
         track?: TrackResponse
     }
+    createdAt: Date
+    updatedAt: Date
     /** REMOVED IN FAVOR OF POSTEWAY
     stats?: {
         status: number
