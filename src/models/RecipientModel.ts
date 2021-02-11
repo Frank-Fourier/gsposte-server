@@ -79,8 +79,8 @@ export function mapRecipientToPerson(recipient: RecipientDocument, notes?: strin
     const hasSpace = fullNameTrimmed.includes(" ");
     return {
         ...insert(hasSpace, {
-            name: fullNameTrimmed.split(" ")[0],
-            surname: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || ""
+            name: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
+            surname: fullNameTrimmed.split(" ")[0],
         }, {
             businessName: fullNameTrimmed
         }),

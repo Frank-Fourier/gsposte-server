@@ -330,7 +330,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             createdAt: createdAt.format("DD/MM/YYYY"),
             services: invoice.letters.map((letter: LetterDocument) => ({
                 name: `${letter.kind} ONLINE`,
-                data: moment(letter.createdAt).format("DD/MM/YYYY"),
+                date: moment(letter.createdAt).format("DD/MM/YYYY"),
                 description: letter.subject,
                 quantity: letter.recipients.length,
                 priceSingle: formatCurrency(letter.price),
