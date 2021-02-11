@@ -22,7 +22,6 @@ import { insert } from "@utils/misc";
  *       - description
  *       - address
  *       - businessName
- *       - invoiceCode
  *     properties:
  *       user:
  *         type: string
@@ -55,6 +54,9 @@ import { insert } from "@utils/misc";
  *       email:
  *         type: string
  *         example: giovanni.orciuolo1999@gmail.com
+ *       pec:
+ *         type: string
+ *         example: giovanni.orciuolo@pec.it
  *       notes:
  *         type: string
  *         example: Any additional notes you may have for this sender.
@@ -84,10 +86,11 @@ export interface Sender {
     addressAR?: Address
     addressBill?: Address
     businessName: string
-    invoiceCode: string
+    invoiceCode?: string
     iva?: string
     cf?: string
     email?: string
+    pec?: string
     notes?: string
 }
 export interface SenderDocument extends Sender, Document {
@@ -103,10 +106,11 @@ export const senderDecoder: Decoder<Sender> = object({
     addressAR: optional(addressDecoder),
     addressBill: optional(addressDecoder),
     businessName: string(),
-    invoiceCode: string(),
+    invoiceCode: optional(string()),
     iva: optional(string()),
     cf: optional(string()),
     email: optional(string()),
+    pec: optional(string()),
     notes: optional(string()),
 });
 
@@ -159,7 +163,6 @@ export const SenderSchema = new Schema<Sender>({
     },
     invoiceCode: {
         type: String,
-        required: "Invoice code is required",
     },
     iva: {
         type: String,
@@ -170,6 +173,12 @@ export const SenderSchema = new Schema<Sender>({
         maxlength: 16,
     },
     email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        maxlength: 100,
+    },
+    pec: {
         type: String,
         trim: true,
         lowercase: true,

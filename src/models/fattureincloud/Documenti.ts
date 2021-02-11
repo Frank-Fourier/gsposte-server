@@ -12,6 +12,8 @@ export namespace FIC {
      * https://api.fattureincloud.it/v1/documentation/dist/#!/Documenti_emessi/DocNuovo
      */
 
+    export const IBAN = "IT21L0301503200000003519941";
+
     export interface Auth {
         api_uid: string
         api_key: string
@@ -79,7 +81,7 @@ export namespace FIC {
         ddt_trasportatore?: string
         ddt_annotazioni?: string
         PA?: boolean
-        PA_tipo_cliente?: string
+        PA_tipo_cliente?: PA_TipoCliente
         PA_tipo?: string
         PA_numero?: string
         PA_data?: string
@@ -190,14 +192,14 @@ export namespace FIC {
             mostra_info_pagamento: true,
             metodo_pagamento: "Bonifico",
             metodo_titoloN: "IBAN",
-            metodo_descN: "IT21L0301503200000003519941",
+            metodo_descN: IBAN,
             mostra_totali: "tutti",
             lista_articoli: invoice.letters.map((letter: LetterDocument) => ({
                 nome: `${letter.kind} ONLINE`,
                 quantita: letter.recipients.length,
                 descrizione: letter.subject,
                 prezzo_netto: letter.price,
-                cod_iva: 0, // -> 22
+                cod_iva: 0, // Punta ad aliquota IVA 22% (Default)
             })),
             lista_pagamenti: [{
                 data_scadenza: expiresAt,
@@ -207,6 +209,17 @@ export namespace FIC {
             extra_anagrafica: {
                 mail: sender.email ?? "",
             },
+            // Anagrafica PA B2B
+            PA: true,
+            PA_tipo_cliente: PA_TipoCliente.B2B,
+            PA_numero: !isTestEnv() ? `${invoice.number.toString()}P` : "P",
+            PA_data: moment(invoice.createdAt).format("DD/MM/YYYY"),
+            PA_codice: sender.invoiceCode,
+            PA_pec: sender.pec,
+            PA_esigibilita: "N",
+            PA_modalita_pagamento: "MP05",
+            PA_iban: IBAN,
+            PA_beneficiario: "General Services SCC",
         };
     }
 
@@ -218,6 +231,10 @@ export namespace FIC {
 
     export enum TipoDoc {
         FATTURE = "fatture",
+    }
+    export enum PA_TipoCliente {
+        PA = "PA",
+        B2B = "B2B",
     }
 
 }
