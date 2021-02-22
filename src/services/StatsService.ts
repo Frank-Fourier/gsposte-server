@@ -171,9 +171,10 @@ export class StatsService {
      *
      * @param user {UserDocument} User to fetch stats for
      * @param year {number} Optional year to calculate stats for. If not passed, it gets all the letters
+     * @param sendAtQuery {object} Whatever query for letter sendAt. Considered if year is falsy
      * @returns {Promise<Stats>} Object containing stats for the user
      */
-    public async fetchStats(user: UserDocument, year?: number): Promise<Stats> {
+    public async fetchStats(user: UserDocument, year?: number, sendAtQuery?: object): Promise<Stats> {
         const letters = await this.letterService.find({
             ...insert(!user.isAdmin(), {
                 user: user.id
@@ -183,6 +184,8 @@ export class StatsService {
                     $gte: `${year}-01-01`,
                     $lte: `${year}-12-31`
                 }
+            }, {
+                sendAt: sendAtQuery
             }),
             error: { $ne: true },
             posteway: { $exists: true }

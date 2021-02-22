@@ -29,6 +29,14 @@ export class StatsRoute extends Route {
              *         required: false
              *         in: path
              *         description: Optional year to get the stats for. If omitted, it considers ALL the letters sent by this user
+             *       - name: gte
+             *         required: false
+             *         in: query
+             *         description: Optional GTE value for sendAt. Considered if year is not passed
+             *       - name: lte
+             *         required: false
+             *         in: query
+             *         description: Optional LTE value for sendAt. Considered if year is not passed
              *     responses:
              *       200:
              *         description: Stats
