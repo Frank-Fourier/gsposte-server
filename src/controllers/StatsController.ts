@@ -17,7 +17,7 @@ export class StatsController {
             throw new Forbidden("You are not allowed to request stats for other users!");
         }
 
-        const year = !!req.params.year ? parseInt(req.params.year) : null;
+        const year = !!req.query.year ? parseInt(req.query.year) : null;
         const stats = await this.statsService.fetchStats(user, year, {
             $gte: req.query.gte, $lte: req.query.lte
         });

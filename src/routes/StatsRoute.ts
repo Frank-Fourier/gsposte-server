@@ -27,7 +27,7 @@ export class StatsRoute extends Route {
              *         description: Mongo id of the user to get stats for
              *       - name: year
              *         required: false
-             *         in: path
+             *         in: query
              *         description: Optional year to get the stats for. If omitted, it considers ALL the letters sent by this user
              *       - name: gte
              *         required: false
@@ -50,7 +50,7 @@ export class StatsRoute extends Route {
              *         description: You are not allowed to get statistics of other users!
              */
             {
-                path: "/user/:id/:year",
+                path: "/user/:id",
                 method: RequestMethod.GET,
                 requiresAuth: true,
                 handler: (req, res) => this.statsController.fetchStatsForUser(req, res)
