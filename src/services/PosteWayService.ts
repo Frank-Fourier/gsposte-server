@@ -53,9 +53,9 @@ export class PosteWayService {
         return this.call("/confirm", JSON.stringify({ kind, requestId }), "POST", { "Content-Type": "application/json" });
     }
 
-    public async cancel(kind: SubmitKind, requestId: string): Promise<void> {
-        return this.call("/cancel", JSON.stringify({ kind, requestId }), "DELETE", { "Content-Type": "application/json" });
-    }
+    // public async cancel(kind: SubmitKind, requestId: string): Promise<void> {
+    //     return this.call("/cancel", JSON.stringify({ kind, requestId }), "DELETE", { "Content-Type": "application/json" });
+    // }
 
     public async track(kind: SubmitKind, orderId: string): Promise<TrackResponse> {
         return this.call(`/track/${kind}/${orderId}`);

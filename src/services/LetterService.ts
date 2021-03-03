@@ -154,6 +154,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
          *
          * - Per prima cosa marchio la lettera come inviata (sent impostato a true);
          * - Determino se la lettera è una LOL o una ROL e controllo se il suo file PDF associato esiste;
+         * - Se la lettera è una Raccomandata UNO, skippa tutto e termina la chiamata;
          * - Se il PDF non esiste tiro l'errore e informo il client WS in ascolto;
          * - Chiamo PosteWay per effettuare l'upload, se va in errore tiro e informo il WS client;
          * - Chiamo PosteWay per effettuare l'invio, se va in errore tiro e informo il WS client;
@@ -169,6 +170,29 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
          */
         logger.info(`===== SENDING LETTER '${letter.codePdf}' =====`);
         let updated = await this.updateById(letter.id, { $set: { sent: true }});
+
+        let kind: "lol" | "rol" | "runo";
+        switch (letter.kind) {
+            case LetterKind.LETTERA_SEMPLICE:
+            case LetterKind.LETTERA_PRIORITARIA:
+                kind = "lol";
+                break;
+            case LetterKind.RACCOMANDATA:
+            case LetterKind.RACCOMANDATA_AR:
+                kind = "rol";
+                break;
+            case LetterKind.RACCOMANDATA_UNO:
+            case LetterKind.RACCOMANDATA_UNO_AR:
+                kind = "runo";
+                break;
+        }
+
+        if (!kind || kind === "runo") {
+            logger.info(`[LETTER ${letter.codePdf}] is a RACCOMANDATA UNO! Can't send through PosteWay.`);
+            logFile?.info(`This letter is a RACCOMANDATA UNO! Can't send through PosteWay.`);
+            return updated;
+        }
+
         const userId = letter.depopulate("user").user.toString();
         letter = await letter.populate("sender recipients").execPopulate();
 
@@ -323,7 +347,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         };
 
         try {
-            const kind = (letter.kind === LetterKind.LETTERA_SEMPLICE || letter.kind === LetterKind.LETTERA_PRIORITARIA) ? "lol" : "rol";
             const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
             const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
 

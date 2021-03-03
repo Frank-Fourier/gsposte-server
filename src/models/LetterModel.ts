@@ -21,7 +21,9 @@ export enum LetterKind {
     "LETTERA_SEMPLICE" = "LETTERA SEMPLICE",
     "LETTERA_PRIORITARIA" = "LETTERA PRIORITARIA",
     "RACCOMANDATA" = "RACCOMANDATA",
-    "RACCOMANDATA_AR" = "RACCOMANDATA AR"
+    "RACCOMANDATA_AR" = "RACCOMANDATA AR",
+    "RACCOMANDATA_UNO" = "RACCOMANDATA UNO",
+    "RACCOMANDATA_UNO_AR" = "RACCOMANDATA UNO AR",
 }
 
 /**
@@ -194,6 +196,8 @@ export const letterDecoder: Decoder<Letter> = object({
         constant(LetterKind.LETTERA_PRIORITARIA),
         constant(LetterKind.RACCOMANDATA),
         constant(LetterKind.RACCOMANDATA_AR),
+        constant(LetterKind.RACCOMANDATA_UNO),
+        constant(LetterKind.RACCOMANDATA_UNO_AR),
     ),
     codePdf: string(),
     bw: optional(boolean()),
@@ -243,7 +247,14 @@ export const LetterSchema = new Schema<Letter>({
     },
     kind: {
         type: String,
-        enum: [ LetterKind.LETTERA_SEMPLICE, LetterKind.LETTERA_PRIORITARIA, LetterKind.RACCOMANDATA, LetterKind.RACCOMANDATA_AR ],
+        enum: [
+            LetterKind.LETTERA_SEMPLICE,
+            LetterKind.LETTERA_PRIORITARIA,
+            LetterKind.RACCOMANDATA,
+            LetterKind.RACCOMANDATA_AR,
+            LetterKind.RACCOMANDATA_UNO,
+            LetterKind.RACCOMANDATA_UNO_AR,
+        ],
         required: "Letter kind is required.",
     },
     codePdf: {
