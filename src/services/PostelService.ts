@@ -194,6 +194,8 @@ export const WorkProcessID = {
     "LETTERA PRIORITARIA": "0",
     "RACCOMANDATA": "1089026",
     "RACCOMANDATA AR": "1089024",
+    "RACCOMANDATA UNO": "0",
+    "RACCOMANDATA UNO AR": "0",
 };
 
 export enum PostelStatus {
