@@ -6,12 +6,15 @@ import { User, UserPasswordUpdate, userPasswordUpdateDecoder } from "@models/Use
 import { logger } from "@utils/winston";
 import httpErrors from "http-errors";
 import { CrudController } from "@controllers/CrudController";
+import { isTestEnv } from "@utils/system";
+import { MailService } from "@services/MailService";
 
 @provide(UserController)
 export class UserController extends CrudController {
 
     constructor(
         @inject(UserService) private userService: UserService,
+        @inject(MailService) private mailService: MailService,
     ) {
         super(userService, false, true);
     }
@@ -32,6 +35,10 @@ export class UserController extends CrudController {
         const user = req.body as User;
         logger.info(`Trying to register a new user named ${user.username}...`);
         const newUser = await this.userService.save(user);
+
+        if (!isTestEnv()) {
+            this.mailService.sendRegistrationMail(newUser);
+        }
 
         return res.status(201).send(newUser);
     }
