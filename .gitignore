@@ -25,6 +25,7 @@ public/xlsx/
 public/invoices/
 public/attachments/
 public/logs/
+public/images/
 
 # Lock files
 .~lock.*

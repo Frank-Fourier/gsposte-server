@@ -58,6 +58,9 @@ export enum UserRoles {
  *             - "ROLE_USER"
  *             - "ROLE_TV_MANAGER"
  *             - "ROLE_ADMIN"
+ *       avatar:
+ *         type: string
+ *         description: Avatar URL
  *   UserDocument:
  *     allOf:
  *       - $ref: '#/definitions/User'
@@ -88,8 +91,9 @@ export interface User {
     active?: boolean
     address?: Address
     roles?: Array<UserRoles>
-    isAdmin?: () => boolean;
-    isTvManager?: () => boolean;
+    avatar?: string
+    isAdmin?: () => boolean
+    isTvManager?: () => boolean
 }
 export interface UserDocument extends User, Document {
     address?: AddressDocument
@@ -108,6 +112,7 @@ export const userDecoder: Decoder<User> = object({
         constant(UserRoles.ROLE_TV_MANAGER),
         constant(UserRoles.ROLE_ADMIN)
     ))),
+    avatar: optional(string()),
 });
 
 /**
@@ -182,6 +187,9 @@ export const UserSchema = new Schema<User>({
         type: [ String ],
         enum: [ UserRoles.ROLE_USER, UserRoles.ROLE_TV_MANAGER, UserRoles.ROLE_ADMIN ],
         default: [ UserRoles.ROLE_USER ]
+    },
+    avatar: {
+        type: String,
     },
 }, {
     timestamps: {

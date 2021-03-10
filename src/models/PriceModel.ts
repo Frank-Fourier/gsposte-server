@@ -28,12 +28,13 @@ import { LetterKind } from "@models/LetterModel";
  *         description: Max weight (must be > 0 and should be > minWeight) [grams]
  *       kind:
  *         type: string
- *         description: The letter kind of this price range. Can be "LETTERA SEMPLICE", "RACCOMANDATA" or "RACCOMANDATA AR".
+ *         description: The letter kind of this price range. Can be "LETTERA SEMPLICE", "RACCOMANDATA", "RACCOMANDATA AR" or "RACCOMANDATA UNO".
  *         example: "RACCOMANDATA"
  *         enum:
  *           - "LETTERA SEMPLICE"
  *           - "RACCOMANDATA"
  *           - "RACCOMANDATA AR"
+ *           - "RACCOMANDATA UNO"
  *       extra:
  *         type: string
  *         description: Extra price to add to base price. Defaults to 0.
@@ -70,6 +71,7 @@ export const priceDecoder: Decoder<Price> = object({
         constant(LetterKind.LETTERA_SEMPLICE),
         constant(LetterKind.RACCOMANDATA),
         constant(LetterKind.RACCOMANDATA_AR),
+        constant(LetterKind.RACCOMANDATA_UNO),
     ),
     extra: optional(number()),
 });
@@ -92,7 +94,12 @@ export const PriceSchema = new Schema<Price>({
     },
     kind: {
         type: String,
-        enum: [ LetterKind.LETTERA_SEMPLICE, LetterKind.RACCOMANDATA, LetterKind.RACCOMANDATA_AR ],
+        enum: [
+            LetterKind.LETTERA_SEMPLICE,
+            LetterKind.RACCOMANDATA,
+            LetterKind.RACCOMANDATA_AR,
+            LetterKind.RACCOMANDATA_UNO,
+        ],
         required: "Kind is required.",
     },
     extra: {

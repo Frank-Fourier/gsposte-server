@@ -34,6 +34,7 @@ import { swaggerUi, serveSwagger } from "@utils/swagger";
 import { generateSystemUser } from "@utils/system";
 import { queryJob, uploadJob } from "@utils/cron";
 import { initializeWebSocketServer, WebSocketClient } from "@utils/websockets";
+import { ImageRoute } from "@routes/ImageRoute";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -56,6 +57,7 @@ export class ExpressServer {
         ioc.resolve(StatsRoute),
         ioc.resolve(ProvisionRoute),
         ioc.resolve(NoticeRoute),
+        ioc.resolve(ImageRoute),
     ];
 
     constructor(
@@ -92,9 +94,10 @@ export class ExpressServer {
         this.app.disable("x-powered-by");
 
         // STATIC FILES ROUTES
-        this.app.use("/documents", express.static("public/pdf"));
-        this.app.use("/invoices", express.static("public/invoices"));
-        this.app.use("/attachments", express.static("public/attachments"));
+        this.app.use("/documents", express.static(process.env.PDF_ROOT || "public/pdf"));
+        this.app.use("/invoices", express.static(process.env.INVOICES_ROOT || "public/invoices"));
+        this.app.use("/attachments", express.static(process.env.ATTACHMENTS_ROOT || "public/attachments"));
+        this.app.use("/images", express.static(process.env.IMAGES_ROOT || "public/images"));
 
         spinner && spinner.succeed();
     }

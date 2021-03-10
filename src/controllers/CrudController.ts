@@ -13,7 +13,7 @@ export class CrudController {
 
     constructor(
         @unmanaged() private service: MongoRepository<object, Document>,
-        @unmanaged() protected userBased: boolean = false,
+        @unmanaged() protected userBased: boolean = false, // If true, a requesting user (if not admin) can't see other user's entities
         @unmanaged() protected readOnly: boolean = false, // If true, only admins can create/update/delete
         @unmanaged() protected accessRole: UserRoles = UserRoles.ROLE_USER,
     ) {}
