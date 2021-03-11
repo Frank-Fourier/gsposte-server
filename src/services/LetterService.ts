@@ -219,7 +219,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     options: {
                         bw: letter.bw || true,
                         backSide: letter.backSide || true,
-                        ar: letter.kind === LetterKind.RACCOMANDATA_AR,
+                        ar: letter.kind === LetterKind.RACCOMANDATA_UNO_AR,
                     }
                 })), pdf
             );
