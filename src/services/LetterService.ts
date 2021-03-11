@@ -225,7 +225,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             );
 
             const net = letters.reduce((acc: number, cur: PW_LetterDocument) => acc + cur.price, 0);
-            const tax = net + (net * 22) / 100;
+            const tax = (net * 22) / 100;
             const tot = net + tax;
 
             // Update letter's PosteWay object and return
