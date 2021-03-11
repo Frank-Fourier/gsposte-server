@@ -1,4 +1,4 @@
-export type SubmitKind = "lol" | "rol";
+export type SubmitKind = "lol" | "rol" | "runo";
 
 export type AddressKind = "normal" | "postal";
 
@@ -113,4 +113,79 @@ export interface ConfirmResponse {
 export interface Recipient {
     id: string
     person: Person
+}
+
+export interface SoapCredentials {
+    username: string
+    password: string
+    test?: boolean
+}
+
+export interface ApiToken {
+    code: string
+    expiresAt: Date
+    enabled: boolean
+}
+
+export enum PW_UserRoles {
+    ROLE_USER = "ROLE_USER",
+    ROLE_PRINTER = "ROLE_PRINTER",
+    ROLE_ADMIN = "ROLE_ADMIN",
+}
+
+export interface PW_User {
+    businessName: string
+    email: string
+    password: string
+    iva: string
+    roles: PW_UserRoles[]
+    credentials?: SoapCredentials
+    tokens?: Array<ApiToken>
+    active: boolean
+    sender?: string | PW_User
+}
+
+export enum LetterWorkStatus {
+    WAITING = "IN ATTESA",
+    PRINTED = "STAMPATA",
+    SENT = "INVIATA",
+}
+
+export interface PW_Letter {
+    user?: string | PW_User
+    platform: string
+    code: string
+    kind: SubmitKind
+    sender: Person
+    recipient: Person
+    recipientAR?: Person
+    avatarUrl?: string
+    pdf: string
+    options: {
+        bw?: boolean
+        backSide?: boolean
+        ar?: boolean
+    }
+}
+
+export interface PW_LetterDocument extends PW_Letter {
+    _id: string
+    status: LetterWorkStatus
+    price: number
+    tracking?: string
+}
+
+export interface PW_PaginateResult<T> {
+    docs: T[];
+    totalDocs: number;
+    limit: number;
+    page?: number;
+    totalPages: number;
+    nextPage?: number | null;
+    prevPage?: number | null;
+    pagingCounter: number;
+    hasPrevPage: boolean;
+    hasNextPage: boolean;
+    meta?: any;
+    [customLabel: string]: T[] | number | boolean | null | undefined;
 }

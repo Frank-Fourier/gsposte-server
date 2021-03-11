@@ -10,8 +10,15 @@ import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel"
 import { createLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
-import { ConfirmResponse, StatusResponse, SubmitKind, SubmitResponse, TrackResponse } from "../posteway";
-import { isTestEnv } from "@utils/system";
+import {
+    ConfirmResponse,
+    PW_LetterDocument,
+    StatusResponse,
+    SubmitKind,
+    SubmitResponse,
+    TrackResponse
+} from "../posteway";
+import { isProdEnv, isTestEnv } from "@utils/system";
 import { ProvisionService } from "@services/ProvisionService";
 import { NoticeKind } from "@models/NoticeModel";
 import winston from "winston";
@@ -67,6 +74,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         }
 
         return updated;
+    }
+
+    public getOriginalPdfLink(letter: LetterDocument): string | null {
+        if (!letter.codePdf) {
+            return null;
+        }
+        const baseUrl = `${process.env.SERVER_HOST}${isProdEnv() ? "" : `:${process.env.SERVER_PORT}`}`;
+        return `${baseUrl}/documents/${letter.codePdf}/original.pdf`;
     }
 
     /**
@@ -144,57 +159,101 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      * Sends a letter through PosteWay, confirms it, updates everything on the document,
      * and finally returns the updated document with all the info about the order.
      *
+     * LOGICA DI INVIO DELLA LETTERA
+     *
+     * - Per prima cosa marchio la lettera come inviata (sent impostato a true);
+     * - Determino se la lettera è una LOL o una ROL e controllo se il suo file PDF associato esiste;
+     * - Se la lettera è una Raccomandata UNO, entra nel circuito PosteWay Coda di Stampa e ritorna;
+     * - Se il PDF non esiste tiro l'errore e informo il client WS in ascolto;
+     * - Chiamo PosteWay per effettuare l'upload, se va in errore tiro e informo il WS client;
+     * - Chiamo PosteWay per effettuare l'invio, se va in errore tiro e informo il WS client;
+     * - Se la risposta della chiamata di invio non è OK, tiro e informo il WS client;
+     * - Chiamo confirmAndTrackLetter, che si occuperà di aspettare i 60 secondi e poi confermare e tracciare l'invio;
+     * - La chiamata normale finisce;
+     * - Dentro confirmAndTrackLetter, si aspettano 60 secondi;
+     * - Chiamo PosteWay per effettuare la conferma, se va in errore tiro e informo il WS client;
+     * - Chiamo PosteWay per effettuare il tracking della lettera, se va in errore tiro e informo il WS client;
+     * - Aggiorno l'oggetto letter salvato nel database per includere tutte le info che ho preso da PosteWay;
+     * - Calcolo e salvo la provvigione, e la associo alla lettera;
+     * - Informo il WS client che la procedura di invio è andata a buon fine, ritornando la lettera aggiornata.
+     *
+     *
      * @param letter {LetterDocument}
      * @param logFile {winston.Logger}
      * @returns {Promise<LetterDocument>} Updated document containing an up-to-date posteway object
      */
     public async sendLetter(letter: LetterDocument, logFile?: winston.Logger): Promise<LetterDocument> {
-        /**
-         * LOGICA DI INVIO DELLA LETTERA
-         *
-         * - Per prima cosa marchio la lettera come inviata (sent impostato a true);
-         * - Determino se la lettera è una LOL o una ROL e controllo se il suo file PDF associato esiste;
-         * - Se la lettera è una Raccomandata UNO, skippa tutto e termina la chiamata;
-         * - Se il PDF non esiste tiro l'errore e informo il client WS in ascolto;
-         * - Chiamo PosteWay per effettuare l'upload, se va in errore tiro e informo il WS client;
-         * - Chiamo PosteWay per effettuare l'invio, se va in errore tiro e informo il WS client;
-         * - Se la risposta della chiamata di invio non è OK, tiro e informo il WS client;
-         * - Chiamo confirmAndTrackLetter, che si occuperà di aspettare i 60 secondi e poi confermare e tracciare l'invio;
-         * - La chiamata normale finisce;
-         * - Dentro confirmAndTrackLetter, si aspettano 60 secondi;
-         * - Chiamo PosteWay per effettuare la conferma, se va in errore tiro e informo il WS client;
-         * - Chiamo PosteWay per effettuare il tracking della lettera, se va in errore tiro e informo il WS client;
-         * - Aggiorno l'oggetto letter salvato nel database per includere tutte le info che ho preso da PosteWay;
-         * - Calcolo e salvo la provvigione, e la associo alla lettera;
-         * - Informo il WS client che la procedura di invio è andata a buon fine, ritornando la lettera aggiornata.
-         */
         logger.info(`===== SENDING LETTER '${letter.codePdf}' =====`);
         let updated = await this.updateById(letter.id, { $set: { sent: true }});
 
-        let kind: "lol" | "rol" | "runo";
-        switch (letter.kind) {
-            case LetterKind.LETTERA_SEMPLICE:
-            case LetterKind.LETTERA_PRIORITARIA:
-                kind = "lol";
-                break;
-            case LetterKind.RACCOMANDATA:
-            case LetterKind.RACCOMANDATA_AR:
-                kind = "rol";
-                break;
-            case LetterKind.RACCOMANDATA_UNO:
-            case LetterKind.RACCOMANDATA_UNO_AR:
-                kind = "runo";
-                break;
-        }
+        const kind = this.chooseSubmitKind(letter.kind);
 
-        if (!kind || kind === "runo") {
-            logger.info(`[LETTER ${letter.codePdf}] is a RACCOMANDATA UNO! Can't send through PosteWay.`);
-            logFile?.info(`This letter is a RACCOMANDATA UNO! Can't send through PosteWay.`);
+        if (!kind) {
+            logger.info(`[LETTER ${letter.codePdf}] Unrecognized kind. Letter kind is ${letter.kind}. Can't send letter.`);
+            logFile?.info(`Unrecognized kind. Letter kind is ${letter.kind}. Can't send letter.`);
             return updated;
         }
 
         const userId = letter.depopulate("user").user.toString();
         letter = await letter.populate("sender recipients").execPopulate();
+
+        if (kind === "runo") {
+            // Enter CDS lane, create bulk letters (order is preserved in Promise.all)
+            const pdf = this.getOriginalPdfLink(letter);
+            const { pages, letters } = await this.posteway.cds_create_bulk(
+                letter.recipients.map((recipient: RecipientDocument) => ({
+                    platform: "GSPoste",
+                    code: letter.codePdf,
+                    kind: kind,
+                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.subject),
+                    recipient: mapRecipientToPerson(recipient),
+                    recipientAR: letter.recipientAR ? {
+                        ...letter.recipientAR,
+                        notes: letter.subject
+                    } : (
+                        (letter.sender as SenderDocument).addressAR
+                            ? mapSenderToPerson(letter.sender as SenderDocument, letter.subject, true)
+                            : undefined
+                    ),
+                    pdf: pdf,
+                    options: {
+                        bw: letter.bw || true,
+                        backSide: letter.backSide || true,
+                        ar: letter.kind === LetterKind.RACCOMANDATA_AR,
+                    }
+                })), pdf
+            );
+
+            const net = letters.reduce((acc: number, cur: PW_LetterDocument) => acc + cur.price, 0);
+            const tax = net + (net * 22) / 100;
+            const tot = net + tax;
+
+            // Update letter's PosteWay object and return
+            updated = await this.updateById(updated.id, {
+                $set: {
+                    posteway: {
+                        prices: {
+                            pages: pages,
+                            total: {
+                                cur: "EUR",
+                                net, tax, tot
+                            }
+                        },
+                        track: {
+                            recipients: letters.map(letter => ({
+                                id: letter._id,
+                                person: letter.recipient,
+                                tracking: {
+                                    number: letter.tracking,
+                                    status: letter.status,
+                                }
+                            }))
+                        }
+                    }
+                }
+            }, false, false);
+            return updated;
+        }
 
         const confirmAndTrackLetter = async (submit: SubmitResponse, kind: SubmitKind) => {
             try {
@@ -467,10 +526,32 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      */
     public async queryLetter(letter: LetterDocument): Promise<LetterDocument> {
         logger.info(`===== QUERYING LETTER '${letter.codePdf}' =====`);
+
+        const kind = this.chooseSubmitKind(letter.kind);
+        if (kind === "runo") {
+            // Need to query this from CDS (since it's a RUNO)
+            const { docs } = await this.posteway.cds_find(letter.codePdf);
+            return this.updateById(letter.id, {
+                $set: {
+                    "posteway.track": {
+                        recipients: docs.map(letter => ({
+                            id: letter._id,
+                            person: letter.recipient,
+                            tracking: {
+                                number: letter.tracking,
+                                status: letter.status,
+                            }
+                        }))
+                    }
+                }
+            });
+        }
+
+        // Query from Poste Italiane in case of LOL/ROL
         const { requestId, orderId } = letter.posteway;
 
-        const track = await this.posteway.track(letter.kind !== LetterKind.LETTERA_SEMPLICE ? "rol" : "lol", orderId);
-        const status = await this.posteway.status(letter.kind !== LetterKind.LETTERA_SEMPLICE ? "rol" : "lol", requestId).catch(() => null);
+        const track = await this.posteway.track(kind, orderId);
+        const status = await this.posteway.status(kind, requestId).catch(() => null);
 
        const temporary = {
            // Do not update prices if the status call errored
@@ -479,6 +560,20 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
        };
 
         return this.updateById(letter.id, temporary, false, false);
+    }
+
+    private chooseSubmitKind(kind: LetterKind): SubmitKind {
+        switch (kind) {
+            case LetterKind.LETTERA_SEMPLICE:
+            case LetterKind.LETTERA_PRIORITARIA:
+                return "lol";
+            case LetterKind.RACCOMANDATA:
+            case LetterKind.RACCOMANDATA_AR:
+                return "rol";
+            case LetterKind.RACCOMANDATA_UNO:
+            case LetterKind.RACCOMANDATA_UNO_AR:
+                return "runo";
+        }
     }
 
     /**

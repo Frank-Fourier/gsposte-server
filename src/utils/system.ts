@@ -24,3 +24,6 @@ export async function generateSystemUser(): Promise<UserDocument> {
 export function isTestEnv(): boolean {
     return process.env.NODE_ENV === "test";
 }
+export function isProdEnv(): boolean {
+    return process.env.NODE_ENV === "production";
+}

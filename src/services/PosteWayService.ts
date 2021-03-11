@@ -1,6 +1,8 @@
 import { provide } from "inversify-binding-decorators";
 import {
     ConfirmResponse,
+    PW_Letter,
+    PW_LetterDocument, PW_PaginateResult,
     Recipient,
     StatusResponse,
     Submit,
@@ -15,10 +17,49 @@ import FormData from "form-data";
 @provide(PosteWayService)
 export class PosteWayService {
 
-    private async call(path: string, body?: any, method?: string, headers?: { [key: string]: string }): Promise<any> {
+    upload(pdf: ReadStream): Promise<{ cid: string }> {
+        const form = new FormData();
+        form.append("file", pdf, { contentType: "application/pdf" });
+
+        return this.call("/upload", form, "POST");
+    }
+
+    send(submit: Submit): Promise<SubmitResponse> {
+        return this.call("/send", submit, "POST", { "Content-Type": "application/json" });
+    }
+
+    status(kind: SubmitKind, requestId: string): Promise<StatusResponse> {
+        return this.call(`/status/${kind}/${requestId}`);
+    }
+
+    confirm(kind: SubmitKind, requestId: string): Promise<ConfirmResponse> {
+        return this.call("/confirm", { kind, requestId }, "POST", { "Content-Type": "application/json" });
+    }
+
+    // public async cancel(kind: SubmitKind, requestId: string): Promise<void> {
+    //     return this.call("/cancel", { kind, requestId }, "DELETE", { "Content-Type": "application/json" });
+    // }
+
+    track(kind: SubmitKind, orderId: string): Promise<TrackResponse> {
+        return this.call(`/track/${kind}/${orderId}`);
+    }
+
+    recipients(kind: SubmitKind, requestId: string): Promise<Recipient[]> {
+        return this.call(`/recipients/${kind}/${requestId}`);
+    }
+
+    cds_create_bulk(letters: PW_Letter[], pdf: string): Promise<{ letters: PW_LetterDocument[], pages: number }> {
+        return this.call(`/letter/bulk`, { letters, pdf }, "POST", { "Content-Type": "application/json" })
+    }
+
+    cds_find(code: string): Promise<PW_PaginateResult<PW_LetterDocument>> {
+        return this.call(`/letter/query`, { query: { code }, pagination: false }, "POST", { "Content-Type": "application/json" });
+    }
+
+    private async call<T = any>(path: string, body?: any, method?: string, headers?: { [key: string]: string }): Promise<T> {
         const res = await fetch(`${process.env.PW_ENDPOINT}${path}`, {
             method: method || "GET",
-            body: body,
+            body: JSON.stringify(body),
             headers: {
                 "PW-AccessToken": process.env.PW_TOKEN,
                 ...(headers || {})
@@ -32,37 +73,6 @@ export class PosteWayService {
             };
         }
         return json;
-    }
-
-    public async upload(pdf: ReadStream): Promise<{ cid: string }> {
-        const form = new FormData();
-        form.append("file", pdf, { contentType: "application/pdf" });
-
-        return this.call("/upload", form, "POST");
-    }
-
-    public async send(submit: Submit): Promise<SubmitResponse> {
-        return this.call("/send", JSON.stringify(submit), "POST", { "Content-Type": "application/json" });
-    }
-
-    public async status(kind: SubmitKind, requestId: string): Promise<StatusResponse> {
-        return this.call(`/status/${kind}/${requestId}`);
-    }
-
-    public async confirm(kind: SubmitKind, requestId: string): Promise<ConfirmResponse> {
-        return this.call("/confirm", JSON.stringify({ kind, requestId }), "POST", { "Content-Type": "application/json" });
-    }
-
-    // public async cancel(kind: SubmitKind, requestId: string): Promise<void> {
-    //     return this.call("/cancel", JSON.stringify({ kind, requestId }), "DELETE", { "Content-Type": "application/json" });
-    // }
-
-    public async track(kind: SubmitKind, orderId: string): Promise<TrackResponse> {
-        return this.call(`/track/${kind}/${orderId}`);
-    }
-
-    public async recipients(kind: SubmitKind, requestId: string): Promise<Recipient[]> {
-        return this.call(`/recipients/${kind}/${requestId}`);
     }
 
 }
