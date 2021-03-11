@@ -72,6 +72,7 @@ export const priceDecoder: Decoder<Price> = object({
         constant(LetterKind.RACCOMANDATA),
         constant(LetterKind.RACCOMANDATA_AR),
         constant(LetterKind.RACCOMANDATA_UNO),
+        constant(LetterKind.RACCOMANDATA_UNO_AR),
     ),
     extra: optional(number()),
 });
@@ -99,6 +100,7 @@ export const PriceSchema = new Schema<Price>({
             LetterKind.RACCOMANDATA,
             LetterKind.RACCOMANDATA_AR,
             LetterKind.RACCOMANDATA_UNO,
+            LetterKind.RACCOMANDATA_UNO_AR,
         ],
         required: "Kind is required.",
     },

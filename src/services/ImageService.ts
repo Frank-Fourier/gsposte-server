@@ -21,7 +21,7 @@ const uploader = multer({
     }),
     limits: {
         files: 1,
-        fileSize: 100 * 1000 * 1000 // ~100MB
+        fileSize: 2 * 1000 * 1000 // ~2MB
     },
     // The file filter will only accept image files
     fileFilter(req: Request, file: Express.Multer.File, callback: (error: (Error | null), acceptFile: boolean) => void): void {
@@ -45,7 +45,7 @@ export class ImageService {
                         case "LIMIT_FILE_COUNT":
                             return reject(new httpErrors.BadRequest("More than one file field was passed to this upload request."));
                         case "LIMIT_FILE_SIZE":
-                            return reject(new httpErrors.PayloadTooLarge("The provided file is too heavy. Only file sizes < 100MB are acceptable for upload."));
+                            return reject(new httpErrors.PayloadTooLarge("The provided file is too heavy. Only file sizes < 2MB are acceptable for upload."));
                         case "LIMIT_UNEXPECTED_FILE":
                             return reject(new httpErrors.NotAcceptable("Only image files are acceptable for upload."));
                     }
