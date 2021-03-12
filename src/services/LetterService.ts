@@ -11,7 +11,7 @@ import { createLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
 import {
-    ConfirmResponse,
+    ConfirmResponse, PW_Letter,
     PW_LetterDocument,
     StatusResponse,
     SubmitKind,
@@ -24,6 +24,7 @@ import { NoticeKind } from "@models/NoticeModel";
 import winston from "winston";
 import moment from "moment";
 import fs from "fs";
+import { UserDocument } from "@models/UserModel";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -189,19 +190,27 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         const kind = this.chooseSubmitKind(letter.kind);
 
         if (!kind) {
-            logger.info(`[LETTER ${letter.codePdf}] Unrecognized kind. Letter kind is ${letter.kind}. Can't send letter.`);
-            logFile?.info(`Unrecognized kind. Letter kind is ${letter.kind}. Can't send letter.`);
+            logger.error(`[LETTER ${letter.codePdf}] Unrecognized kind. Letter kind is ${letter.kind}. Can't send letter.`);
+            logFile?.error(`Unrecognized kind. Letter kind is ${letter.kind}. Can't send letter.`);
             return updated;
         }
 
-        const userId = letter.depopulate("user").user.toString();
-        letter = await letter.populate("sender recipients").execPopulate();
+        // Populate needed fields
+        letter = await letter.populate("user sender recipients").execPopulate();
+
+        const user = letter.user as UserDocument;
+        const userId = user?.id;
+        if (!userId) {
+            logger.error(`[LETTER ${letter.codePdf}] No user associated. Can't send letter.`);
+            logFile?.error(`No user associated. Can't send letter.`);
+            return updated;
+        }
 
         if (kind === "runo") {
             // Enter CDS lane, create bulk letters (order is preserved in Promise.all)
             const pdf = this.getOriginalPdfLink(letter);
             const { pages, letters } = await this.posteway.cds_create_bulk(
-                letter.recipients.map((recipient: RecipientDocument) => ({
+                letter.recipients.map<PW_Letter>((recipient: RecipientDocument) => ({
                     platform: "GSPoste",
                     code: letter.codePdf,
                     kind: kind,
@@ -220,7 +229,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         bw: letter.bw || true,
                         backSide: letter.backSide || true,
                         ar: letter.kind === LetterKind.RACCOMANDATA_UNO_AR,
-                    }
+                    },
+                    avatarUrl: user.avatar,
                 })), pdf
             );
 
