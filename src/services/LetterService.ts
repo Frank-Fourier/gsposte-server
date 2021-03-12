@@ -226,8 +226,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     ),
                     pdf: pdf,
                     options: {
-                        bw: letter.bw || true,
-                        backSide: letter.backSide || true,
+                        bw: letter.bw ?? true,
+                        backSide: letter.backSide ?? true,
                         ar: letter.kind === LetterKind.RACCOMANDATA_UNO_AR,
                     },
                     avatarUrl: user.avatar,
@@ -474,8 +474,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     ),
                     cid: cid,
                     options: {
-                        bw: letter.bw || false,
-                        backSide: letter.backSide || true,
+                        bw: letter.bw ?? false,
+                        backSide: letter.backSide ?? true,
                         foreign: false, // Needs to be mapped based on recipients
                         ar: letter.kind === LetterKind.RACCOMANDATA_AR,
                         priority: letter.kind === LetterKind.LETTERA_PRIORITARIA,
