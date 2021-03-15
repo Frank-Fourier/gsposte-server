@@ -180,7 +180,7 @@ import fs from "fs";
                         orderStatus: "FAKELETTERSENTFROMTEST",
                         requestStatus: "Mai inviata - TEST",
                         recipients: saved.recipients.map((r: RecipientDocument) => ({
-                            person: mapRecipientToPerson(r),
+                            person: mapRecipientToPerson(r, saved.kind),
                             tracking: {
                                 number: "617845434905",
                                 statusCode: "01",
