@@ -214,14 +214,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     platform: "GSPoste",
                     code: letter.codePdf,
                     kind: kind,
-                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.subject),
-                    recipient: mapRecipientToPerson(recipient),
+                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
+                    recipient: mapRecipientToPerson(recipient, letter.kind),
                     recipientAR: letter.recipientAR ? {
                         ...letter.recipientAR,
                         notes: letter.subject
                     } : (
                         (letter.sender as SenderDocument).addressAR
-                            ? mapSenderToPerson(letter.sender as SenderDocument, letter.subject, true)
+                            ? mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject, true)
                             : undefined
                     ),
                     pdf: pdf,
@@ -462,14 +462,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             try {
                 submit = await this.posteway.send({
                     kind: kind,
-                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.subject),
-                    recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r)),
+                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
+                    recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r, letter.kind)),
                     recipientAR: letter.recipientAR ? {
                         ...letter.recipientAR,
                         notes: letter.subject
                     } : (
                         (letter.sender as SenderDocument).addressAR
-                            ? mapSenderToPerson(letter.sender as SenderDocument, letter.subject, true)
+                            ? mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject, true)
                             : undefined
                     ),
                     cid: cid,

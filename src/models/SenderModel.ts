@@ -10,6 +10,7 @@ import {
 } from "@models/schemas/AddressSchema";
 import { Person } from "../posteway";
 import { insert } from "@utils/misc";
+import { LetterKind } from "@models/LetterModel";
 
 /**
  * @swagger
@@ -113,13 +114,20 @@ export const senderDecoder: Decoder<Sender> = object({
     notes: optional(string()),
 });
 
-export function mapSenderToPerson(sender: SenderDocument, notes?: string, useAddressAR?: boolean): Person {
+export function mapSenderToPerson(sender: SenderDocument, letterKind: LetterKind, notes?: string, useAddressAR?: boolean): Person {
     const fullNameTrimmed = sender.name.trim().replace(/[\s]+/g, " ");
     const hasSpace = fullNameTrimmed.includes(" ");
     return {
         ...insert(hasSpace, {
-            name: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
-            surname: fullNameTrimmed.split(" ")[0],
+            // MODIFICA IMPORTANTE:
+            // Nel caso di invio lettera semplice, Poste Italiane stampa prima il nome e poi il cognome (bastardi)
+            ...insert(letterKind === LetterKind.LETTERA_SEMPLICE, {
+                surname: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
+                name: fullNameTrimmed.split(" ")[0],
+            }, {
+                name: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
+                surname: fullNameTrimmed.split(" ")[0],
+            }),
             businessName: sender.businessName?.trim(),
         }, {
             businessName: sender.businessName?.trim(),
