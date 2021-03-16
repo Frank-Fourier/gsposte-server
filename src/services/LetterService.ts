@@ -575,6 +575,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             tracking: {
                                 number: letter.tracking,
                                 status: letter.status,
+                                date: moment(letter.printDate).format("DD/MM/YYYY HH:mm:ss"),
                             }
                         }))
                     }
