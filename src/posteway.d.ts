@@ -78,7 +78,8 @@ export interface Submit {
     sender: Person
     recipients: Person[]
     recipientAR?: Person
-    cid: string
+    cid?: string
+    pdf?: string
     options?: {
         bw?: boolean
         backSide?: boolean

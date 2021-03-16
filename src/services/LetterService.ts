@@ -441,46 +441,46 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         };
 
         try {
-            const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
-            const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
-
-            if (!pdf_exists) {
-                logger.error(`[LETTER ${letter.codePdf}] PDF not found!`);
-                logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
-
-                // Inform the user that there was an error
-                this.noticeService.save({
-                    user: userId,
-                    title: "Errore durante l'invio della lettera",
-                    content: `La lettera '${letter.codePdf}' non ha alcun PDF associato. Effettuare nuovamente l'upload e riprovare.`,
-                    data: { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` },
-                    kind: NoticeKind.LETTER,
-                    error: true
-                });
-
-                throw { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` };
-            }
-
-            let cid: string;
-            try {
-                // Upload through PosteWay to get the CID
-                cid = (await this.posteway.upload(fs.createReadStream(pdf_path))).cid;
-            } catch (err) {
-                logFile?.error(`Error while calling PosteWay UPLOAD endpoint`, err);
-                logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay UPLOAD endpoint. Got this error: `, err);
-
-                // Inform the user that there was an error
-                this.noticeService.save({
-                    user: userId,
-                    title: "Errore durante l'invio della lettera",
-                    content: `Errore durante l'upload del PDF della lettera '${letter.codePdf}' tramite PosteWay!`,
-                    data: { error: err },
-                    kind: NoticeKind.LETTER,
-                    error: true
-                });
-
-                throw { message: `Error while calling PosteWay UPLOAD endpoint`, error: err };
-            }
+            // const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
+            // const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
+            //
+            // if (!pdf_exists) {
+            //     logger.error(`[LETTER ${letter.codePdf}] PDF not found!`);
+            //     logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
+            //
+            //     // Inform the user that there was an error
+            //     this.noticeService.save({
+            //         user: userId,
+            //         title: "Errore durante l'invio della lettera",
+            //         content: `La lettera '${letter.codePdf}' non ha alcun PDF associato. Effettuare nuovamente l'upload e riprovare.`,
+            //         data: { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` },
+            //         kind: NoticeKind.LETTER,
+            //         error: true
+            //     });
+            //
+            //     throw { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` };
+            // }
+            //
+            // let cid: string;
+            // try {
+            //     // Upload through PosteWay to get the CID
+            //     cid = (await this.posteway.upload(fs.createReadStream(pdf_path))).cid;
+            // } catch (err) {
+            //     logFile?.error(`Error while calling PosteWay UPLOAD endpoint`, err);
+            //     logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay UPLOAD endpoint. Got this error: `, err);
+            //
+            //     // Inform the user that there was an error
+            //     this.noticeService.save({
+            //         user: userId,
+            //         title: "Errore durante l'invio della lettera",
+            //         content: `Errore durante l'upload del PDF della lettera '${letter.codePdf}' tramite PosteWay!`,
+            //         data: { error: err },
+            //         kind: NoticeKind.LETTER,
+            //         error: true
+            //     });
+            //
+            //     throw { message: `Error while calling PosteWay UPLOAD endpoint`, error: err };
+            // }
 
             // Submit through PosteWay to get the Request ID
             let submit: SubmitResponse;
@@ -497,7 +497,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             ? mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject, true)
                             : undefined
                     ),
-                    cid: cid,
+                    // cid: cid,
+                    pdf: this.getOriginalPdfLink(letter),
                     options: {
                         bw: letter.bw ?? false,
                         backSide: letter.backSide ?? true,
