@@ -39,6 +39,10 @@ import { Price } from "../posteway";
  *             $ref: "#/definitions/LetterStats"
  *           "RACCOMANDATA AR":
  *             $ref: "#/definitions/LetterStats"
+ *           "RACCOMANDATA UNO":
+ *             $ref: "#/definitions/LetterStats"
+ *           "RACCOMANDATA UNO AR":
+ *             $ref: "#/definitions/LetterStats"
  *       counts:
  *         type: object
  *         properties:
@@ -77,6 +81,14 @@ import { Price } from "../posteway";
  *             type: number
  *             description: Percent of cash spent on this kind of letter
  *             example: 45
+ *           "RACCOMANDATA UNO":
+ *             type: number
+ *             description: Percent of cash spent on this kind of letter
+ *             example: 45
+ *           "RACCOMANDATA UNO AR":
+ *             type: number
+ *             description: Percent of cash spent on this kind of letter
+ *             example: 45
  */
 interface LetterStats {
     total: number
@@ -90,6 +102,8 @@ export interface Stats {
         [LetterKind.LETTERA_PRIORITARIA]: LetterStats
         [LetterKind.RACCOMANDATA]: LetterStats
         [LetterKind.RACCOMANDATA_AR]: LetterStats
+        [LetterKind.RACCOMANDATA_UNO]: LetterStats
+        [LetterKind.RACCOMANDATA_UNO_AR]: LetterStats
     }
     counts: {
         sent: number
@@ -103,6 +117,8 @@ export interface Stats {
         [LetterKind.LETTERA_PRIORITARIA]: number
         [LetterKind.RACCOMANDATA]: number
         [LetterKind.RACCOMANDATA_AR]: number
+        [LetterKind.RACCOMANDATA_UNO]: number
+        [LetterKind.RACCOMANDATA_UNO_AR]: number
     }
 }
 
@@ -206,6 +222,8 @@ export class StatsService {
             [LetterKind.LETTERA_PRIORITARIA]: aggregateStats(lettersByKind[LetterKind.LETTERA_PRIORITARIA] || []),
             [LetterKind.RACCOMANDATA]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA] || []),
             [LetterKind.RACCOMANDATA_AR]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_AR] || []),
+            [LetterKind.RACCOMANDATA_UNO]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_UNO] || []),
+            [LetterKind.RACCOMANDATA_UNO_AR]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_UNO_AR] || []),
         };
 
         const totalSpent = Object.values(stats).reduce<number>((acc, s) => acc + s.spent, 0);
@@ -215,7 +233,9 @@ export class StatsService {
                 [LetterKind.LETTERA_SEMPLICE]: stats[LetterKind.LETTERA_SEMPLICE].counts,
                 [LetterKind.LETTERA_PRIORITARIA]: stats[LetterKind.LETTERA_PRIORITARIA].counts,
                 [LetterKind.RACCOMANDATA]: stats[LetterKind.RACCOMANDATA].counts,
-                [LetterKind.RACCOMANDATA_AR]: stats[LetterKind.RACCOMANDATA_AR].counts
+                [LetterKind.RACCOMANDATA_AR]: stats[LetterKind.RACCOMANDATA_AR].counts,
+                [LetterKind.RACCOMANDATA_UNO]: stats[LetterKind.RACCOMANDATA_UNO].counts,
+                [LetterKind.RACCOMANDATA_UNO_AR]: stats[LetterKind.RACCOMANDATA_UNO_AR].counts,
             },
             counts: {
                 sent: Object.values(stats).reduce<number>((acc, s) => acc + s.counts.sent, 0),
@@ -228,7 +248,9 @@ export class StatsService {
                 [LetterKind.LETTERA_SEMPLICE]: ((stats[LetterKind.LETTERA_SEMPLICE].spent) / totalSpent) * 100,
                 [LetterKind.LETTERA_PRIORITARIA]: ((stats[LetterKind.LETTERA_SEMPLICE].spent) / totalSpent) * 100,
                 [LetterKind.RACCOMANDATA]: ((stats[LetterKind.RACCOMANDATA].spent) / totalSpent) * 100,
-                [LetterKind.RACCOMANDATA_AR]: ((stats[LetterKind.RACCOMANDATA_AR].spent) / totalSpent) * 100
+                [LetterKind.RACCOMANDATA_AR]: ((stats[LetterKind.RACCOMANDATA_AR].spent) / totalSpent) * 100,
+                [LetterKind.RACCOMANDATA_UNO]: ((stats[LetterKind.RACCOMANDATA_UNO].spent) / totalSpent) * 100,
+                [LetterKind.RACCOMANDATA_UNO_AR]: ((stats[LetterKind.RACCOMANDATA_UNO_AR].spent) / totalSpent) * 100,
             }
         }
     }
@@ -268,6 +290,8 @@ export class StatsService {
             [LetterKind.LETTERA_PRIORITARIA]: aggregatePrices(lettersByKind[LetterKind.LETTERA_PRIORITARIA] || []),
             [LetterKind.RACCOMANDATA]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA] || []),
             [LetterKind.RACCOMANDATA_AR]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_AR] || []),
+            [LetterKind.RACCOMANDATA_UNO]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_UNO] || []),
+            [LetterKind.RACCOMANDATA_UNO_AR]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_UNO_AR] || []),
         };
 
         return {
