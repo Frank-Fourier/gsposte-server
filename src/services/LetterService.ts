@@ -262,6 +262,31 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     }
                 }
             }, false, false);
+
+            // Everything went fine, generate provision
+            try {
+                updated.provision = await this.provisionService.generateProvision(letter);
+                await updated.save();
+            } catch (err) {
+                logFile?.error(`Error while generating the provision!`, err);
+                logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
+
+                // Inform the user that there was an error
+                this.noticeService.save({
+                    user: userId,
+                    title: "Creazione della provvigione fallita",
+                    content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
+                    data: { error: err },
+                    kind: NoticeKind.LETTER,
+                    error: true
+                });
+
+                throw err;
+            }
+
+            // Finally inform the client that this letter is ready
+            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}.`);
+
             return updated;
         }
 
