@@ -173,6 +173,7 @@ export interface PW_LetterDocument extends PW_Letter {
     status: LetterWorkStatus
     price: number
     tracking?: string
+    printDate?: string
 }
 
 export interface PW_PaginateResult<T> {
