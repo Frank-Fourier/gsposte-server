@@ -335,6 +335,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 quantity: letter.recipients.length,
                 priceSingle: formatCurrency(letter.price),
                 total: formatCurrency(letter.price * letter.recipients.length),
+                code: letter.codePdf,
             })),
             taxable: formatCurrency(invoice.taxable),
             iva: formatCurrency(invoice.iva),
