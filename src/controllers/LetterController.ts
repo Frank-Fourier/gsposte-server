@@ -16,6 +16,39 @@ export class LetterController extends CrudController {
         super(letterService, true);
     }
 
+    public async find(req: Request, res: Response) {
+        await this.authService.roleOnly(req, this.accessRole);
+        const pagination = this.letterService.paginateOptionsFromObject(req.body.pagination);
+
+        if (this.userBased) {
+            const user = await this.authService.getUserFromRequest(req);
+            if (!user.isAdmin()) {
+                // Modify the query so it will always retrieve only documents associated with the requesting user
+                delete req.body.query.user; // If already present...
+                req.body.query = {
+                    ...req.body.query,
+                    user: user.id
+                }
+            }
+        }
+
+        if (!!req.body.query["$senderName"]) {
+            const senderName = req.body.query["$senderName"];
+            delete req.body.query["$senderName"];
+            const result = await this.letterService.paginateBySenderName(senderName, req.body.query, pagination);
+            return res.status(200).send(result);
+        }
+        if (!!req.body.query["$recipientName"]) {
+            const recipientName = req.body.query["$recipientName"];
+            delete req.body.query["$recipientName"];
+            const result = await this.letterService.paginateByRecipientName(recipientName, req.body.query, pagination);
+            return res.status(200).send(result);
+        }
+
+        const result = await this.letterService.paginate(req.body.query, pagination);
+        return res.status(200).send(result);
+    }
+
     public async updateById(req: Request, res: Response) {
         const letter = await this.letterService.findById(req.params.id);
         if (letter.sent) {

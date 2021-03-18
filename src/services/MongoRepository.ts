@@ -89,7 +89,7 @@ export class MongoRepository<DTO, Doc extends Document> {
     constructor(
         @unmanaged() private model: Model<Doc>,
         @unmanaged() private decoder: Decoder<DTO>,
-        @unmanaged() private searchFields: string[] = []
+        @unmanaged() protected searchFields: string[] = []
     ) {}
 
     public async save(object: DTO): Promise<Doc> {
