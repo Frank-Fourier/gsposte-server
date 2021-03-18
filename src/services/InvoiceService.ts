@@ -294,7 +294,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             ...insert(letter.isRaccomandata() && !!r.tracking, {
                 tracking: {
                     ...r.tracking,
-                    date: r.tracking?.date ? moment(r.tracking?.date).format("DD/MM/YYYY") : dateSent
+                    date: r.tracking?.date ? moment(r.tracking?.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : dateSent
                 }
             })
         }));
