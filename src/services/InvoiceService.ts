@@ -282,6 +282,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             logger.warn(`[INVOICE ${letter.codePdf}] Failed to query letter on PosteWay!`, err);
         }
 
+        const dateSent = letter.sendAt ? moment(letter.sendAt).format("DD/MM/YYYY") : null;
+
         // Format envelopes dates
         letter.posteway.track.recipients = letter.posteway.track.recipients?.map(r => ({
             ...r,
@@ -292,7 +294,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             ...insert(letter.isRaccomandata() && !!r.tracking, {
                 tracking: {
                     ...r.tracking,
-                    date: r.tracking.date ? moment(r.tracking.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : null
+                    date: r.tracking?.date ? moment(r.tracking?.date).format("DD/MM/YYYY") : dateSent
                 }
             })
         }));
@@ -300,7 +302,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({
             sender: letter.sender ? (letter.sender as SenderDocument).toObject() : {},
             posteway: (letter.posteway as Partial<Document>).toObject() || {},
-            dateSent: letter.sendAt ? moment(letter.sendAt).format("DD/MM/YYYY") : null,
+            dateSent: dateSent,
             partial: false,
             codePdf: letter.codePdf,
             kind: letter.kind,
