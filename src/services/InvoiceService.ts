@@ -289,7 +289,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 ...r.person,
                 fullName: `${r.person.name?.toUpperCase() ?? (r.person.businessName?.toUpperCase() ?? "")} ${r.person.surname?.toUpperCase() ?? ""}`,
             },
-            ...insert(!!r.tracking, {
+            ...insert(letter.isRaccomandata() && !!r.tracking, {
                 tracking: {
                     ...r.tracking,
                     date: r.tracking.date ? moment(r.tracking.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : null

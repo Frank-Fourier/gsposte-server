@@ -146,6 +146,7 @@ export interface Letter {
     bw?: boolean
     backSide?: boolean
     notes?: string
+    isRaccomandata?: () => boolean
 }
 export interface LetterDocument extends Letter, Document {
     sent: boolean
@@ -325,5 +326,9 @@ export const LetterSchema = new Schema<Letter>({
         updatedAt: true,
     }
 });
+
+LetterSchema.methods.isRaccomandata = function() {
+    return this.kind !== LetterKind.LETTERA_SEMPLICE && this.kind !== LetterKind.LETTERA_PRIORITARIA;
+};
 
 export const LetterModel: Model<LetterDocument> = model("Letter", LetterSchema);
