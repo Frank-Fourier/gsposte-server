@@ -344,8 +344,7 @@ LetterSchema.methods.isRaccomandata = function() {
     return this.kind !== LetterKind.LETTERA_SEMPLICE && this.kind !== LetterKind.LETTERA_PRIORITARIA;
 };
 LetterSchema.methods.getTotalPrice = function(gifts?: number) {
-    const priceSingle = this.price ?? ioc.resolve(PriceService).calculatePrice(this);
-    return priceSingle * (this.recipients.length - (gifts ?? 0));
+    return this.price * (this.recipients.length - (gifts ?? 0));
 };
 
 export const LetterModel: Model<LetterDocument> = model("Letter", LetterSchema);
