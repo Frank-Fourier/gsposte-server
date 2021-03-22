@@ -48,7 +48,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         const user = await this.userService.findById(
             letter.user instanceof String ? letter.user : (letter.user as UserDocument)._id
         );
-        if (user.recipientsGift < (letter.recipientsGift ?? 0)) {
+        const recipientsGift = letter.recipientsGift ?? 0;
+
+        if (recipientsGift > letter.recipients.length) {
+            throw new httpErrors.BadRequest(`Can't assign more recipients gift than the actual recipients!`);
+        }
+        if (user.recipientsGift < recipientsGift) {
             throw new httpErrors.Forbidden(`Can't assign more recipients gift than you have! You have ${user.recipientsGift} gifts left.`);
         }
 
