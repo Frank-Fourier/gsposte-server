@@ -3,7 +3,7 @@ import { inject } from "inversify";
 import { INVOICES_ROOT, InvoiceService } from "@services/InvoiceService";
 import { LetterService } from "@services/LetterService";
 import { Request, Response } from "express";
-import { BadRequest } from "http-errors";
+import httpErrors from "http-errors";
 import fs from "fs";
 
 export class InvoiceController extends CrudController {
@@ -52,7 +52,7 @@ export class InvoiceController extends CrudController {
 
     public async generateInvoicePDF(req: Request, res: Response) {
         if (!req.params.id) {
-            throw new BadRequest("Invoice ID is required");
+            throw new httpErrors.BadRequest("Invoice ID is required");
         }
 
         const invoice = await this.invoiceService.findById(req.params.id);
@@ -69,7 +69,7 @@ export class InvoiceController extends CrudController {
     public async exportOneToFIC(req: Request, res: Response) {
         const user = await this.authService.adminOnly(req);
         if (!req.params.id) {
-            throw new BadRequest("Invoice ID is required");
+            throw new httpErrors.BadRequest("Invoice ID is required");
         }
 
         const invoice = await this.invoiceService.findById(req.params.id);

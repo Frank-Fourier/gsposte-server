@@ -4,7 +4,7 @@ import { CrudController } from "@controllers/CrudController";
 import { LetterService } from "@services/LetterService";
 import { InvoiceService } from "@services/InvoiceService";
 import { Request, Response } from "express";
-import httpErrors, { BadRequest } from "http-errors";
+import httpErrors from "http-errors";
 
 @provide(LetterService)
 export class LetterController extends CrudController {
@@ -61,7 +61,7 @@ export class LetterController extends CrudController {
 
     public async generateInvoice(req: Request, res: Response) {
         if (!req.params.id) {
-            throw new BadRequest("Letter ID is required");
+            throw new httpErrors.BadRequest("Letter ID is required");
         }
         const letter = (await this.letterService.findById(req.params.id)).depopulate("user");
 

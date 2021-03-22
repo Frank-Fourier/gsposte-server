@@ -2,9 +2,9 @@ import { provide } from "inversify-binding-decorators";
 import { MongoRepository } from "./MongoRepository";
 import { UserModel, User, UserDocument, UserPasswordUpdate, userDecoder } from "@models/UserModel";
 import { comparePasswords } from "@utils/crypto";
-import httpErrors from "http-errors";
 import { inject } from "inversify";
 import { SenderService } from "@services/SenderService";
+import httpErrors from "http-errors";
 
 @provide(UserService)
 export class UserService extends MongoRepository<User, UserDocument> {

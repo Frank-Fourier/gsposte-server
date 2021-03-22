@@ -3,7 +3,7 @@ import { inject } from "inversify";
 import { StatsService } from "@services/StatsService";
 import { Request, Response } from "express";
 import { AuthService } from "@services/AuthService";
-import { Forbidden } from "http-errors";
+import httpErrors from "http-errors";
 
 @provide(StatsController)
 export class StatsController {
@@ -14,7 +14,7 @@ export class StatsController {
     public async fetchStatsForUser(req: Request, res: Response) {
         const user = await this.authService.getUserFromRequest(req);
         if (user.id !== req.params.id && !user.isAdmin()) {
-            throw new Forbidden("You are not allowed to request stats for other users!");
+            throw new httpErrors.Forbidden("You are not allowed to request stats for other users!");
         }
 
         const year = !!req.query.year ? parseInt(req.query.year) : null;
@@ -28,7 +28,7 @@ export class StatsController {
     public async fetchSystemSpentStats(req: Request, res: Response) {
         const user = await this.authService.getUserFromRequest(req);
         if (!user.isAdmin()) {
-            throw new Forbidden("You are not allowed to access this data.");
+            throw new httpErrors.Forbidden("You are not allowed to access this data.");
         }
 
         const systemStats = await this.statsService.fetchSystemSpentStats(!!req.params.year ? parseInt(req.params.year) : null);

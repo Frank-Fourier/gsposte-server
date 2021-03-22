@@ -1,7 +1,7 @@
 import { InvoiceDocument } from "@models/InvoiceModel";
 import { SenderDocument } from "@models/SenderModel";
 import { LetterDocument } from "@models/LetterModel";
-import { BadRequest } from "http-errors";
+import httpErrors from "http-errors";
 import moment from "moment";
 import { isTestEnv } from "@utils/system";
 
@@ -149,22 +149,22 @@ export namespace FIC {
         invoice = await invoice.populate("sender letters").execPopulate();
         const sender = invoice.sender as SenderDocument;
         if (!sender) {
-            throw new BadRequest("Questa fattura non ha un mittente. Non è stato possibile esportarla.");
+            throw new httpErrors.BadRequest("Questa fattura non ha un mittente. Non è stato possibile esportarla.");
         }
 
         const name = sender.businessName ?? sender.name;
         if (!name) {
-            throw new BadRequest("Questo mittente non ha un nominativo. Non è stato possibile esportare la sua fattura.");
+            throw new httpErrors.BadRequest("Questo mittente non ha un nominativo. Non è stato possibile esportare la sua fattura.");
         }
 
         const { iva, cf } = sender;
         if (!iva && !cf) {
-            throw new BadRequest("Questo mittente non ha valorizzati nè P.IVA nè Codice Fiscale. Non è stato possibile esportare la sua fattura.");
+            throw new httpErrors.BadRequest("Questo mittente non ha valorizzati nè P.IVA nè Codice Fiscale. Non è stato possibile esportare la sua fattura.");
         }
 
         const address = sender.addressBill ?? sender.addressAR ?? sender.address;
         if (!address?.street) {
-            throw new BadRequest("Questo mittente non ha un indirizzo. Non è stato possibile esportare la sua fattura.");
+            throw new httpErrors.BadRequest("Questo mittente non ha un indirizzo. Non è stato possibile esportare la sua fattura.");
         }
 
         // Generate invoice expiration date

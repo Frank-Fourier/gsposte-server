@@ -10,7 +10,7 @@ import { UserService } from "@services/UserService";
 import { compileFile } from "pug";
 import { Document } from "mongoose";
 import { MongoRepository } from "@services/MongoRepository";
-import { BadRequest, Forbidden, InternalServerError } from "http-errors";
+import httpErrors from "http-errors";
 import { logger } from "@utils/winston";
 import { formatCurrency, groupBy, insert } from "@utils/misc";
 import { FICService } from "@services/FICService";
@@ -77,7 +77,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         errors: Array<{ letter: LetterDocument, error: Error | any }>
     }> {
         if (letters.length === 0) {
-            throw new BadRequest("Letters array is empty! Can't generate invoice.");
+            throw new httpErrors.BadRequest("Letters array is empty! Can't generate invoice.");
         }
 
         const errors: Array<{ letter: LetterDocument, error: Error | any }> = [];
@@ -86,20 +86,20 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         for (const letter of letters) {
             letter.depopulate("sender user");
             if (letter.sender.toString() !== letters[0].sender.toString()) {
-                throw new BadRequest("Letters to generate an invoice from must all have the same sender!");
+                throw new httpErrors.BadRequest("Letters to generate an invoice from must all have the same sender!");
             }
 
             try {
                 if (!letter.sent) {
-                    throw new BadRequest("This letter is not sent so I won't include it in the invoice.");
+                    throw new httpErrors.BadRequest("This letter is not sent so I won't include it in the invoice.");
                 }
                 if (letter.error) {
-                    throw new BadRequest("This letter is in an error state so I won't include it in the invoice.");
+                    throw new httpErrors.BadRequest("This letter is in an error state so I won't include it in the invoice.");
                 }
 
                 const taxable = letter.getTotalPrice();
                 if (taxable <= 0 || isNaN(taxable)) {
-                    throw new BadRequest("Can't create an invoice for a letter without a price!");
+                    throw new httpErrors.BadRequest("Can't create an invoice for a letter without a price!");
                 }
 
                 taxableSum += taxable;
@@ -272,13 +272,13 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async generateLetterInvoicePDF(letter: LetterDocument, root?: string): Promise<string> {
         if (!letter.sent) {
-            throw new Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
+            throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
         }
         if (letter.error) {
-            throw new Forbidden("You are not allowed to create an invoice for an errored letter!");
+            throw new httpErrors.Forbidden("You are not allowed to create an invoice for an errored letter!");
         }
         if (!letter.posteway) {
-            throw new BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
+            throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
         }
 
         // Avoid generating PDF again if it's already there
@@ -375,7 +375,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async exportToFIC(exporter: UserDocument, invoice: InvoiceDocument): Promise<InvoiceDocument> {
         if (!exporter.isAdmin()) {
-            throw new Forbidden("You can't export documents to FIC!");
+            throw new httpErrors.Forbidden("You can't export documents to FIC!");
         }
 
         if (!!invoice.fic) {
@@ -388,7 +388,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         );
         if (!(result as FIC.NuovoDocumentoResponse).success) {
             const err = result as FIC.Error;
-            throw new InternalServerError(`Errore Fatture in Cloud [${err.error_code}]: ${err.error}`);
+            throw new httpErrors.InternalServerError(`Errore Fatture in Cloud [${err.error_code}]: ${err.error}`);
         }
 
         const response = result as FIC.NuovoDocumentoResponse;
@@ -411,10 +411,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async bulkExportToFIC(exporter: UserDocument, wait = true): Promise<void> {
         if (!exporter.isAdmin()) {
-            throw new Forbidden("You can't export documents to FIC!");
+            throw new httpErrors.Forbidden("You can't export documents to FIC!");
         }
         if (this.exportFlags.exporting) {
-            throw new BadRequest("A export is already in progress.");
+            throw new httpErrors.BadRequest("A export is already in progress.");
         }
 
         const toExport = await this.find({
