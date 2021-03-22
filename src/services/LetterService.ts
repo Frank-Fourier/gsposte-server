@@ -11,7 +11,8 @@ import { createLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
 import {
-    ConfirmResponse, PW_Letter,
+    ConfirmResponse,
+    PW_Letter,
     PW_LetterDocument,
     StatusResponse,
     SubmitKind,
@@ -22,9 +23,10 @@ import { isProdEnv, isTestEnv } from "@utils/system";
 import { ProvisionService } from "@services/ProvisionService";
 import { NoticeKind } from "@models/NoticeModel";
 import { UserDocument } from "@models/UserModel";
-import { insert } from "@utils/misc";
+import { UserService } from "@services/UserService";
 import winston from "winston";
 import moment from "moment";
+import httpErrors from "http-errors";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -34,6 +36,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     @inject(PriceService) private priceService: PriceService;
     @inject(ProvisionService) private provisionService: ProvisionService;
     @inject(NoticeService) private noticeService: NoticeService;
+    @inject(UserService) private userService: UserService;
 
     constructor(private letterModel = LetterModel) {
         super(letterModel, letterDecoder, [
@@ -42,36 +45,54 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public async save(letter: Letter, depopulate = true): Promise<LetterDocument> {
-        let saved = await (await super.save(letter)).populate("sender recipients").execPopulate();
-        const price = await this.priceService.calculatePrice(saved);
-        await saved.updateOne({ $set: { price: price }}).exec();
-        saved.price = price;
+        const user = await this.userService.findById(
+            letter.user instanceof String ? letter.user : (letter.user as UserDocument)._id
+        );
+        if (user.recipientsGift < (letter.recipientsGift ?? 0)) {
+            throw new httpErrors.Forbidden(`Can't assign more recipients gift than you have! You have ${user.recipientsGift} gifts left.`);
+        }
+
+        // Subtract gifts from user
+        user.recipientsGift -= letter.recipientsGift ?? 0;
+        await user.save();
+
+        // Save the letter
+        let letterDocument = await (await super.save(letter)).populate("sender recipients").execPopulate();
+
+        // Calculate its price
+        letterDocument.price = await this.priceService.calculatePrice(letterDocument);
+        await letterDocument.save();
 
         if (!isTestEnv() && (!letter.sendAt || moment(letter.sendAt).isSameOrBefore(moment()))) {
             // No need to schedule, send everything immediately
-            saved = await this.sendLetter(saved, createLogFile(`${letter.codePdf}.log`));
+            letterDocument = await this.sendLetter(letterDocument, createLogFile(`${letter.codePdf}.log`));
         }
 
-        return depopulate ? saved.depopulate("sender recipients") : saved;
+        // Return the document (depopulated based on flag)
+        return depopulate ? letterDocument.depopulate("sender recipients") : letterDocument;
     }
 
     public async updateById(id: string, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
-        const updated = await (await super.updateById(id, updateBody, upsert, runValidators)).populate("sender recipients").execPopulate();
+        const updated = await (await super.updateById(id, updateBody, upsert, runValidators))
+            .populate("sender recipients").execPopulate();
+
         if (updateBody.recipients || updateBody.kind || updateBody.codePdf) {
-            const price = await this.priceService.calculatePrice(updated);
-            await updated.updateOne({ $set: { price: price }}).exec();
-            updated.price = price;
+            // Need to recalculate price again
+            updated.price = await this.priceService.calculatePrice(updated);
+            await updated.save();
         }
 
         return updated;
     }
 
     public async updateOne(query: MongoQuery<Letter & LetterDocument>, updateBody: (Partial<Letter> | any), upsert = false, runValidators = true): Promise<LetterDocument> {
-        const updated = await (await super.updateOne(query, updateBody, upsert, runValidators)).populate("sender recipients").execPopulate();
+        const updated = await (await super.updateOne(query, updateBody, upsert, runValidators))
+            .populate("sender recipients").execPopulate();
+
         if (updateBody.recipients || updateBody.kind || updateBody.codePdf) {
-            const price = await this.priceService.calculatePrice(updated);
-            await updated.updateOne({ $set: { price: price }}).exec();
-            updated.price = price;
+            // Need to recalculate price again
+            updated.price = await this.priceService.calculatePrice(updated);
+            await updated.save();
         }
 
         return updated;

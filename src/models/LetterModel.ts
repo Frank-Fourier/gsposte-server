@@ -7,7 +7,7 @@ import {
     string,
     oneOf,
     constant,
-    boolean
+    boolean, number
 } from "@mojotech/json-type-validation";
 import { UserDocument } from "@models/UserModel";
 import { SenderDocument } from "@models/SenderModel";
@@ -16,6 +16,8 @@ import { InvoiceDocument } from "@models/InvoiceModel";
 import { Person, PriceResponse, TrackResponse } from "../posteway";
 import { ProvisionDocument } from "@models/ProvisionModel";
 import { addressDecoder, AddressSchema } from "@models/schemas/AddressSchema";
+import { ioc } from "@ioc";
+import { PriceService } from "@services/PriceService";
 
 export enum LetterKind {
     "LETTERA_SEMPLICE" = "LETTERA SEMPLICE",
@@ -92,6 +94,10 @@ export enum LetterKind {
  *       notes:
  *         type: string
  *         example: This is my beautiful campaign!
+ *       recipientsGift:
+ *         type: number
+ *         description: How many recipients to gift for this letter
+ *         example: 0
  *   LetterDocument:
  *     allOf:
  *       - $ref: '#/definitions/Letter'
@@ -146,7 +152,9 @@ export interface Letter {
     bw?: boolean
     backSide?: boolean
     notes?: string
+    recipientsGift?: number
     isRaccomandata?: () => boolean
+    getTotalPrice?: (gifts?: number) => number
 }
 export interface LetterDocument extends Letter, Document {
     sent: boolean
@@ -204,6 +212,7 @@ export const letterDecoder: Decoder<Letter> = object({
     bw: optional(boolean()),
     backSide: optional(boolean()),
     notes: optional(string()),
+    recipientsGift: optional(number()),
 });
 
 export const LetterSchema = new Schema<Letter>({
@@ -297,6 +306,10 @@ export const LetterSchema = new Schema<Letter>({
     price: {
         type: Number,
     },
+    recipientsGift: {
+        type: Number,
+        default: 0,
+    },
     posteway: new Schema({
         requestId: String,
         orderId: String,
@@ -329,6 +342,10 @@ export const LetterSchema = new Schema<Letter>({
 
 LetterSchema.methods.isRaccomandata = function() {
     return this.kind !== LetterKind.LETTERA_SEMPLICE && this.kind !== LetterKind.LETTERA_PRIORITARIA;
+};
+LetterSchema.methods.getTotalPrice = function(gifts?: number) {
+    const priceSingle = this.price ?? ioc.resolve(PriceService).calculatePrice(this);
+    return priceSingle * (this.recipients.length - (gifts ?? 0));
 };
 
 export const LetterModel: Model<LetterDocument> = model("Letter", LetterSchema);

@@ -81,7 +81,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
 
         const errors: Array<{ letter: LetterDocument, error: Error | any }> = [];
-        let taxableSum = 0;
+        let taxableSum = 0, giftSum = 0;
 
         for (const letter of letters) {
             letter.depopulate("sender user");
@@ -97,31 +97,42 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                     throw new BadRequest("This letter is in an error state so I won't include it in the invoice.");
                 }
 
-                const taxable = (letter.price || await this.priceService.calculatePrice(letter)) * letter.recipients.length;
+                const taxable = letter.getTotalPrice();
                 if (taxable <= 0 || isNaN(taxable)) {
                     throw new BadRequest("Can't create an invoice for a letter without a price!");
                 }
 
                 taxableSum += taxable;
+                giftSum += letter.recipientsGift ?? 0;
             } catch (err) {
                 errors.push({ letter: letter, error: err });
             }
         }
 
-        const iva = (taxableSum * 22) / 100;
-        const total = taxableSum + iva;
+        const taxableMinusGifts = taxableSum - giftSum;
+        const iva = (taxableMinusGifts * 22) / 100;
+        const granTotal = taxableMinusGifts + iva;
+        if (granTotal <= 0) {
+            // Return prematurely: this invoice has no value
+            return {
+                invoice: null,
+                errors: []
+            }
+        }
+
         const invoice = await this.save({
             user: letters[0].user,
             sender: letters[0].sender,
             letters: letters.filter(l => l.sent),
             taxable: parseFloat(taxableSum.toFixed(2)),
+            discount: parseFloat(giftSum.toFixed(2)),
             iva: parseFloat(iva.toFixed(2)),
-            total: parseFloat(total.toFixed(2)),
+            total: parseFloat(granTotal.toFixed(2)),
         });
 
         if (!!number) {
-            await invoice.updateOne({ $set: { number: number } }).exec();
             invoice.number = number;
+            await invoice.save();
         }
 
         for (const letter of letters) {
@@ -165,8 +176,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
         let lastNumber = startNumber || await this.getLatestInvoiceNumber();
         for (const letter of Object.values(aggregated)) {
-            const invoice = await this.generateSingleInvoice(letter, lastNumber + 1);
-            results.push(invoice);
+            const result = await this.generateSingleInvoice(letter, lastNumber + 1);
+            if (!result.invoice) {
+                continue;
+            }
+
+            results.push(result);
             lastNumber++;
         }
 
@@ -273,7 +288,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
 
         await letter.populate("sender recipients").execPopulate();
-        const price = letter.price || await this.priceService.calculatePrice(letter);
+        const price = letter.price ?? await this.priceService.calculatePrice(letter);
 
         try {
             // Call PosteWay to get the latest info
@@ -307,7 +322,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             codePdf: letter.codePdf,
             kind: letter.kind,
             price: formatCurrency(price),
-            total: formatCurrency(price * letter.posteway.track.recipients.length),
+            total: formatCurrency(price * letter.recipients.length),
         });
 
         // I wait until networkidle2 to let all the images on the HTML load before converting
@@ -340,6 +355,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 code: letter.codePdf,
             })),
             taxable: formatCurrency(invoice.taxable),
+            discount: formatCurrency(invoice.discount ?? 0),
             iva: formatCurrency(invoice.iva),
             total: formatCurrency(invoice.total)
         });

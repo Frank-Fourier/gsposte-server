@@ -162,7 +162,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
         })[0] as WeightRanges;
 
         const revenue = ranges[letter.kind][amountKey] * letter.recipients.length;
-        const spent = letter.price * letter.recipients.length;
+        const spent = letter.getTotalPrice(letter.recipientsGift);
 
         const referrers = await this.userService.getUserReferrers(user as UserDocument, percents.length - 1);
         return this.save({

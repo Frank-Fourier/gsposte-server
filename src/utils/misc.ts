@@ -35,7 +35,7 @@ export function groupBy<T>(array: Array<T>, property: (x: T) => string): { [key:
  *     oranges: 1
  * }
  */
-export function insert(condition: boolean, obj: object, defaultValue?: any): object {
+export function insert(condition: boolean, obj: any, defaultValue?: any): any {
     return condition ? obj : (defaultValue || {})
 }
 

@@ -48,7 +48,7 @@ export class UserController extends CrudController {
         if (req.body.password) {
             throw new httpErrors.BadRequest("Please use /update/password to update your password.");
         }
-        if ((req.body.roles || req.body.active) && !user.isAdmin()) {
+        if ((req.body.roles || req.body.active || req.body.recipientsGift) && !user.isAdmin()) {
             throw new httpErrors.Forbidden("You can't update forbidden fields. Only admins can.");
         }
 

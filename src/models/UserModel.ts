@@ -1,6 +1,6 @@
 import { model, Model, Schema, Document } from "mongoose";
 import { encryptPasswordSync } from "@utils/crypto";
-import { array, constant, Decoder, object, oneOf, optional, string } from "@mojotech/json-type-validation";
+import { array, constant, Decoder, number, object, oneOf, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
 import { generateRandomCode } from "@utils/random";
 import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
@@ -92,6 +92,7 @@ export interface User {
     address?: Address
     roles?: Array<UserRoles>
     avatar?: string
+    recipientsGift?: number
     isAdmin?: () => boolean
     isTvManager?: () => boolean
 }
@@ -112,6 +113,7 @@ export const userDecoder: Decoder<User> = object({
         constant(UserRoles.ROLE_TV_MANAGER),
         constant(UserRoles.ROLE_ADMIN)
     ))),
+    recipientsGift: optional(number()),
     avatar: optional(string()),
 });
 
@@ -190,6 +192,10 @@ export const UserSchema = new Schema<User>({
     },
     avatar: {
         type: String,
+    },
+    recipientsGift: {
+        type: Number,
+        default: 0,
     },
 }, {
     timestamps: {
