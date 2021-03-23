@@ -1,14 +1,18 @@
 import { model, Model, Schema, Document } from "mongoose";
 import { encryptPasswordSync } from "@utils/crypto";
-import { array, constant, Decoder, number, object, oneOf, optional, string } from "@mojotech/json-type-validation";
+import { array, Decoder, number, object, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
 import { generateRandomCode } from "@utils/random";
-import { Address, addressDecoder, AddressDocument, AddressSchema } from "@models/schemas/AddressSchema";
 
 export enum UserRoles {
     ROLE_USER = "ROLE_USER",
     ROLE_TV_MANAGER = "ROLE_TV_MANAGER",
     ROLE_ADMIN = "ROLE_ADMIN"
+}
+
+export interface ProvisionPayment {
+    paymentDate: string
+    amount: number
 }
 
 /**
@@ -89,15 +93,14 @@ export interface User {
     referFrom?: string
     referCode?: string
     active?: boolean
-    address?: Address
     roles?: Array<UserRoles>
     avatar?: string
     recipientsGift?: number
+    provisionPayments?: Array<ProvisionPayment>
     isAdmin?: () => boolean
     isTvManager?: () => boolean
 }
 export interface UserDocument extends User, Document {
-    address?: AddressDocument
 }
 export const userDecoder: Decoder<User> = object({
     username: string(),
@@ -106,14 +109,11 @@ export const userDecoder: Decoder<User> = object({
     iva: string(),
     phone: string(),
     referFrom: optional(string()),
-    referCode: optional(string()),
-    address: optional(addressDecoder),
-    roles: optional(array(oneOf(
-        constant(UserRoles.ROLE_USER),
-        constant(UserRoles.ROLE_TV_MANAGER),
-        constant(UserRoles.ROLE_ADMIN)
-    ))),
     recipientsGift: optional(number()),
+    provisionPayments: optional(array(object({
+        paymentDate: optional(string()),
+        amount: number(),
+    }))),
     avatar: optional(string()),
 });
 
@@ -182,9 +182,6 @@ export const UserSchema = new Schema<User>({
         type: Boolean,
         default: false,
     },
-    address: {
-        type: AddressSchema
-    },
     roles: {
         type: [ String ],
         enum: [ UserRoles.ROLE_USER, UserRoles.ROLE_TV_MANAGER, UserRoles.ROLE_ADMIN ],
@@ -197,6 +194,18 @@ export const UserSchema = new Schema<User>({
         type: Number,
         default: 0,
     },
+    provisionPayments: [{
+        type: new Schema<ProvisionPayment>({
+            paymentDate: {
+                type: Date,
+                default: Date.now,
+            },
+            amount: {
+                type: Number,
+                required: "Payment amount is required.",
+            }
+        }, { _id: false })
+    }],
 }, {
     timestamps: {
         createdAt: true,

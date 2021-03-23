@@ -1,4 +1,4 @@
-import { suite, test } from "mocha-typescript";
+import { suite, test, timeout } from "mocha-typescript";
 import { expect } from "chai";
 import { ioc } from "@ioc";
 import { RecipientService } from "@services/RecipientService";
@@ -162,6 +162,7 @@ import faker from "faker/locale/it";
         expect(deleted).not.to.exist;
     }
 
+    @timeout(60000)
     @test async "Should import recipients from XLSX correctly" () {
         // Import municipalities into test database
         await importMunicipalities();
@@ -169,7 +170,7 @@ import faker from "faker/locale/it";
         const xlsx_standard = await fs.promises.readFile("test/assets/xlsx/import_standard.xlsx");
         let res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id, "import_standard.xlsx");
 
-        expect(res.imported.length).to.equal(2);
+        expect(res.imported.length).to.equal(4);
 
         expect(res.imported[0].fullName).to.equal("Carmine Conversano");
         expect(res.imported[0].user.toString()).to.equal(this.system.id);
@@ -180,7 +181,6 @@ import faker from "faker/locale/it";
             province: "BT",
             country: "IT"
         });
-        expect(res.imported[0].notes).to.equal("Contatto importato da Excel.");
 
         expect(res.imported[1].fullName).to.equal("Silvio Troia");
         expect(res.imported[1].user.toString()).to.equal(this.system.id);
@@ -191,7 +191,6 @@ import faker from "faker/locale/it";
             province: "SA",
             country: "IT"
         });
-        expect(res.imported[1].notes).to.equal("Contatto importato da Excel.");
 
         expect(res.errors.length).to.equal(2);
         expect(res.errors[0].row).to.equal(4);
@@ -208,9 +207,11 @@ import faker from "faker/locale/it";
         expect(res.errors.length).to.equal(6);
     }
 
+    @timeout(60000)
     @test async "Should import recipients with rubrics from XLSX correctly" () {
         // Import municipalities into test database
         await importMunicipalities();
+        await this.recipientService.deleteAll();
 
         const silvio = await this.recipientService.save({
             user: this.system.id,

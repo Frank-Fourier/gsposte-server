@@ -31,8 +31,8 @@ export class UserService extends MongoRepository<User, UserDocument> {
             invoiceCode: "0000000",
             iva: user.iva,
             address: {
-                street: "",
-                city: "",
+                street: "DA COMPILARE",
+                city: "DA COMPILARE",
                 zip: "00000",
                 province: "00"
             }

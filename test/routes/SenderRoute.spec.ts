@@ -141,9 +141,9 @@ const API = process.env.API_PATH;
             })
             .expect(200);
 
-        expect(res.body.meta.total).to.equal(2);
+        expect(res.body.meta.total).to.equal(3);
         expect(res.body.meta.pages).to.equal(1);
-        expect(res.body.docs.length).to.equal(2);
+        expect(res.body.docs.length).to.equal(3);
         expect(res.body.docs[0].user).to.equal(giovanni._id.toString());
         expect(res.body.docs[1].user).to.equal(giovanni._id.toString());
     }

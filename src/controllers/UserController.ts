@@ -31,16 +31,15 @@ export class UserController extends CrudController {
 
     public async register(req: Request, res: Response) {
         this.userService.validateObject(req.body);
+        delete req.body.roles;
+        delete req.body.active;
 
-        const user = req.body as User;
-        logger.info(`Trying to register a new user named ${user.username}...`);
-        const newUser = await this.userService.save(user);
-
+        const user = await this.userService.save(req.body as User);
         if (!isTestEnv()) {
-            this.mailService.sendRegistrationMail(newUser);
+            this.mailService.sendRegistrationMail(user);
         }
 
-        return res.status(201).send(newUser);
+        return res.status(201).send(user);
     }
 
     public async updateMe(req: Request, res: Response) {

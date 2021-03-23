@@ -63,9 +63,9 @@ import fs from "fs";
             sender: sender.id,
             letters: letters,
             number: 1,
-            taxable: 27.5,
-            iva: 6.05,
-            total: 33.55,
+            taxable: 42.5,
+            iva: 9.35,
+            total: 51.85,
         }, invoice);
     }
 
@@ -100,9 +100,9 @@ import fs from "fs";
             sender: sender1.id,
             letters: firstBatch,
             number: 1,
-            taxable: 16.5,
-            iva: 3.63,
-            total: 20.13,
+            taxable: 25.5,
+            iva: 5.61,
+            total: 31.11,
         }, results[this.system.id][0].invoice);
         expect(results[this.system.id][1].errors.length).to.equal(0);
         assertSameInvoice({
@@ -110,9 +110,9 @@ import fs from "fs";
             sender: sender2.id,
             letters: secondBatch,
             number: 2,
-            taxable: 11,
-            iva: 2.42,
-            total: 13.42,
+            taxable: 17,
+            iva: 3.74,
+            total: 20.74,
         }, results[this.system.id][1].invoice);
         expect(results[this.system.id][2].errors.length).to.equal(0);
         assertSameInvoice({
@@ -120,9 +120,9 @@ import fs from "fs";
             sender: sender3.id,
             letters: thirdBatch,
             number: 3,
-            taxable: 22,
-            iva: 4.84,
-            total: 26.84,
+            taxable: 34,
+            iva: 7.48,
+            total: 41.48,
         }, results[this.system.id][2].invoice);
     }
 
@@ -160,7 +160,8 @@ import fs from "fs";
 
     @timeout(60000)
     @test async "Should generate a letter invoice PDF correctly" () {
-        const saved = await saveMockLetter({ user: this.system.id, kind: LetterKind.RACCOMANDATA_AR });
+        const saved = await (await saveMockLetter({ user: this.system.id, kind: LetterKind.RACCOMANDATA_AR }))
+            .populate("recipients").execPopulate();
 
         // Emulate the final behaviour of sendLetter()
         const requestId = generateUUID(), orderId = generateUUID().toUpperCase();

@@ -4,7 +4,7 @@ import { ioc } from "@ioc";
 import { LetterService } from "@services/LetterService";
 import { SenderService } from "@services/SenderService";
 import { RecipientService } from "@services/RecipientService";
-import { PdfService } from "@services/PdfService";
+import { PDF_ROOT, PdfService } from "@services/PdfService";
 import { UserDocument } from "@models/UserModel";
 import { LetterDocument } from "@models/LetterModel";
 import { RecipientDocument } from "@models/RecipientModel";
@@ -17,6 +17,7 @@ import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
 // @ts-ignore
 import faker from "faker/locale/it";
+import * as fs from "fs";
 
 @suite ("LetterService") class LetterServiceTests {
 
@@ -26,7 +27,10 @@ import faker from "faker/locale/it";
     pdf = ioc.resolve(PdfService);
     system: UserDocument;
 
-    static async before() { await generateSystemUser(); }
+    static async before() {
+        await generateSystemUser();
+        await importPrices();
+    }
     async before() { this.system = await getSystemUser(); }
 
     @test async "Should save letter" () {
@@ -58,18 +62,19 @@ import faker from "faker/locale/it";
             ],
             TEST_CODE_PDF
         );
-        delete mock.user; // One of the required params;
+        const subj = mock.subject;
+        delete mock.subject; // One of the required params;
 
         let letter: LetterDocument;
         try {
             letter = await this.letterService.save(mock);
         } catch (err) {
             expect(err).to.exist;
-            expect(err.message).to.equal("User is required.");
+            expect(err.message).to.equal("Subject is required.");
         }
 
         expect(letter).not.to.exist;
-        mock.user = this.system.id;
+        mock.subject = subj;
         mock.notes = faker.lorem.words(500); // Notes max length is 500
 
         try {
@@ -247,8 +252,6 @@ import faker from "faker/locale/it";
 
     @timeout(120000)
     @test async "Should send letter correctly" () {
-        await importPrices();
-
         const letter = await this.letterService.save(generateMockLetter(
             this.system.id,
             await this.senderService.save(generateMockSender(this.system.id)),
@@ -268,6 +271,7 @@ import faker from "faker/locale/it";
             TEST_CODE_PDF
         ), false);
 
+        await fs.promises.copyFile(`test/assets/pdf/${TEST_CODE_PDF}/original.pdf`, `${PDF_ROOT}/${TEST_CODE_PDF}/original.pdf`);
         const sent = await this.letterService.sendLetter(letter);
 
         // If I'm here, it means sendLetter didn't throw so the routine is waiting 60 seconds

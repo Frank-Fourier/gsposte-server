@@ -173,13 +173,6 @@ const API = process.env.API_PATH;
         const mockUser = await saveMockUserAndLogin();
         const mockRecipient = generateMockRecipient(mockUser.user._id);
         const recipient = await this.recipientService.save(mockRecipient);
-
-        await this.http
-            .post(`${API}/recipient`)
-            .set("Authorization", this.token)
-            .send(mockRecipient)
-            .expect(201);
-
         const newStreet = "Via Lezzi 4316";
 
         const { body } = await this.http

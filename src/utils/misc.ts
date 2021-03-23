@@ -59,5 +59,5 @@ export function formatCurrency(price: number): string {
  * @returns {string}
  */
 export function getDocumentId(docOrId: Schema.Types.ObjectId | Document | any): string {
-    return docOrId instanceof Schema.Types.ObjectId ? docOrId.toString() : (docOrId as Document).id.toString()
+    return typeof(docOrId) === "string" ? docOrId : (docOrId as Document).id;
 }

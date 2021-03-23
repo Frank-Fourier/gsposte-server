@@ -191,6 +191,39 @@ export class ProvisionRoute extends Route {
                 requiresAuth: true,
                 handler: (req, res) => this.provisionController.calculateRevenueYearly(req, res)
             },
+            /**
+             * @swagger
+             *
+             * /provision/revenue/due/{userId}:
+             *   get:
+             *     tags:
+             *       - Provisions
+             *     description: Calculates the due revenue to pay for a user
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: userId
+             *         required: true
+             *         in: path
+             *         description: Mongo id of the user to calculate due revenue of
+             *     responses:
+             *       200:
+             *         description: Calculated due revenue
+             *         schema:
+             *           $ref: "#/definitions/DueRevenue"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/revenue/due/:userId",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.provisionController.calculateUserDueRevenue(req, res)
+            }
         ]);
     }
 

@@ -4,7 +4,7 @@ import { ioc } from "@ioc";
 import { ExpressServer } from "@server";
 import { generateSystemUser } from "@utils/system";
 import { getSystemUser, loginWithSystem } from "../test_utils";
-import { generateMockUser, userGiovanni } from "../mocks/user";
+import { generateMockUser } from "../mocks/user";
 import { UserService } from "@services/UserService";
 import { cleanTestDB } from "@utils/mongo";
 import { UserRoles } from "@models/UserModel";
@@ -64,7 +64,8 @@ const API = process.env.API_PATH;
                 username: "system_duplicate",
                 email: "system@server",
                 password: "MakotoBestGirl2020",
-                iva: "DUPLICATE"
+                iva: "DUPLICATE",
+                phone: "4242424242"
             })
             .expect(409);
     }

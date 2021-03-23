@@ -160,7 +160,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         const letters = await this.letterService.find({
             user: user,
             sent: true,
-            paid: false,
+            paid: { $ne: true },
             error: { $ne: true },
             invoice: { $exists: false },
         });
@@ -174,7 +174,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             errors: Array<{ letter: LetterDocument, error: Error | any }>
         }> = [];
 
-        let lastNumber = startNumber || await this.getLatestInvoiceNumber();
+        let lastNumber = startNumber ?? await this.getLatestInvoiceNumber();
         for (const letter of Object.values(aggregated)) {
             const result = await this.generateSingleInvoice(letter, lastNumber + 1);
             if (!result.invoice) {

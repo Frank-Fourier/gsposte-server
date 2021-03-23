@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { inject } from "inversify";
 import { ProvisionService } from "@services/ProvisionService";
 import { LetterService } from "@services/LetterService";
+import { UserService } from "@services/UserService";
 import httpErrors from "http-errors";
 
 @provide(ProvisionController)
@@ -10,6 +11,7 @@ export class ProvisionController {
 
     @inject(ProvisionService) private provisionService: ProvisionService;
     @inject(LetterService) private letterService: LetterService;
+    @inject(UserService) private userService: UserService;
 
     public async generate(req: Request, res: Response) {
         const letterId = req.params.letterId;
@@ -56,6 +58,16 @@ export class ProvisionController {
 
         const revenues = await this.provisionService.calculateRevenueYearly(req.params.userId, year);
         return res.status(200).send(revenues);
+    }
+
+    public async calculateUserDueRevenue(req: Request, res: Response) {
+        if (!req.params.userId) {
+            throw new httpErrors.BadRequest("User ID is required.");
+        }
+
+        const user = await this.userService.findById(req.params.userId);
+        const dueRevenue = await this.provisionService.calculateTotalDueRevenue(user);
+        return res.status(200).send(dueRevenue);
     }
 
 }

@@ -5,10 +5,10 @@ import { LetterDocument } from "@models/LetterModel";
 import { inject } from "inversify";
 import { PriceService, WeightRanges } from "@services/PriceService";
 import { UserService } from "@services/UserService";
-import { UserDocument } from "@models/UserModel";
+import { ProvisionPayment, UserDocument } from "@models/UserModel";
 import moment from "moment";
 import provisionConfig from "../../provisions.json";
-import { getDocumentId } from "@utils/misc";
+import { InvoiceDocument } from "@models/InvoiceModel";
 
 export interface ProvisionRanges {
     percents: number[]
@@ -129,6 +129,25 @@ export interface RevenueYears {
     provisions: Array<ProvisionDocument>
 }
 
+/**
+ * @swagger
+ *
+ * definitions:
+ *   DueRevenue:
+ *     type: object
+ *     properties:
+ *       due:
+ *         type: number
+ *         description: How much revenue this user needs to be paid
+ *       paid:
+ *         type: number
+ *         description: How much revenue has already been paid for this user
+ */
+export interface DueRevenue {
+    due: number
+    paid: number
+}
+
 @provide(ProvisionService)
 export class ProvisionService extends MongoRepository<Provision, ProvisionDocument> {
 
@@ -199,10 +218,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
             year: year || new Date().getFullYear(),
             month: month,
             provisions: provisions,
-            amount: provisions
-                .reduce<number>((acc, cur) =>
-                    acc + cur.referrers.find(ref => getDocumentId(ref.user) === userId)?.amount ?? 0, 0
-                ),
+            amount: provisions.reduce<number>((acc, cur) => acc + this.getAmountForUserId(cur, userId), 0),
         };
     }
 
@@ -214,7 +230,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * @returns {Promise<RevenueMonths>} The object containing all months
      */
     public async calculateRevenueYearly(userId: string, year?: number): Promise<RevenueYears> {
-        year = Number.isNaN(year) ? new Date().getFullYear() : year;
+        year = !year ? new Date().getFullYear() : year;
         const revenue = await this.calculateRevenue(userId, {
             createdAt: {
                 $gte: new Date(year, 0, 1),
@@ -281,6 +297,41 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
             total: Object.values(revenueMonths).reduce<number>((acc: number, cur: RevenueMonth) => acc + cur.amount, 0),
             ...revenueMonths
         };
+    }
+
+    /**
+     * Calculates the total due revenue for a specific user
+     * "Due revenue" means how much money this user can request (based on his paid invoices)
+     *
+     * @param user {UserDocument} The user
+     * @returns {Promise<DueRevenue>} Object containing the total to request and how much has been paid
+     */
+    public async calculateTotalDueRevenue(user: UserDocument): Promise<DueRevenue> {
+        const amount = (await this.find({
+            referrers: { $elemMatch: { user: user.id } }
+        }, {
+            populate: [{
+                path: "letter",
+                populate: { path: "invoice" }
+            }, {
+                path: "referrers.user"
+            }]
+        })).filter(p => ((p.letter as LetterDocument)?.invoice as InvoiceDocument)?.paid)
+           .reduce((acc, cur) => acc + this.getAmountForUserId(cur, user.id), 0);
+
+        const payments = this.getUserTotalProvisionPayments(user);
+        return {
+            due: amount - payments,
+            paid: payments,
+        }
+    }
+
+    getAmountForUserId(provision: ProvisionDocument, userId: string) {
+        return provision.depopulate("referrers.user").referrers.find((ref: any) => ref.user.toString() === userId)?.amount ?? 0;
+    }
+
+    getUserTotalProvisionPayments(user: UserDocument) {
+        return user.provisionPayments?.reduce((acc: number, cur: ProvisionPayment) => acc + cur.amount, 0) ?? 0;
     }
 
 }

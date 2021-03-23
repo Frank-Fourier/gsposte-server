@@ -46,7 +46,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     public async save(letter: Letter, depopulate = true): Promise<LetterDocument> {
         const user = await this.userService.findById(
-            letter.user instanceof String ? letter.user : (letter.user as UserDocument)._id
+            typeof(letter.user) === "string" ? letter.user : (letter.user as UserDocument)._id
         );
         const recipientsGift = letter.recipientsGift ?? 0;
 

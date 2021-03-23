@@ -1,4 +1,4 @@
-import { suite, test } from "mocha-typescript";
+import { suite, test, timeout } from "mocha-typescript";
 import { expect } from "chai";
 import { ioc } from "@ioc";
 import { StatsService } from "@services/StatsService";
@@ -18,6 +18,7 @@ import { LetterKind } from "@models/LetterModel";
     static async before() { await generateSystemUser(); }
     async before() { this.system = await getSystemUser(); }
 
+    @timeout(60000)
     @test async "Should generate the right statistics" () {
         await importMunicipalities();
         await importPrices();

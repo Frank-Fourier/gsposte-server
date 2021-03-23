@@ -10,11 +10,14 @@ import { generateMockUser } from "../mocks/user";
 import { saveMockLetter } from "../mocks/letter";
 import { UserDocument } from "@models/UserModel";
 import { importPrices } from "../test_utils";
+import { LetterKind } from "@models/LetterModel";
+import { InvoiceService } from "@services/InvoiceService";
 
 @suite ("ProvisionService") class ProvisionServiceTests {
 
     userService = ioc.resolve(UserService);
     provisionService = ioc.resolve(ProvisionService);
+    invoiceService = ioc.resolve(InvoiceService);
 
     userA: UserDocument;
     userB1: UserDocument;
@@ -160,6 +163,25 @@ import { importPrices } from "../test_utils";
             logger.error(err);
             expect(err).not.to.exist;
         }
+    }
+
+    @test async "Should generate total due revenue correctly" () {
+        await this.generateUsers();
+
+        const [ provisionA, provisionB ] = await Promise.all([
+            await saveMockLetter({ user: this.userA.id, kind: LetterKind.LETTERA_SEMPLICE, sent: true }),
+            await saveMockLetter({ user: this.userA.id, kind: LetterKind.RACCOMANDATA, sent: true }),
+            await saveMockLetter({ user: this.userA.id, kind: LetterKind.RACCOMANDATA_AR, sent: true }),
+            await saveMockLetter({ user: this.userA.id, kind: LetterKind.LETTERA_SEMPLICE, sent: true }),
+            await saveMockLetter({ user: this.userA.id, kind: LetterKind.RACCOMANDATA, sent: true }),
+        ].map(letter => this.provisionService.generateProvision(letter)));
+
+        const invoices = (await this.invoiceService.generateInvoicesForUser(this.userA.id)).map(({ invoice }) => invoice);
+        await Promise.all([ 0, 1 ].map(i => this.invoiceService.toggleInvoicePaid(invoices[i])));
+
+        const { due, paid } = await this.provisionService.calculateTotalDueRevenue(this.userA);
+        expect(due).to.equal(this.provisionService.getAmountForUserId(provisionA, this.userA.id) + this.provisionService.getAmountForUserId(provisionB, this.userA.id));
+        expect(paid).to.equal(0);
     }
 
 }

@@ -29,58 +29,59 @@ import { logger } from "@utils/winston";
         await this.invoiceService.deleteAll();
     }
 
-    @timeout(60000)
-    @test async "Should export an invoice to FIC correctly" () {
-        const sender = await this.senderService.save(generateMockSender(this.system.id));
-        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
-        const results = await this.invoiceService.generateInvoices();
-        const [{ invoice }] = results[this.system.id];
-
-        try {
-            const { fic } = await this.invoiceService.exportToFIC(this.system, invoice);
-            expect(fic).to.exist;
-        } catch (err) {
-            logger.error(err);
-            expect(err).not.to.exist;
-        }
-    }
-
-    @timeout(60000)
-    @test async "Should bulk export invoices to FIC correctly" () {
-        const [ sender1, sender2, sender3 ] = [
-            await this.senderService.save(generateMockSender(this.system.id)),
-            await this.senderService.save(generateMockSender(this.system.id)),
-            await this.senderService.save(generateMockSender(this.system.id)),
-        ];
-        await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
-
-        await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
-
-        await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
-        await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
-
-        await this.invoiceService.generateInvoices();
-        this.invoiceService.bulkExportToFIC(this.system, false);
-        await sleep(5000);
-
-        const imported = await this.invoiceService.find({ fic: { $exists: true } });
-        expect(imported.length).to.equal(3);
-    }
+    // FATTURE IN CLOUD: LICENZA SCADUTA
+    // @timeout(60000)
+    // @test async "Should export an invoice to FIC correctly" () {
+    //     const sender = await this.senderService.save(generateMockSender(this.system.id));
+    //     await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true });
+    //     const results = await this.invoiceService.generateInvoices();
+    //     const [{ invoice }] = results[this.system.id];
+    //
+    //     try {
+    //         const { fic } = await this.invoiceService.exportToFIC(this.system, invoice);
+    //         expect(fic).to.exist;
+    //     } catch (err) {
+    //         logger.error(err);
+    //         expect(err).not.to.exist;
+    //     }
+    // }
+    //
+    // @timeout(60000)
+    // @test async "Should bulk export invoices to FIC correctly" () {
+    //     const [ sender1, sender2, sender3 ] = [
+    //         await this.senderService.save(generateMockSender(this.system.id)),
+    //         await this.senderService.save(generateMockSender(this.system.id)),
+    //         await this.senderService.save(generateMockSender(this.system.id)),
+    //     ];
+    //     await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true });
+    //
+    //     await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true });
+    //
+    //     await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
+    //     await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true });
+    //
+    //     await this.invoiceService.generateInvoices();
+    //     this.invoiceService.bulkExportToFIC(this.system, false);
+    //     await sleep(5000);
+    //
+    //     const imported = await this.invoiceService.find({ fic: { $exists: true } });
+    //     expect(imported.length).to.equal(3);
+    // }
 
     static after() { cleanTestDB(); }
 

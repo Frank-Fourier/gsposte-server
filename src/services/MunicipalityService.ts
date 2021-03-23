@@ -75,7 +75,8 @@ export class MunicipalityService extends MongoRepository<Municipality, Municipal
         });
 
         // Insert all municipalities after drop
-        await connection.db.dropCollection("municipalities");
+        const exists = await (await connection.db.listCollections().toArray()).findIndex((item) => item.name === "municipalities") !== -1;
+        if (exists) { await connection.db.dropCollection("municipalities"); }
         const imported = await this.municipalityModel.insertMany(municipalities);
 
         logger.info(`Ok! ${imported.length} municipalities imported.`);

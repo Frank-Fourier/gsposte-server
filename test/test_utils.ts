@@ -13,6 +13,7 @@ import { MunicipalityService } from "@services/MunicipalityService";
 import fs from "fs";
 import prices from "../test/assets/json/prices.json";
 import { Invoice, InvoiceDocument } from "@models/InvoiceModel";
+import { MunicipalityModel } from "@models/MunicipalityModel";
 
 export const TEST_CODE_PDF = "GSTESTPDF21";
 
@@ -116,8 +117,14 @@ export async function sleep(ms: number): Promise<void> {
 }
 
 export async function importMunicipalities(): Promise<void> {
-    await ioc.resolve(MunicipalityService).importFromJSON(await fs.promises.readFile("test/assets/json/municipalities.json"));
+    if (await MunicipalityModel.count({}).exec() === 0) {
+        await ioc.resolve(MunicipalityService).importFromJSON(
+            await fs.promises.readFile("test/assets/json/municipalities.json")
+        );
+    }
 }
 export async function importPrices(): Promise<void> {
-    await PriceModel.insertMany(prices);
+    if (await PriceModel.count({}).exec() === 0) {
+        await PriceModel.insertMany(prices);
+    }
 }
