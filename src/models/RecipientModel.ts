@@ -80,15 +80,8 @@ export function mapRecipientToPerson(recipient: RecipientDocument, letterKind: L
     const hasSpace = fullNameTrimmed.includes(" ");
     return {
         ...insert(hasSpace, {
-            // MODIFICA IMPORTANTE:
-            // Nel caso di invio lettera semplice, Poste Italiane stampa prima il nome e poi il cognome (bastardi)
-            ...insert(letterKind === LetterKind.LETTERA_SEMPLICE, {
-                surname: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
-                name: fullNameTrimmed.split(" ")[0],
-            }, {
-                name: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
-                surname: fullNameTrimmed.split(" ")[0],
-            }),
+            name: fullNameTrimmed.substring(fullNameTrimmed.indexOf(" ") + 1) || "",
+            surname: fullNameTrimmed.split(" ")[0],
         }, {
             businessName: fullNameTrimmed
         }),
