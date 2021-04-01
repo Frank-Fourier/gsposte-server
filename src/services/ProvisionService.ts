@@ -6,9 +6,10 @@ import { inject } from "inversify";
 import { PriceService, WeightRanges } from "@services/PriceService";
 import { UserService } from "@services/UserService";
 import { ProvisionPayment, UserDocument } from "@models/UserModel";
+import { Types } from "mongoose";
 import moment from "moment";
 import provisionConfig from "../../provisions.json";
-import { InvoiceDocument } from "@models/InvoiceModel";
+import httpErrors from "http-errors";
 
 export interface ProvisionRanges {
     percents: number[]
@@ -307,21 +308,128 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
      * @returns {Promise<DueRevenue>} Object containing the total to request and how much has been paid
      */
     public async calculateTotalDueRevenue(user: UserDocument): Promise<DueRevenue> {
-        const amount = (await this.find({
-            referrers: { $elemMatch: { user: user.id } }
-        }, {
-            populate: [{
-                path: "letter",
-                populate: { path: "invoice" }
-            }, {
-                path: "referrers.user"
-            }]
-        })).filter(p => ((p.letter as LetterDocument)?.invoice as InvoiceDocument)?.paid)
-           .reduce((acc, cur) => acc + this.getAmountForUserId(cur, user.id), 0);
+        const [{ total_due }] = await this.provisionModel.aggregate([
+            /**
+             * AGGREGATE PIPELINE SPIEGATA
+             * Effettua il match: passano solo i documenti che hanno nell'array 'referrers' lo user id interessato
+             */
+            {
+                $match: {
+                    referrers: {
+                        $elemMatch: { user: Types.ObjectId(user.id) }
+                    }
+                }
+            },
+            /**
+             * Effettua il left join sulla tabella letters per trovare la lettera corrispondente a questa provvigione.
+             * Il risultato va a finire nell'array 'letter'
+             */
+            {
+                $lookup: {
+                    from: "letters",
+                    localField: "letter",
+                    foreignField: "_id",
+                    as: "letter"
+                }
+            },
+            /**
+             * Dato che la relazione Provision/Letter è one-to-one, rendo l'array 'letter' un oggetto singolo
+             */
+            {
+                $unwind: {
+                    path: "$letter"
+                }
+            },
+            /**
+             * Effettua il left join sulla tabella invoices per trovare la fattura corrispondente a questa lettera (se esiste).
+             * Il risultato va a finire nell'array 'invoice'
+             */
+            {
+                $lookup: {
+                    from: "invoices",
+                    localField: "letter.invoice",
+                    foreignField: "_id",
+                    as: "invoice"
+                }
+            },
+            /**
+             * Dato che la relazione Letter/Invoice è one-to-one, rendo l'array 'letter' un oggetto singolo
+             */
+            {
+                $unwind: {
+                    path: "$invoice"
+                }
+            },
+            /**
+             * Effettua il match: passano solo i documenti che hanno fattura segnata come pagata
+             */
+            {
+                $match: {
+                    "invoice.paid": true
+                }
+            },
+            /**
+             * Proietta nell'array 'referrer' solo il referrer relativo all'utente interessato.
+             * Questo al fine di recuperare il valore di 'amount' in seguito.
+             */
+            {
+                $project: {
+                    referrer: {
+                        $filter: {
+                            input: "$referrers",
+                            as: "referrer",
+                            cond: { $eq: [ "$$referrer.user", Types.ObjectId(user.id) ] }
+                        }
+                    }
+                }
+            },
+            /**
+             * So bene che, se esiste, il match è singolo nell'array 'referrer', quindi posso unwindare
+             */
+            {
+                $unwind: {
+                    path: "$referrer"
+                }
+            },
+            /**
+             * Effettuo una group by di tutti gli array 'referrer' così composti, ottenendo un singolo documento
+             * con un unico array complessivo
+             */
+            {
+                $group: {
+                    _id: 0,
+                    referrers: {
+                        $push: "$referrer"
+                    }
+                }
+            },
+            /**
+             * Da questo array complessivo effettuo la reduce per sommare tutti gli amount,
+             * e metto il valore definitivo in total_due. Infine, lo proietto come valore finale
+             * dell'aggregation.
+             */
+            {
+                $project: {
+                    _id: 0,
+                    total_due: {
+                        $reduce: {
+                            input: "$referrers",
+                            initialValue: 0,
+                            in: {
+                                $add: ["$$value", "$$this.amount"]
+                            }
+                        }
+                    }
+                }
+            }
+        ]).exec();
+        if (!total_due) {
+            throw new httpErrors.InternalServerError("Failed to calculate total due");
+        }
 
         const payments = this.getUserTotalProvisionPayments(user);
         return {
-            due: amount - payments,
+            due: total_due - payments,
             paid: payments,
         }
     }
