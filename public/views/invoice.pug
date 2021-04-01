@@ -75,6 +75,8 @@ html(lang="it")
             br
             | #{sender.address.zip} #{sender.address.city.toUpperCase()} (#{sender.address.province.toUpperCase()})
         p(class="invoice-info") Distinta #{partial ? "parziale" : ""} #{codePdf} #{dateSent ? `del ${dateSent}` : ""}
+            br
+            | Oggetto: #{subject}
         - const isRaccomandata = () => kind !== "LETTERA SEMPLICE" && kind !== "LETTERA PRIORITARIA"
         table(class="recipients-table")
             thead
