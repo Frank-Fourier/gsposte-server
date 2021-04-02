@@ -423,7 +423,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
                 }
             }
         ]).exec();
-        if (!total_due) {
+        if (total_due === null || total_due === undefined) {
             throw new httpErrors.InternalServerError("Failed to calculate total due");
         }
 
