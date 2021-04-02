@@ -13,11 +13,9 @@ import { UserDocument } from "@models/UserModel";
 import { SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
-import { Person, PriceResponse, TrackResponse } from "../posteway";
+import { Person, PriceResponse, TelegramTicket, TrackResponse } from "../posteway";
 import { ProvisionDocument } from "@models/ProvisionModel";
 import { addressDecoder, AddressSchema } from "@models/schemas/AddressSchema";
-import { ioc } from "@ioc";
-import { PriceService } from "@services/PriceService";
 
 export enum LetterKind {
     "LETTERA_SEMPLICE" = "LETTERA SEMPLICE",
@@ -26,6 +24,7 @@ export enum LetterKind {
     "RACCOMANDATA_AR" = "RACCOMANDATA AR",
     "RACCOMANDATA_UNO" = "RACCOMANDATA UNO",
     "RACCOMANDATA_UNO_AR" = "RACCOMANDATA UNO AR",
+    "TELEGRAMMA" = "TELEGRAMMA",
 }
 
 /**
@@ -83,6 +82,10 @@ export enum LetterKind {
  *         type: string
  *         description: The code used to associate the PDF to this campaign. Get this from the /pdf/upload call.
  *         example: GSK6RNCXHW
+ *       text:
+ *         type: string
+ *         description: Telegram text. Considered if kind is TELEGRAMMA
+ *         example: HELLO WORLD
  *       bw:
  *         type: boolean
  *         description: Gray-scale print on Poste - Default is false
@@ -149,11 +152,13 @@ export interface Letter {
     sendAt?: Date | string
     kind: LetterKind
     codePdf: string
+    text?: string
     bw?: boolean
     backSide?: boolean
     notes?: string
     recipientsGift?: number
     isRaccomandata?: () => boolean
+    isTelegramma?: () => boolean
     getTotalPrice?: (gifts?: number) => number
 }
 export interface LetterDocument extends Letter, Document {
@@ -169,6 +174,20 @@ export interface LetterDocument extends Letter, Document {
         status?: string
         prices?: PriceResponse
         track?: TrackResponse
+        telegram?: {
+            price?: {
+                words: number
+                net: number
+                tax: number
+                total: number
+            }
+            tickets?: Array<TelegramTicket>
+            status?: Array<{
+                id: string
+                part: number
+                state: string
+            }>
+        }
     }
     createdAt: Date
     updatedAt: Date
@@ -208,7 +227,8 @@ export const letterDecoder: Decoder<Letter> = object({
         constant(LetterKind.RACCOMANDATA_UNO),
         constant(LetterKind.RACCOMANDATA_UNO_AR),
     ),
-    codePdf: string(),
+    codePdf: optional(string()),
+    text: optional(string()),
     bw: optional(boolean()),
     backSide: optional(boolean()),
     notes: optional(string()),
@@ -270,6 +290,10 @@ export const LetterSchema = new Schema<Letter>({
     codePdf: {
         type: String,
         required: "PDF code is required.",
+    },
+    text: {
+        type: String,
+        maxlength: 8192,
     },
     bw: {
         type: Boolean,
@@ -341,8 +365,11 @@ export const LetterSchema = new Schema<Letter>({
 });
 
 LetterSchema.methods.isRaccomandata = function() {
-    return this.kind !== LetterKind.LETTERA_SEMPLICE && this.kind !== LetterKind.LETTERA_PRIORITARIA;
+    return this.kind !== LetterKind.LETTERA_SEMPLICE && this.kind !== LetterKind.LETTERA_PRIORITARIA && this.kind !== LetterKind.TELEGRAMMA;
 };
+LetterSchema.methods.isTelegramma = function() {
+    return this.kind === LetterKind.TELEGRAMMA;
+}
 LetterSchema.methods.getTotalPrice = function(gifts?: number) {
     return this.price * (this.recipients.length - (gifts ?? 0));
 };

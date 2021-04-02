@@ -1,4 +1,4 @@
-export type SubmitKind = "lol" | "rol" | "runo";
+export type SubmitKind = "lol" | "rol" | "runo" | "tol";
 
 export type AddressKind = "normal" | "postal";
 
@@ -190,4 +190,61 @@ export interface PW_PaginateResult<T> {
     hasNextPage: boolean;
     meta?: any;
     [customLabel: string]: T[] | number | boolean | null | undefined;
+}
+
+/// TELEGRAMS
+
+export interface GenericResponse {
+    ok: boolean
+    description: string
+}
+
+export interface TelegramTicket {
+    id?: string
+    recipientId?: number
+    serviceId?: string
+    message: string
+}
+
+export interface TelegramConfirmResponse {
+    message?: string
+    tickets?: Array<TelegramTicket>
+}
+
+export interface TelegramStatusResponse {
+    telegrams: Array<{
+        id: string
+        part: number
+        state: string
+    }>
+}
+
+export interface TelegramSubmit {
+    sender: Person
+    recipients: Array<Person>
+    text: string
+    notes?: string
+    showSenderAddress?: boolean
+}
+
+export interface TelegramSubmitResponse {
+    ok: boolean
+    requestId: string
+    submitResult?: {
+        text: string
+        price: {
+            words: number
+            net: number
+            tax: number
+            total: number
+        }
+    }
+    validationResult?: {
+        description: string
+        results: Array<{
+            recipientId: string
+            correctAddress: Address
+            result: string
+        }>
+    }
 }

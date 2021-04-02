@@ -71,6 +71,10 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
      * @returns {Promise<number>} Calculated price
      */
     public async calculatePrice(letter: LetterDocument): Promise<number> {
+        if (letter.isTelegramma()) {
+
+        }
+
         const { pages, weight } = await this.calculateWeight(letter);
         const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
 

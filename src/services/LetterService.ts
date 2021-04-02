@@ -27,6 +27,7 @@ import { UserService } from "@services/UserService";
 import winston from "winston";
 import moment from "moment";
 import httpErrors from "http-errors";
+import { generateRandomCode } from "@utils/random";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -62,6 +63,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         await user.save();
 
         // Save the letter
+        letter.codePdf = letter.codePdf ?? `GS${generateRandomCode()}`;
         let letterDocument = await (await super.save(letter)).populate("sender recipients").execPopulate();
 
         // Calculate its price
@@ -700,6 +702,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             case LetterKind.RACCOMANDATA_UNO:
             case LetterKind.RACCOMANDATA_UNO_AR:
                 return "runo";
+            case LetterKind.TELEGRAMMA:
+                return "tol";
         }
     }
 
