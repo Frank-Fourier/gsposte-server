@@ -299,162 +299,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         }
 
         if (kind === "tol") {
-            // Enter Telegramma lane
-            if (!letter.text) {
-                logFile?.error(`This telegram does not have text.`);
-                logger.error(`[TELEGRAM ${letter.codePdf}] This telegram does not have text.`);
-
-                // Inform the user that there was an error
-                this.noticeService.save({
-                    user: userId,
-                    title: "Errore durante l'invio del telegramma",
-                    content: "Non è possibile inviare un telegramma senza testo",
-                    data: {},
-                    kind: NoticeKind.LETTER,
-                    error: true
-                });
-
-                throw { message: `This telegram does not have text.` };
-            }
-
-            let submit: TelegramSubmitResponse;
-            try {
-                submit = await this.posteway.send_telegram({
-                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
-                    recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r, letter.kind)),
-                    text: letter.text,
-                    notes: letter.subject,
-                    showSenderAddress: letter.telegramShowSenderAddress ?? false,
-                });
-            } catch (err) {
-                logFile?.error(`Error while calling PosteWay TELEGRAM SEND endpoint`, err);
-                logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TELEGRAM SEND endpoint. Got this error: `, err);
-
-                // Inform the user that there was an error
-                this.noticeService.save({
-                    user: userId,
-                    title: "Errore durante l'invio del telegramma",
-                    content: `Errore durante la richiesta di invio del telegramma '${letter.codePdf}' tramite PosteWay!`,
-                    data: { error: err },
-                    kind: NoticeKind.LETTER,
-                    error: true
-                });
-
-                throw { message: `Error while calling PosteWay TELEGRAM SEND endpoint`, error: err };
-            }
-
-            if (!submit.ok) {
-                logFile?.error(`PosteWay TELEGRAM SEND API result was not ok. Got this result: `, submit);
-                logger.error(`[TELEGRAM ${letter.codePdf}] PosteWay TELEGRAM SEND API result was not ok. Got this result: `, submit);
-
-                // Inform the user that there was an error
-                this.noticeService.save({
-                    user: userId,
-                    title: "Errore durante l'invio della lettera",
-                    content: "Il telegramma contiene dei campi non validi. Controllare la risposta e riprovare.",
-                    data: { result: submit },
-                    kind: NoticeKind.LETTER,
-                    error: true
-                });
-
-                throw { message: `PosteWay TELEGRAM SEND API result was not ok.`, result: submit };
-            }
-
-            updated = await this.updateById(updated.id, {
-                $set: {
-                    posteway: {
-                        requestId: submit.requestId,
-                        telegram: {
-                            text: submit.submitResult.text,
-                            price: submit.submitResult.price
-                        }
-                    }
-                }
-            });
+            return await this.sendTelegram(letter, userId, logFile);
         }
 
         if (kind === "runo") {
-            // Enter CDS lane, create bulk letters (order is preserved in Promise.all)
-            const pdf = this.getOriginalPdfLink(letter);
-            const { pages, letters } = await this.posteway.cds_create_bulk(
-                letter.recipients.map<PW_Letter>((recipient: RecipientDocument) => ({
-                    platform: "GSPoste",
-                    code: letter.codePdf,
-                    kind: kind,
-                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
-                    recipient: mapRecipientToPerson(recipient, letter.kind),
-                    recipientAR: letter.recipientAR ? {
-                        ...letter.recipientAR,
-                        notes: letter.subject
-                    } : (
-                        (letter.sender as SenderDocument).addressAR
-                            ? mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject, true)
-                            : undefined
-                    ),
-                    pdf: pdf,
-                    options: {
-                        bw: letter.bw ?? true,
-                        backSide: letter.backSide ?? true,
-                        ar: letter.kind === LetterKind.RACCOMANDATA_UNO_AR,
-                    },
-                    avatarUrl: user.avatar,
-                })), pdf
-            );
-
-            const net = letters.reduce((acc: number, cur: PW_LetterDocument) => acc + cur.price, 0);
-            const tax = (net * 22) / 100;
-            const tot = net + tax;
-
-            // Update letter's PosteWay object and return
-            updated = await this.updateById(updated.id, {
-                $set: {
-                    posteway: {
-                        prices: {
-                            pages: pages,
-                            total: {
-                                cur: "EUR",
-                                net, tax, tot
-                            }
-                        },
-                        track: {
-                            recipients: letters.map(letter => ({
-                                id: letter._id,
-                                person: letter.recipient,
-                                tracking: {
-                                    number: letter.tracking,
-                                    status: letter.status,
-                                }
-                            }))
-                        }
-                    }
-                }
-            }, false, false);
-
-            // Everything went fine, generate provision
-            try {
-                updated.provision = await this.provisionService.generateProvision(letter);
-                await updated.save();
-            } catch (err) {
-                logFile?.error(`Error while generating the provision!`, err);
-                logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
-
-                // Inform the user that there was an error
-                this.noticeService.save({
-                    user: userId,
-                    title: "Creazione della provvigione fallita",
-                    content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
-                    data: { error: err },
-                    kind: NoticeKind.LETTER,
-                    error: true
-                });
-
-                throw err;
-            }
-
-            // Finally inform the client that this letter is ready
-            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}.`);
-
-            return updated;
+            return await this.sendRUNO(letter, user, logFile);
         }
 
         const confirmAndTrackLetter = async (submit: SubmitResponse, kind: SubmitKind) => {
@@ -723,6 +572,165 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
        };
 
         return this.updateById(letter.id, temporary, false, false);
+    }
+
+    private async sendRUNO(letter: LetterDocument, user: UserDocument, logFile?: winston.Logger) {
+        // Enter CDS lane, create bulk letters (order is preserved in Promise.all)
+        const pdf = this.getOriginalPdfLink(letter);
+        const { pages, letters } = await this.posteway.cds_create_bulk(
+            letter.recipients.map<PW_Letter>((recipient: RecipientDocument) => ({
+                platform: "GSPoste",
+                code: letter.codePdf,
+                kind: "runo",
+                sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
+                recipient: mapRecipientToPerson(recipient, letter.kind),
+                recipientAR: letter.recipientAR ? {
+                    ...letter.recipientAR,
+                    notes: letter.subject
+                } : (
+                    (letter.sender as SenderDocument).addressAR
+                        ? mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject, true)
+                        : undefined
+                ),
+                pdf: pdf,
+                options: {
+                    bw: letter.bw ?? true,
+                    backSide: letter.backSide ?? true,
+                    ar: letter.kind === LetterKind.RACCOMANDATA_UNO_AR,
+                },
+                avatarUrl: user.avatar,
+            })), pdf
+        );
+
+        const net = letters.reduce((acc: number, cur: PW_LetterDocument) => acc + cur.price, 0);
+        const tax = (net * 22) / 100;
+        const tot = net + tax;
+
+        // Update letter's PosteWay object and return
+        const updated = await this.updateById(letter.id, {
+            $set: {
+                posteway: {
+                    prices: {
+                        pages: pages,
+                        total: {
+                            cur: "EUR",
+                            net, tax, tot
+                        }
+                    },
+                    track: {
+                        recipients: letters.map(letter => ({
+                            id: letter._id,
+                            person: letter.recipient,
+                            tracking: {
+                                number: letter.tracking,
+                                status: letter.status,
+                            }
+                        }))
+                    }
+                }
+            }
+        }, false, false);
+
+        // Everything went fine, generate provision
+        try {
+            updated.provision = await this.provisionService.generateProvision(letter);
+            await updated.save();
+        } catch (err) {
+            logFile?.error(`Error while generating the provision!`, err);
+            logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: user.id,
+                title: "Creazione della provvigione fallita",
+                content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
+                data: { error: err },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw err;
+        }
+
+        // Finally inform the client that this letter is ready
+        logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}.`);
+
+        return updated;
+    }
+
+    private async sendTelegram(letter: LetterDocument, userId: string, logFile?: winston.Logger) {
+        // Enter Telegramma lane
+        if (!letter.text) {
+            logFile?.error(`This telegram does not have text.`);
+            logger.error(`[TELEGRAM ${letter.codePdf}] This telegram does not have text.`);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante l'invio del telegramma",
+                content: "Non è possibile inviare un telegramma senza testo",
+                data: {},
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `This telegram does not have text.` };
+        }
+
+        let submit: TelegramSubmitResponse;
+        try {
+            submit = await this.posteway.send_telegram({
+                sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
+                recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r, letter.kind)),
+                text: letter.text,
+                notes: letter.subject,
+                showSenderAddress: letter.telegramShowSenderAddress ?? false,
+            });
+        } catch (err) {
+            logFile?.error(`Error while calling PosteWay TELEGRAM SEND endpoint`, err);
+            logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TELEGRAM SEND endpoint. Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante l'invio del telegramma",
+                content: `Errore durante la richiesta di invio del telegramma '${letter.codePdf}' tramite PosteWay!`,
+                data: { error: err },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `Error while calling PosteWay TELEGRAM SEND endpoint`, error: err };
+        }
+
+        if (!submit.ok) {
+            logFile?.error(`PosteWay TELEGRAM SEND API result was not ok. Got this result: `, submit);
+            logger.error(`[TELEGRAM ${letter.codePdf}] PosteWay TELEGRAM SEND API result was not ok. Got this result: `, submit);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante l'invio della lettera",
+                content: "Il telegramma contiene dei campi non validi. Controllare la risposta e riprovare.",
+                data: { result: submit },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `PosteWay TELEGRAM SEND API result was not ok.`, result: submit };
+        }
+
+        return this.updateById(letter.id, {
+            $set: {
+                posteway: {
+                    requestId: submit.requestId,
+                    telegram: {
+                        text: submit.submitResult.text,
+                        price: submit.submitResult.price
+                    }
+                }
+            }
+        });
     }
 
     private chooseSubmitKind(kind: LetterKind): SubmitKind {
