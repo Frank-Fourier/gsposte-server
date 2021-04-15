@@ -73,7 +73,7 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
     public async calculatePrice(letter: LetterDocument): Promise<number> {
         if (letter.isTelegramma()) {
             // I only accept the price calculated from Poste Italiane
-            return ((letter.posteway.telegram?.price?.total ?? 0) / letter.recipients.length) || undefined;
+            return ((letter.posteway?.telegram?.price?.total ?? 0) / letter.recipients.length) || undefined;
         }
 
         const { pages, weight } = await this.calculateWeight(letter);

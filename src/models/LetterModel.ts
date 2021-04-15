@@ -73,11 +73,15 @@ export enum LetterKind {
  *         description: Assign a value to schedule this campaign. Anything that can be interpreted as a Date counts, but it's recommended to follow the YYYY-MM-DD HH:mm:ss.SSS format.
  *       kind:
  *         type: string
- *         description: The kind of letter this campaign contains. Can be "LETTERA SEMPLICE", "RACCOMANDATA" or "RACCOMANDATA AR".
+ *         description: The kind of letter this campaign contains.
  *         enum:
  *           - "LETTERA SEMPLICE"
+ *           - "LETTERA PRIORITARIA"
  *           - "RACCOMANDATA"
  *           - "RACCOMANDATA AR"
+ *           - "RACCOMANDATA UNO"
+ *           - "RACCOMANDATA UNO AR"
+ *           - "TELEGRAMMA"
  *       codePdf:
  *         type: string
  *         description: The code used to associate the PDF to this campaign. Get this from the /pdf/upload call.
@@ -151,7 +155,7 @@ export interface Letter {
     subject: string
     sendAt?: Date | string
     kind: LetterKind
-    codePdf: string
+    codePdf?: string
     text?: string
     bw?: boolean
     backSide?: boolean
@@ -228,6 +232,7 @@ export const letterDecoder: Decoder<Letter> = object({
         constant(LetterKind.RACCOMANDATA_AR),
         constant(LetterKind.RACCOMANDATA_UNO),
         constant(LetterKind.RACCOMANDATA_UNO_AR),
+        constant(LetterKind.TELEGRAMMA),
     ),
     codePdf: optional(string()),
     text: optional(string()),
@@ -287,6 +292,7 @@ export const LetterSchema = new Schema<Letter>({
             LetterKind.RACCOMANDATA_AR,
             LetterKind.RACCOMANDATA_UNO,
             LetterKind.RACCOMANDATA_UNO_AR,
+            LetterKind.TELEGRAMMA,
         ],
         required: "Letter kind is required.",
     },

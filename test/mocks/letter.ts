@@ -24,6 +24,18 @@ export function generateMockLetter(user: string | UserDocument, sender: string |
     };
 }
 
+export function generateMockTelegram(user: string | UserDocument, sender: string | SenderDocument, recipients: Array<string | RecipientDocument>, text: string): Letter {
+    return {
+        user: user,
+        sender: sender,
+        recipients: recipients,
+        subject: faker.lorem.sentence(),
+        kind: LetterKind.TELEGRAMMA,
+        text: text,
+        notes: faker.lorem.sentence(),
+    };
+}
+
 export async function saveMockLetter(options: { user: string | UserDocument, sender?: string | SenderDocument, recipients?: Array<string | RecipientDocument>, codePdf?: string, sent?: boolean, kind?: LetterKind }) {
     const userId = typeof(options.user) === "object" ? (options.user as UserDocument).id : options.user;
     // THIS SHIT DOESN'T WORK!?!?!?!?

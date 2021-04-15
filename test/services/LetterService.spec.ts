@@ -11,13 +11,14 @@ import { RecipientDocument } from "@models/RecipientModel";
 import { SenderDocument } from "@models/SenderModel";
 import { generateSystemUser } from "@utils/system";
 import { assertSameLetter, getSystemUser, importPrices, TEST_CODE_PDF } from "../test_utils";
-import { generateMockLetter } from "../mocks/letter";
+import { generateMockLetter, generateMockTelegram } from "../mocks/letter";
 import { generateMockSender } from "../mocks/sender";
 import { generateMockRecipient } from "../mocks/recipient";
 import { cleanTestDB } from "@utils/mongo";
 // @ts-ignore
 import faker from "faker/locale/it";
 import * as fs from "fs";
+import { generateMockAddress } from "../mocks/address";
 
 @suite ("LetterService") class LetterServiceTests {
 
@@ -275,6 +276,49 @@ import * as fs from "fs";
         const sent = await this.letterService.sendLetter(letter);
 
         // If I'm here, it means sendLetter didn't throw so the routine is waiting 60 seconds
+        expect(sent).to.exist;
+    }
+
+    @timeout(120000)
+    @test async "Should send telegram correctly" () {
+        const letter = await this.letterService.save(generateMockTelegram(
+            this.system.id,
+            await this.senderService.save({
+                user: this.system.id,
+                name: "Giovanni Orciuolo",
+                description: faker.lorem.sentence(),
+                address: {
+                    street: "Via Barletta 367",
+                    city: "Andria",
+                    zip: "76123",
+                    province: "BT"
+                },
+                addressBill: generateMockAddress(),
+                iva: faker.random.alphaNumeric(11),
+                cf: faker.random.alphaNumeric(16),
+                email: faker.internet.email(),
+                businessName: "Overzoom SRL",
+                invoiceCode: faker.random.alphaNumeric(5),
+                notes: faker.lorem.sentence(),
+            }),
+            [
+                (await this.recipientService.save({
+                    user: this.system.id,
+                    fullName: "Silvio Troia",
+                    address: {
+                        street: "Via Barletta 367",
+                        city: "Andria",
+                        zip: "76123",
+                        province: "BT"
+                    }
+                })).id,
+            ],
+            "SIAMO I WATUSSI, SIAMO I WATUSSI. GLI ALTISSIMI NE"
+        ), false);
+
+        const sent = await this.letterService.sendLetter(letter);
+        console.log(JSON.stringify(sent, null, 4));
+
         expect(sent).to.exist;
     }
 

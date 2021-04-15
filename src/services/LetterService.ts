@@ -107,23 +107,23 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public async paginateByPopulateField(collection: string, field: string, text: string, query: any, pagination: PaginateOptions): Promise<Paginated<LetterDocument>> {
-        let $text: string;
-        if (query["$text"]) {
-            $text = query["$text"];
-            delete query["$text"];
-        }
+        // let $text: string;
+        // if (query["$text"]) {
+        //     $text = query["$text"];
+        //     delete query["$text"];
+        // }
 
-        const match = {
-            ...(query || {}),
-            ...($text ? {
-                $or: this.searchFields.map(field => ({
-                    [field]: {
-                        $regex: $text,
-                        $options: "i"
-                    }
-                }))
-            } : {})
-        };
+        // const match = {
+        //     ...(query || {}),
+        //     ...($text ? {
+        //         $or: this.searchFields.map(field => ({
+        //             [field]: {
+        //                 $regex: $text,
+        //                 $options: "i"
+        //             }
+        //         }))
+        //     } : {})
+        // };
 
         const [{ meta, docs }] = await this.letterModel.aggregate([
             // insert(Object.keys(match).length > 0, { $match: match }, undefined),
@@ -299,11 +299,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         }
 
         if (kind === "tol") {
-            return await this.sendTelegram(letter, userId, logFile);
+            return this.sendTelegram(letter, userId, logFile);
         }
 
         if (kind === "runo") {
-            return await this.sendRUNO(letter, user, logFile);
+            return this.sendRUNO(letter, user, logFile);
         }
 
         const confirmAndTrackLetter = async (submit: SubmitResponse, kind: SubmitKind) => {
@@ -574,7 +574,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         return this.updateById(letter.id, temporary, false, false);
     }
 
-    private async sendRUNO(letter: LetterDocument, user: UserDocument, logFile?: winston.Logger) {
+    private async sendRUNO(letter: LetterDocument, user: UserDocument, logFile?: winston.Logger): Promise<LetterDocument> {
         // Enter CDS lane, create bulk letters (order is preserved in Promise.all)
         const pdf = this.getOriginalPdfLink(letter);
         const { pages, letters } = await this.posteway.cds_create_bulk(
@@ -658,7 +658,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         return updated;
     }
 
-    private async sendTelegram(letter: LetterDocument, userId: string, logFile?: winston.Logger) {
+    private async sendTelegram(letter: LetterDocument, userId: string, logFile?: winston.Logger): Promise<LetterDocument> {
+        let updated: LetterDocument;
+
         // Enter Telegramma lane
         if (!letter.text) {
             logFile?.error(`This telegram does not have text.`);
@@ -668,7 +670,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             this.noticeService.save({
                 user: userId,
                 title: "Errore durante l'invio del telegramma",
-                content: "Non è possibile inviare un telegramma senza testo",
+                content: "Non è possibile inviare un telegramma privo di testo.",
                 data: {},
                 kind: NoticeKind.LETTER,
                 error: true
@@ -688,13 +690,13 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             });
         } catch (err) {
             logFile?.error(`Error while calling PosteWay TELEGRAM SEND endpoint`, err);
-            logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TELEGRAM SEND endpoint. Got this error: `, err);
+            logger.error(`[TELEGRAM ${letter.codePdf}] Error while calling PosteWay TELEGRAM SEND endpoint. Got this error: `, err);
 
             // Inform the user that there was an error
             this.noticeService.save({
                 user: userId,
                 title: "Errore durante l'invio del telegramma",
-                content: `Errore durante la richiesta di invio del telegramma '${letter.codePdf}' tramite PosteWay!`,
+                content: `Errore durante la richiesta di invio del telegramma '${letter.codePdf}'.`,
                 data: { error: err },
                 kind: NoticeKind.LETTER,
                 error: true
@@ -710,8 +712,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             // Inform the user that there was an error
             this.noticeService.save({
                 user: userId,
-                title: "Errore durante l'invio della lettera",
-                content: "Il telegramma contiene dei campi non validi. Controllare la risposta e riprovare.",
+                title: "Errore durante l'invio del telegramma",
+                content: "Il telegramma contiene dei campi non validi.",
                 data: { result: submit },
                 kind: NoticeKind.LETTER,
                 error: true
@@ -720,7 +722,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             throw { message: `PosteWay TELEGRAM SEND API result was not ok.`, result: submit };
         }
 
-        return this.updateById(letter.id, {
+        updated = await this.updateById(letter.id, {
             $set: {
                 posteway: {
                     requestId: submit.requestId,
@@ -731,6 +733,55 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 }
             }
         });
+
+        try {
+            const { telegrams } = await this.posteway.status_telegram(submit.requestId);
+            updated = await this.updateById(letter.id, {
+                $set: {
+                    price: await this.priceService.calculatePrice(updated),
+                    "posteway.telegram.status": telegrams
+                }
+            });
+        } catch (err) {
+            logFile?.error(`Error while calling PosteWay TELEGRAM STATUS endpoint`, err);
+            logger.error(`[TELEGRAM ${letter.codePdf}] Error while calling PosteWay TELEGRAM STATUS endpoint. Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante la richiesta di stato del telegramma",
+                content: `Errore durante la richiesta di stato del telegramma '${letter.codePdf}'.`,
+                data: { error: err },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `Error while calling PosteWay TELEGRAM STATUS endpoint`, error: err };
+        }
+
+        try {
+            const { tickets } = await this.posteway.confirm_telegram(submit.requestId);
+            updated = await this.updateById(letter.id, {
+                $set: { "posteway.telegram.tickets": tickets }
+            });
+        } catch (err) {
+            logFile?.error(`Error while calling PosteWay TELEGRAM CONFIRM endpoint`, err);
+            logger.error(`[TELEGRAM ${letter.codePdf}] Error while calling PosteWay TELEGRAM CONFIRM endpoint. Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante la richiesta di conferma del telegramma",
+                content: `Errore durante la richiesta di conferma del telegramma '${letter.codePdf}'.`,
+                data: { error: err },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `Error while calling PosteWay TELEGRAM CONFIRM endpoint`, error: err };
+        }
+
+        return updated;
     }
 
     private chooseSubmitKind(kind: LetterKind): SubmitKind {
