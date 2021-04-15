@@ -157,6 +157,7 @@ export interface Letter {
     backSide?: boolean
     notes?: string
     recipientsGift?: number
+    telegramShowSenderAddress?: boolean
     isRaccomandata?: () => boolean
     isTelegramma?: () => boolean
     getTotalPrice?: (gifts?: number) => number
@@ -175,6 +176,7 @@ export interface LetterDocument extends Letter, Document {
         prices?: PriceResponse
         track?: TrackResponse
         telegram?: {
+            text?: string
             price?: {
                 words: number
                 net: number
@@ -233,6 +235,7 @@ export const letterDecoder: Decoder<Letter> = object({
     backSide: optional(boolean()),
     notes: optional(string()),
     recipientsGift: optional(number()),
+    telegramShowSenderAddress: optional(boolean()),
 });
 
 export const LetterSchema = new Schema<Letter>({
@@ -341,6 +344,10 @@ export const LetterSchema = new Schema<Letter>({
         prices: Schema.Types.Mixed,
         track: Schema.Types.Mixed,
     }, { _id: false }),
+    telegramShowSenderAddress: {
+        type: Boolean,
+        default: false,
+    },
     /** REMOVED IN FAVOR OF POSTEWAY
     stats: new Schema({
         status: Number,

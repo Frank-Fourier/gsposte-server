@@ -7,7 +7,7 @@ import {
     StatusResponse,
     Submit,
     SubmitKind,
-    SubmitResponse,
+    SubmitResponse, TelegramConfirmResponse, TelegramStatusResponse, TelegramSubmit, TelegramSubmitResponse,
     TrackResponse
 } from "../posteway";
 import { ReadStream } from "fs";
@@ -54,6 +54,18 @@ export class PosteWayService {
 
     cds_find(code: string): Promise<PW_PaginateResult<PW_LetterDocument>> {
         return this.call(`/letter/query`, { query: { code }, pagination: false }, "POST", { "Content-Type": "application/json" });
+    }
+
+    send_telegram(submit: TelegramSubmit): Promise<TelegramSubmitResponse> {
+        return this.call(`/telegrams/send`, submit, "POST", { "Content-Type": "application/json" });
+    }
+
+    status_telegram(requestId: string): Promise<TelegramStatusResponse> {
+        return this.call(`/telegrams/status/${requestId}`);
+    }
+
+    confirm_telegram(requestId: string): Promise<TelegramConfirmResponse> {
+        return this.call(`/telegrams/send`, {}, "POST", { "Content-Type": "application/json" });
     }
 
     private async call<T = any>(path: string, body?: any, method?: string, headers?: { [key: string]: string }): Promise<T> {
