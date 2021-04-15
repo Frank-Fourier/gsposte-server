@@ -6,7 +6,7 @@ import { inject } from "inversify";
 import { PdfService } from "@services/PdfService";
 import { logger } from "@utils/winston";
 
-export type WeightRanges = "0-20" | "21-50" | "51-100";
+export type WeightRanges = "0-20" | "21-50" | "51-10000";
 
 @provide(PriceService)
 export class PriceService extends MongoRepository<Price, PriceDocument> {
@@ -72,7 +72,8 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
      */
     public async calculatePrice(letter: LetterDocument): Promise<number> {
         if (letter.isTelegramma()) {
-
+            // I only accept the price calculated from Poste Italiane
+            return ((letter.posteway.telegram?.price?.total ?? 0) / letter.recipients.length) || undefined;
         }
 
         const { pages, weight } = await this.calculateWeight(letter);

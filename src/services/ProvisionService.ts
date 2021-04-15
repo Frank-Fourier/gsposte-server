@@ -17,7 +17,7 @@ export interface ProvisionRanges {
         [key: string]: {
             "0-20": number
             "21-50": number
-            "51-100": number
+            "51-10000": number
         }
     }
 }
