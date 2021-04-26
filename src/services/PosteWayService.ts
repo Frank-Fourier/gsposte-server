@@ -65,7 +65,7 @@ export class PosteWayService {
     }
 
     confirm_telegram(requestId: string): Promise<TelegramConfirmResponse> {
-        return this.call(`/telegrams/send`, {}, "POST", { "Content-Type": "application/json" });
+        return this.call(`/telegrams/confirm/${requestId}`, {}, "POST", { "Content-Type": "application/json" });
     }
 
     private async call<T = any>(path: string, body?: any, method?: string, headers?: { [key: string]: string }): Promise<T> {
