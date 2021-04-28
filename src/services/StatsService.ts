@@ -104,6 +104,7 @@ export interface Stats {
         [LetterKind.RACCOMANDATA_AR]: LetterStats
         [LetterKind.RACCOMANDATA_UNO]: LetterStats
         [LetterKind.RACCOMANDATA_UNO_AR]: LetterStats
+        [LetterKind.TELEGRAMMA]: LetterStats
     }
     counts: {
         sent: number
@@ -119,6 +120,7 @@ export interface Stats {
         [LetterKind.RACCOMANDATA_AR]: number
         [LetterKind.RACCOMANDATA_UNO]: number
         [LetterKind.RACCOMANDATA_UNO_AR]: number
+        [LetterKind.TELEGRAMMA]: number
     }
 }
 
@@ -171,8 +173,12 @@ export interface SystemSpentStats {
     year?: number
     spent: Partial<Price>
     [LetterKind.LETTERA_SEMPLICE]: PosteSpent
+    [LetterKind.LETTERA_PRIORITARIA]: PosteSpent
     [LetterKind.RACCOMANDATA]: PosteSpent
     [LetterKind.RACCOMANDATA_AR]: PosteSpent
+    [LetterKind.RACCOMANDATA_UNO]: PosteSpent
+    [LetterKind.RACCOMANDATA_UNO_AR]: PosteSpent
+    [LetterKind.TELEGRAMMA]: PosteSpent
 }
 
 @provide(StatsService)
@@ -224,6 +230,7 @@ export class StatsService {
             [LetterKind.RACCOMANDATA_AR]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_AR] || []),
             [LetterKind.RACCOMANDATA_UNO]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_UNO] || []),
             [LetterKind.RACCOMANDATA_UNO_AR]: aggregateStats(lettersByKind[LetterKind.RACCOMANDATA_UNO_AR] || []),
+            [LetterKind.TELEGRAMMA]: aggregateStats(lettersByKind[LetterKind.TELEGRAMMA] || []),
         };
 
         const totalSpent = Object.values(stats).reduce<number>((acc, s) => acc + s.spent, 0);
@@ -236,6 +243,7 @@ export class StatsService {
                 [LetterKind.RACCOMANDATA_AR]: stats[LetterKind.RACCOMANDATA_AR].counts,
                 [LetterKind.RACCOMANDATA_UNO]: stats[LetterKind.RACCOMANDATA_UNO].counts,
                 [LetterKind.RACCOMANDATA_UNO_AR]: stats[LetterKind.RACCOMANDATA_UNO_AR].counts,
+                [LetterKind.TELEGRAMMA]: stats[LetterKind.TELEGRAMMA].counts,
             },
             counts: {
                 sent: Object.values(stats).reduce<number>((acc, s) => acc + s.counts.sent, 0),
@@ -251,6 +259,7 @@ export class StatsService {
                 [LetterKind.RACCOMANDATA_AR]: ((stats[LetterKind.RACCOMANDATA_AR].spent) / totalSpent) * 100,
                 [LetterKind.RACCOMANDATA_UNO]: ((stats[LetterKind.RACCOMANDATA_UNO].spent) / totalSpent) * 100,
                 [LetterKind.RACCOMANDATA_UNO_AR]: ((stats[LetterKind.RACCOMANDATA_UNO_AR].spent) / totalSpent) * 100,
+                [LetterKind.TELEGRAMMA]: ((stats[LetterKind.TELEGRAMMA].spent) / totalSpent) * 100,
             }
         }
     }
@@ -292,6 +301,7 @@ export class StatsService {
             [LetterKind.RACCOMANDATA_AR]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_AR] || []),
             [LetterKind.RACCOMANDATA_UNO]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_UNO] || []),
             [LetterKind.RACCOMANDATA_UNO_AR]: aggregatePrices(lettersByKind[LetterKind.RACCOMANDATA_UNO_AR] || []),
+            [LetterKind.TELEGRAMMA]: aggregatePrices(lettersByKind[LetterKind.TELEGRAMMA] || []),
         };
 
         return {
