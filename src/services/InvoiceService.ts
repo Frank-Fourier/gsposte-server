@@ -22,6 +22,7 @@ import { UserDocument } from "@models/UserModel";
 import { ws_message } from "@utils/websockets";
 import { NoticeKind } from "@models/NoticeModel";
 import { NoticeService } from "@services/NoticeService";
+import { RecipientDocument } from "@models/RecipientModel";
 
 export const INVOICES_ROOT = process.env.INVOICES_ROOT || "public/invoices";
 export interface InvoiceBulkExportResponse {
@@ -301,20 +302,35 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
         const dateSent = letter.sendAt ? moment(letter.sendAt).format("DD/MM/YYYY") : null;
 
-        // Format envelopes dates
-        letter.posteway.track.recipients = letter.posteway.track.recipients?.map(r => ({
-            ...r,
-            person: {
-                ...r.person,
-                fullName: `${r.person.surname?.toUpperCase() ?? (r.person.businessName?.toUpperCase() ?? "")} ${r.person.name?.toUpperCase() ?? ""}`,
-            },
-            ...insert(letter.isRaccomandata() && !!r.tracking, {
-                tracking: {
-                    ...r.tracking,
-                    date: r.tracking?.date ? moment(r.tracking?.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : dateSent
+        if (!letter.isTelegramma()) {
+            // Format envelopes dates
+            letter.posteway.track.recipients = letter.posteway.track.recipients?.map(r => ({
+                ...r,
+                person: {
+                    ...r.person,
+                    fullName: `${r.person.surname?.toUpperCase() ?? (r.person.businessName?.toUpperCase() ?? "")} ${r.person.name?.toUpperCase() ?? ""}`,
+                },
+                ...insert(letter.isRaccomandata() && !!r.tracking, {
+                    tracking: {
+                        ...r.tracking,
+                        date: r.tracking?.date ? moment(r.tracking?.date, "DD/MM/YYYY hh:mm:ss").format("DD/MM/YYYY") : dateSent
+                    }
+                })
+            }));
+        } else {
+            // In case of telegram, use populated recipients
+            letter.posteway = {
+                track: <any> {
+                    recipients: letter.recipients.map((r: RecipientDocument, i) => ({
+                        id: String(i + 1),
+                        person: {
+                            fullName: r.fullName,
+                            address: r.address,
+                        }
+                    }))
                 }
-            })
-        }));
+            }
+        }
 
         const html = compileFile(`${process.env.VIEWS_ROOT}/invoice.pug`)({
             sender: letter.sender ? (letter.sender as SenderDocument).toObject() : {},
