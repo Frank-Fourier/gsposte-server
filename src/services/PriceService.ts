@@ -6,7 +6,7 @@ import { inject } from "inversify";
 import { PdfService } from "@services/PdfService";
 import { logger } from "@utils/winston";
 
-export type WeightRanges = "0-20" | "21-50" | "51-100";
+export type WeightRanges = "0-20" | "21-50" | "51-10000";
 
 @provide(PriceService)
 export class PriceService extends MongoRepository<Price, PriceDocument> {
@@ -65,17 +65,37 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
     }
 
     /**
+     * Given a telegram, counts its words and returns it
+     *
+     * @param telegram {LetterDocument} Telegram to get words for
+     * @returns {Promise<Number>} Word count
+     */
+    public async countTelegramWords(telegram: LetterDocument): Promise<number> {
+        const { text } = telegram;
+        return text?.split(" ").length ?? 0;
+    }
+
+    /**
      * Calculates and returns the price of a single letter
      *
      * @param letter {LetterDocument} Letter to calculate the price for
      * @returns {Promise<number>} Calculated price
      */
     public async calculatePrice(letter: LetterDocument): Promise<number> {
-        const { pages, weight } = await this.calculateWeight(letter);
-        const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
+        if (!letter.isTelegramma()) {
+            const { pages, weight } = await this.calculateWeight(letter);
+            const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
 
-        logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: ${price}€ with ${extra}€ as extra`);
-        return letter.bw ? price : (price + extra);
+            logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: € ${price} with € ${extra} as extra`);
+            return letter.bw ? price : (price + extra);
+        }
+
+        // Telegram case: count words
+        const words = await this.countTelegramWords(letter);
+        const { price } = await this.getPriceForWeight(words, letter.kind);
+
+        logger.info(`Calculated price for telegram ${letter.codePdf} with ${words} words is: € ${price}`);
+        return price;
     }
 
 }

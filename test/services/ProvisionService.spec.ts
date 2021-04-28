@@ -168,7 +168,7 @@ import { InvoiceService } from "@services/InvoiceService";
     @test async "Should generate total due revenue correctly" () {
         await this.generateUsers();
 
-        const [ provisionA, provisionB ] = await Promise.all([
+        await Promise.all([
             await saveMockLetter({ user: this.userA.id, kind: LetterKind.LETTERA_SEMPLICE, sent: true }),
             await saveMockLetter({ user: this.userA.id, kind: LetterKind.RACCOMANDATA, sent: true }),
             await saveMockLetter({ user: this.userA.id, kind: LetterKind.RACCOMANDATA_AR, sent: true }),
@@ -180,7 +180,7 @@ import { InvoiceService } from "@services/InvoiceService";
         await Promise.all([ 0, 1 ].map(i => this.invoiceService.toggleInvoicePaid(invoices[i])));
 
         const { due, paid } = await this.provisionService.calculateTotalDueRevenue(this.userA);
-        expect(due).to.equal(this.provisionService.getAmountForUserId(provisionA, this.userA.id) + this.provisionService.getAmountForUserId(provisionB, this.userA.id));
+        expect(due).to.equal(4.6);
         expect(paid).to.equal(0);
     }
 

@@ -17,6 +17,7 @@ import {
     StatusResponse,
     SubmitKind,
     SubmitResponse,
+    TelegramSubmitResponse,
     TrackResponse
 } from "../posteway";
 import { isProdEnv, isTestEnv } from "@utils/system";
@@ -27,6 +28,7 @@ import { UserService } from "@services/UserService";
 import winston from "winston";
 import moment from "moment";
 import httpErrors from "http-errors";
+import { generateRandomCode } from "@utils/random";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -62,6 +64,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         await user.save();
 
         // Save the letter
+        letter.codePdf = letter.codePdf ?? `GS${generateRandomCode()}`;
         let letterDocument = await (await super.save(letter)).populate("sender recipients").execPopulate();
 
         // Calculate its price
@@ -104,23 +107,23 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public async paginateByPopulateField(collection: string, field: string, text: string, query: any, pagination: PaginateOptions): Promise<Paginated<LetterDocument>> {
-        let $text: string;
-        if (query["$text"]) {
-            $text = query["$text"];
-            delete query["$text"];
-        }
+        // let $text: string;
+        // if (query["$text"]) {
+        //     $text = query["$text"];
+        //     delete query["$text"];
+        // }
 
-        const match = {
-            ...(query || {}),
-            ...($text ? {
-                $or: this.searchFields.map(field => ({
-                    [field]: {
-                        $regex: $text,
-                        $options: "i"
-                    }
-                }))
-            } : {})
-        };
+        // const match = {
+        //     ...(query || {}),
+        //     ...($text ? {
+        //         $or: this.searchFields.map(field => ({
+        //             [field]: {
+        //                 $regex: $text,
+        //                 $options: "i"
+        //             }
+        //         }))
+        //     } : {})
+        // };
 
         const [{ meta, docs }] = await this.letterModel.aggregate([
             // insert(Object.keys(match).length > 0, { $match: match }, undefined),
@@ -295,97 +298,23 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             return updated;
         }
 
+        if (kind === "tol") {
+            return this.sendTelegram(letter, userId, logFile);
+        }
+
         if (kind === "runo") {
-            // Enter CDS lane, create bulk letters (order is preserved in Promise.all)
-            const pdf = this.getOriginalPdfLink(letter);
-            const { pages, letters } = await this.posteway.cds_create_bulk(
-                letter.recipients.map<PW_Letter>((recipient: RecipientDocument) => ({
-                    platform: "GSPoste",
-                    code: letter.codePdf,
-                    kind: kind,
-                    sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
-                    recipient: mapRecipientToPerson(recipient, letter.kind),
-                    recipientAR: letter.recipientAR ? {
-                        ...letter.recipientAR,
-                        notes: letter.subject
-                    } : (
-                        (letter.sender as SenderDocument).addressAR
-                            ? mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject, true)
-                            : undefined
-                    ),
-                    pdf: pdf,
-                    options: {
-                        bw: letter.bw ?? true,
-                        backSide: letter.backSide ?? true,
-                        ar: letter.kind === LetterKind.RACCOMANDATA_UNO_AR,
-                    },
-                    avatarUrl: user.avatar,
-                })), pdf
-            );
-
-            const net = letters.reduce((acc: number, cur: PW_LetterDocument) => acc + cur.price, 0);
-            const tax = (net * 22) / 100;
-            const tot = net + tax;
-
-            // Update letter's PosteWay object and return
-            updated = await this.updateById(updated.id, {
-                $set: {
-                    posteway: {
-                        prices: {
-                            pages: pages,
-                            total: {
-                                cur: "EUR",
-                                net, tax, tot
-                            }
-                        },
-                        track: {
-                            recipients: letters.map(letter => ({
-                                id: letter._id,
-                                person: letter.recipient,
-                                tracking: {
-                                    number: letter.tracking,
-                                    status: letter.status,
-                                }
-                            }))
-                        }
-                    }
-                }
-            }, false, false);
-
-            // Everything went fine, generate provision
-            try {
-                updated.provision = await this.provisionService.generateProvision(letter);
-                await updated.save();
-            } catch (err) {
-                logFile?.error(`Error while generating the provision!`, err);
-                logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
-
-                // Inform the user that there was an error
-                this.noticeService.save({
-                    user: userId,
-                    title: "Creazione della provvigione fallita",
-                    content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
-                    data: { error: err },
-                    kind: NoticeKind.LETTER,
-                    error: true
-                });
-
-                throw err;
-            }
-
-            // Finally inform the client that this letter is ready
-            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}.`);
-
-            return updated;
+            return this.sendRUNO(letter, user, logFile);
         }
 
         const confirmAndTrackLetter = async (submit: SubmitResponse, kind: SubmitKind) => {
+            let statusResponse: StatusResponse;
+            let confirm: ConfirmResponse;
+
             try {
                 // Wait 60 seconds so I can be sure that the confirm endpoint will work
                 await sleep(60000);
 
                 // Before confirming, call status to check if everything went good
-                let statusResponse: StatusResponse;
                 try {
                     statusResponse = await this.posteway.status(kind, submit.request.requestId);
 
@@ -413,7 +342,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 }
 
                 // Confirm the request to get the Order ID
-                let confirm: ConfirmResponse;
                 try {
                     confirm = await this.posteway.confirm(kind, submit.request.requestId);
                 } catch (err) {
@@ -424,7 +352,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     this.noticeService.save({
                         user: userId,
                         title: "Errore durante l'invio della lettera",
-                        content: `Errore durante la conferma della lettera '${letter.codePdf}' tramite PosteWay!`,
+                        content: `Errore durante la conferma della lettera '${letter.codePdf}'.`,
                         data: { error: err },
                         kind: NoticeKind.LETTER,
                         error: true
@@ -432,145 +360,87 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
                     throw err;
                 }
-
-                // Wait another 30 seconds so I can be sure that I will have tracking numbers
-                await sleep(30000);
-
-                // Call track and recipients to get the info I need to fill the posteway object on document
-                let track: TrackResponse;
-                try {
-                    track = await this.posteway.track(kind, confirm.orderId);
-                } catch (err) {
-                    logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
-                    logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TRACK endpoint. Got this error: `, err);
-
-                    // Inform the user that there was an error
-                    this.noticeService.save({
-                        user: userId,
-                        title: "Errore durante l'invio della lettera",
-                        content: `Errore durante il tracking della lettera '${letter.codePdf}' tramite PosteWay!`,
-                        data: { error: err },
-                        kind: NoticeKind.LETTER,
-                        error: true
-                    });
-
-                    throw err;
-                }
-
-                try {
-                    updated = await this.updateById(letter.id, {
-                        $set: {
-                            posteway: {
-                                requestId: submit.request?.requestId,
-                                orderId: confirm.orderId,
-                                prices: {
-                                    total: confirm.price?.total,
-                                    details: confirm.price?.details,
-                                },
-                                track: track
-                            }
-                        }
-                    }, false, false);
-                    logFile?.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
-                } catch (err) {
-                    logFile?.error(`Error while updating the letter in Mongo!`, err);
-                    logger.error(`[LETTER ${letter.codePdf}] Error while updating the letter in Mongo! Got this error: `, err);
-
-                    // Inform the user that there was an error
-                    this.noticeService.save({
-                        user: userId,
-                        title: "Errore durante l'aggiornamento della lettera",
-                        content: `Errore durante l'aggiornamento della lettera '${letter.codePdf}' nel database!`,
-                        data: { error: err },
-                        kind: NoticeKind.LETTER,
-                        error: true
-                    });
-
-                    throw err;
-                }
-
-                logFile?.info("That's all folks!");
-                logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
-
-                // Everything went fine, generate provision
-                try {
-                    updated.provision = await this.provisionService.generateProvision(letter);
-                    await updated.save();
-                } catch (err) {
-                    logFile?.error(`Error while generating the provision!`, err);
-                    logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
-
-                    // Inform the user that there was an error
-                    this.noticeService.save({
-                        user: userId,
-                        title: "Creazione della provvigione fallita",
-                        content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
-                        data: { error: err },
-                        kind: NoticeKind.LETTER,
-                        error: true
-                    });
-
-                    throw err;
-                }
-
-                // Finally inform the client that this letter is ready
-                logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}. Informing WS client that the letter was sent...`);
-                this.noticeService.save({
-                    user: userId,
-                    title: "Lettera inviata",
-                    content: `La lettera '${letter.codePdf}' è stata inviata correttamente.`,
-                    kind: NoticeKind.LETTER,
-                    data: { letter: updated }
-                });
-
-                logger.info(`[LETTER ${letter.codePdf}] Send routine completed correctly!`);
             } catch (err) {
                 await this.updateById(letter.id, { $set: { error: true }});
+                return;
             }
+
+            // Wait another 30 seconds so I can be sure that I will have tracking numbers
+            await sleep(30000);
+
+            // Call track and recipients to get the info I need to fill the posteway object on document
+            let track: TrackResponse;
+            try {
+                track = await this.posteway.track(kind, confirm.orderId);
+            } catch (err) {
+                logFile?.error(`Error while calling PosteWay TRACK endpoint`, err);
+                logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay TRACK endpoint. Got this error: `, err);
+
+                // Inform the user that there was an error
+                this.noticeService.save({
+                    user: userId,
+                    title: "Lettera inviata - Errore di tracciatura",
+                    content: `La lettera '${letter.codePdf}' è stata inviata correttamente, ma si è verificato un errore durante il primo tracciamento.`,
+                    data: { error: err },
+                    kind: NoticeKind.LETTER
+                });
+
+                return;
+            }
+
+            try {
+                updated = await this.updateById(letter.id, {
+                    $set: {
+                        posteway: {
+                            requestId: submit.request?.requestId,
+                            orderId: confirm.orderId,
+                            prices: {
+                                total: confirm.price?.total,
+                                details: confirm.price?.details,
+                            },
+                            track: track
+                        }
+                    }
+                }, false, false);
+                logFile?.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
+            } catch (err) {
+                logFile?.error(`Error while updating the letter in Mongo!`, err);
+                logger.error(`[LETTER ${letter.codePdf}] Error while updating the letter in Mongo! Got this error: `, err);
+
+                // Inform the user that there was an error
+                this.noticeService.save({
+                    user: userId,
+                    title: "Lettera inviata - Errore di aggiornamento",
+                    content: `La lettera '${letter.codePdf}' è stata inviata correttamente, ma si è verificato un errore durante l'aggiornamento del suo stato nel database.`,
+                    data: { error: err },
+                    kind: NoticeKind.LETTER
+                });
+
+                return;
+            }
+
+            logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
+
+            // Everything went fine, generate provision
+            if (!await this.generateProvision(letter, userId, logFile)) {
+                return;
+            }
+
+            // Finally inform the client that this letter is ready
+            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision}. Informing WS client that the letter was sent...`);
+            this.noticeService.save({
+                user: userId,
+                title: "Lettera inviata",
+                content: `La lettera '${letter.codePdf}' è stata inviata correttamente.`,
+                data: { letter: updated },
+                kind: NoticeKind.LETTER
+            });
+
+            logFile?.info("That's all folks!");
+            logger.info(`[LETTER ${letter.codePdf}] Send routine completed correctly!`);
         };
 
         try {
-            // const pdf_path = `${PDF_ROOT}/${letter.codePdf}/original.pdf`;
-            // const pdf_exists: boolean = !!(await fs.promises.stat(pdf_path).catch(() => false));
-            //
-            // if (!pdf_exists) {
-            //     logger.error(`[LETTER ${letter.codePdf}] PDF not found!`);
-            //     logFile?.error(`This letter does not have a PDF! No PDF was found inside ${pdf_path}`);
-            //
-            //     // Inform the user that there was an error
-            //     this.noticeService.save({
-            //         user: userId,
-            //         title: "Errore durante l'invio della lettera",
-            //         content: `La lettera '${letter.codePdf}' non ha alcun PDF associato. Effettuare nuovamente l'upload e riprovare.`,
-            //         data: { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` },
-            //         kind: NoticeKind.LETTER,
-            //         error: true
-            //     });
-            //
-            //     throw { error: `This letter does not have a PDF! No PDF was found inside ${pdf_path}` };
-            // }
-            //
-            // let cid: string;
-            // try {
-            //     // Upload through PosteWay to get the CID
-            //     cid = (await this.posteway.upload(fs.createReadStream(pdf_path))).cid;
-            // } catch (err) {
-            //     logFile?.error(`Error while calling PosteWay UPLOAD endpoint`, err);
-            //     logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay UPLOAD endpoint. Got this error: `, err);
-            //
-            //     // Inform the user that there was an error
-            //     this.noticeService.save({
-            //         user: userId,
-            //         title: "Errore durante l'invio della lettera",
-            //         content: `Errore durante l'upload del PDF della lettera '${letter.codePdf}' tramite PosteWay!`,
-            //         data: { error: err },
-            //         kind: NoticeKind.LETTER,
-            //         error: true
-            //     });
-            //
-            //     throw { message: `Error while calling PosteWay UPLOAD endpoint`, error: err };
-            // }
-
             // Submit through PosteWay to get the Request ID
             let submit: SubmitResponse;
             try {
@@ -653,8 +523,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         logger.info(`===== QUERYING LETTER '${letter.codePdf}' =====`);
 
         const kind = this.chooseSubmitKind(letter.kind);
+
+        // Need to query this from CDS (since it's a RUNO)
         if (kind === "runo") {
-            // Need to query this from CDS (since it's a RUNO)
             const { docs } = await this.posteway.cds_find(letter.codePdf);
             return this.updateById(letter.id, {
                 $set: {
@@ -674,6 +545,15 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             });
         }
 
+        // Need to query this from telegrams endpoint
+        if (kind === "tol") {
+            const { requestId } = letter.posteway;
+            const { telegrams } = await this.posteway.status_telegram(requestId);
+            return this.updateById(letter.id, {
+                $set: { "posteway.telegram.status": telegrams }
+            });
+        }
+
         // Query from Poste Italiane in case of LOL/ROL
         const { requestId, orderId } = letter.posteway;
 
@@ -689,6 +569,227 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         return this.updateById(letter.id, temporary, false, false);
     }
 
+    private async sendRUNO(letter: LetterDocument, user: UserDocument, logFile?: winston.Logger): Promise<LetterDocument> {
+        // Enter CDS lane, create bulk letters (order is preserved in Promise.all)
+        const pdf = this.getOriginalPdfLink(letter);
+        const { pages, letters } = await this.posteway.cds_create_bulk(
+            letter.recipients.map<PW_Letter>((recipient: RecipientDocument) => ({
+                platform: "GSPoste",
+                code: letter.codePdf,
+                kind: "runo",
+                sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
+                recipient: mapRecipientToPerson(recipient, letter.kind),
+                recipientAR: letter.recipientAR ? {
+                    ...letter.recipientAR,
+                    notes: letter.subject
+                } : (
+                    (letter.sender as SenderDocument).addressAR
+                        ? mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject, true)
+                        : undefined
+                ),
+                pdf: pdf,
+                options: {
+                    bw: letter.bw ?? true,
+                    backSide: letter.backSide ?? true,
+                    ar: letter.kind === LetterKind.RACCOMANDATA_UNO_AR,
+                },
+                avatarUrl: user.avatar,
+            })), pdf
+        );
+
+        const net = letters.reduce((acc: number, cur: PW_LetterDocument) => acc + cur.price, 0);
+        const tax = (net * 22) / 100;
+        const tot = net + tax;
+
+        // Update letter's PosteWay object and return
+        const updated = await this.updateById(letter.id, {
+            $set: {
+                posteway: {
+                    prices: {
+                        pages: pages,
+                        total: {
+                            cur: "EUR",
+                            net, tax, tot
+                        }
+                    },
+                    track: {
+                        recipients: letters.map(letter => ({
+                            id: letter._id,
+                            person: letter.recipient,
+                            tracking: {
+                                number: letter.tracking,
+                                status: letter.status,
+                            }
+                        }))
+                    }
+                }
+            }
+        }, false, false);
+
+        // Everything went fine, generate provision
+        if (!await this.generateProvision(letter, user.id, logFile)) {
+            return;
+        }
+
+        // Finally inform the client that this letter is ready
+        logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision}.`);
+
+        return updated;
+    }
+
+    private async sendTelegram(letter: LetterDocument, userId: string, logFile?: winston.Logger): Promise<LetterDocument> {
+        let updated: LetterDocument;
+
+        // Enter Telegramma lane
+        if (!letter.text) {
+            logFile?.error(`This telegram does not have text.`);
+            logger.error(`[TELEGRAM ${letter.codePdf}] This telegram does not have text.`);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante l'invio del telegramma",
+                content: "Non è possibile inviare un telegramma privo di testo.",
+                data: {},
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `This telegram does not have text.` };
+        }
+
+        let submit: TelegramSubmitResponse;
+        try {
+            submit = await this.posteway.send_telegram({
+                sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),
+                recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r, letter.kind)),
+                text: letter.text,
+                notes: letter.subject,
+                showSenderAddress: letter.telegramShowSenderAddress ?? false,
+            });
+        } catch (err) {
+            logFile?.error(`Error while calling PosteWay TELEGRAM SEND endpoint`, err);
+            logger.error(`[TELEGRAM ${letter.codePdf}] Error while calling PosteWay TELEGRAM SEND endpoint. Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante l'invio del telegramma",
+                content: `Errore durante la richiesta di invio del telegramma '${letter.codePdf}'.`,
+                data: { error: err },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `Error while calling PosteWay TELEGRAM SEND endpoint`, error: err };
+        }
+
+        if (!submit.ok) {
+            logFile?.error(`PosteWay TELEGRAM SEND API result was not ok. Got this result: `, submit);
+            logger.error(`[TELEGRAM ${letter.codePdf}] PosteWay TELEGRAM SEND API result was not ok. Got this result: `, submit);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante l'invio del telegramma",
+                content: "Il telegramma contiene dei campi non validi.",
+                data: { result: submit },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `PosteWay TELEGRAM SEND API result was not ok.`, result: submit };
+        }
+
+        updated = await this.updateById(letter.id, {
+            $set: {
+                posteway: {
+                    requestId: submit.requestId,
+                    telegram: {
+                        text: submit.submitResult.text,
+                        price: submit.submitResult.price
+                    }
+                }
+            }
+        });
+
+        try {
+            const { telegrams } = await this.posteway.status_telegram(submit.requestId);
+            updated = await this.updateById(letter.id, {
+                $set: { "posteway.telegram.status": telegrams }
+            });
+        } catch (err) {
+            logFile?.error(`Error while calling PosteWay TELEGRAM STATUS endpoint`, err);
+            logger.error(`[TELEGRAM ${letter.codePdf}] Error while calling PosteWay TELEGRAM STATUS endpoint. Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante la richiesta di stato del telegramma",
+                content: `Errore durante la richiesta di stato del telegramma '${letter.codePdf}'.`,
+                data: { error: err },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `Error while calling PosteWay TELEGRAM STATUS endpoint`, error: err };
+        }
+
+        try {
+            const { tickets } = await this.posteway.confirm_telegram(submit.requestId);
+            updated = await this.updateById(letter.id, {
+                $set: { "posteway.telegram.tickets": tickets }
+            });
+        } catch (err) {
+            logFile?.error(`Error while calling PosteWay TELEGRAM CONFIRM endpoint`, err);
+            logger.error(`[TELEGRAM ${letter.codePdf}] Error while calling PosteWay TELEGRAM CONFIRM endpoint. Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Errore durante la richiesta di conferma del telegramma",
+                content: `Errore durante la richiesta di conferma del telegramma '${letter.codePdf}'.`,
+                data: { error: err },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw { message: `Error while calling PosteWay TELEGRAM CONFIRM endpoint`, error: err };
+        }
+
+        // Everything went fine, generate provision
+        if (!await this.generateProvision(letter, userId, logFile)) {
+            return;
+        }
+
+        // Finally inform the client that this letter is ready
+        logger.info(`[TELEGRAM ${letter.codePdf}] Provision was generated with ID ${updated?.provision}.`);
+
+        return updated;
+    }
+
+    private async generateProvision(letter: LetterDocument, userId: string, logFile?: winston.Logger): Promise<boolean> {
+        try {
+            letter.provision = await this.provisionService.generateProvision(letter);
+            await letter.save();
+            return true;
+        } catch (err) {
+            logFile?.error(`Error while generating the provision!`, err);
+            logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Invio effettuato - Generazione cashback fallita",
+                content: `${letter.isTelegramma() ? 'Il telegramma' : 'La lettera'} '${letter.codePdf}' è stata inviata correttamente, ma non è stato possibile generare il suo cashback.`,
+                data: { error: err },
+                kind: NoticeKind.LETTER
+            });
+
+            return;
+        }
+    }
+
     private chooseSubmitKind(kind: LetterKind): SubmitKind {
         switch (kind) {
             case LetterKind.LETTERA_SEMPLICE:
@@ -700,6 +801,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             case LetterKind.RACCOMANDATA_UNO:
             case LetterKind.RACCOMANDATA_UNO_AR:
                 return "runo";
+            case LetterKind.TELEGRAMMA:
+                return "tol";
         }
     }
 
