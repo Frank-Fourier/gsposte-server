@@ -86,13 +86,15 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
             const { pages, weight } = await this.calculateWeight(letter);
             const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
 
-            logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: ${price}€ with ${extra}€ as extra`);
+            logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: € ${price} with € ${extra} as extra`);
             return letter.bw ? price : (price + extra);
         }
 
         // Telegram case: count words
         const words = await this.countTelegramWords(letter);
         const { price } = await this.getPriceForWeight(words, letter.kind);
+
+        logger.info(`Calculated price for telegram ${letter.codePdf} with ${words} words is: € ${price}`);
         return price;
     }
 
