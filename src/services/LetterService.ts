@@ -422,27 +422,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
 
             // Everything went fine, generate provision
-            try {
-                updated.provision = await this.provisionService.generateProvision(letter);
-                await updated.save();
-            } catch (err) {
-                logFile?.error(`Error while generating the provision!`, err);
-                logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
-
-                // Inform the user that there was an error
-                this.noticeService.save({
-                    user: userId,
-                    title: "Lettera inviata - Generazione cashback fallita",
-                    content: `La lettera '${letter.codePdf}' è stata inviata correttamente, ma non è stato possibile generare il suo cashback.`,
-                    data: { error: err },
-                    kind: NoticeKind.LETTER
-                });
-
+            if (!await this.generateProvision(letter, userId, logFile)) {
                 return;
             }
 
             // Finally inform the client that this letter is ready
-            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}. Informing WS client that the letter was sent...`);
+            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision}. Informing WS client that the letter was sent...`);
             this.noticeService.save({
                 user: userId,
                 title: "Lettera inviata",
@@ -642,28 +627,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         }, false, false);
 
         // Everything went fine, generate provision
-        try {
-            updated.provision = await this.provisionService.generateProvision(letter);
-            await updated.save();
-        } catch (err) {
-            logFile?.error(`Error while generating the provision!`, err);
-            logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
-
-            // Inform the user that there was an error
-            this.noticeService.save({
-                user: user.id,
-                title: "Creazione della provvigione fallita",
-                content: `Errore durante la creazione della provvigione per la lettera '${letter.codePdf}'.`,
-                data: { error: err },
-                kind: NoticeKind.LETTER,
-                error: true
-            });
-
-            throw err;
+        if (!await this.generateProvision(letter, user.id, logFile)) {
+            return;
         }
 
         // Finally inform the client that this letter is ready
-        logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}.`);
+        logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision}.`);
 
         return updated;
     }
@@ -789,30 +758,36 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         }
 
         // Everything went fine, generate provision
+        if (!await this.generateProvision(letter, userId, logFile)) {
+            return;
+        }
+
+        // Finally inform the client that this letter is ready
+        logger.info(`[TELEGRAM ${letter.codePdf}] Provision was generated with ID ${updated?.provision}.`);
+
+        return updated;
+    }
+
+    private async generateProvision(letter: LetterDocument, userId: string, logFile?: winston.Logger): Promise<boolean> {
         try {
-            updated.provision = await this.provisionService.generateProvision(letter);
-            await updated.save();
+            letter.provision = await this.provisionService.generateProvision(letter);
+            await letter.save();
+            return true;
         } catch (err) {
             logFile?.error(`Error while generating the provision!`, err);
-            logger.error(`[TELEGRAM ${letter.codePdf}] Error while generating the provision for telegram '${letter.codePdf}'! Got this error: `, err);
+            logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
 
             // Inform the user that there was an error
             this.noticeService.save({
                 user: userId,
-                title: "Creazione della provvigione fallita",
-                content: `Errore durante la creazione della provvigione per il telegramma '${letter.codePdf}'.`,
+                title: "Invio effettuato - Generazione cashback fallita",
+                content: `${letter.isTelegramma() ? 'Il telegramma' : 'La lettera'} '${letter.codePdf}' è stata inviata correttamente, ma non è stato possibile generare il suo cashback.`,
                 data: { error: err },
-                kind: NoticeKind.LETTER,
-                error: true
+                kind: NoticeKind.LETTER
             });
 
-            throw err;
+            return;
         }
-
-        // Finally inform the client that this letter is ready
-        logger.info(`[TELEGRAM ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}.`);
-
-        return updated;
     }
 
     private chooseSubmitKind(kind: LetterKind): SubmitKind {
