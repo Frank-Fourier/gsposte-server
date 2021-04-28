@@ -77,7 +77,7 @@ html(lang="it")
         p(class="invoice-info") Distinta #{partial ? "parziale" : ""} #{codePdf} #{dateSent ? `del ${dateSent}` : ""}
             br
             | Oggetto: #{subject}
-        - const isRaccomandata = () => kind !== "LETTERA SEMPLICE" && kind !== "LETTERA PRIORITARIA"
+        - const isRaccomandata = () => kind !== "LETTERA SEMPLICE" && kind !== "LETTERA PRIORITARIA" && kind !== "TELEGRAMMA"
         table(class="recipients-table")
             thead
                 th #
