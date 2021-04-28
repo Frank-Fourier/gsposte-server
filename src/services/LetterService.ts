@@ -538,8 +538,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         logger.info(`===== QUERYING LETTER '${letter.codePdf}' =====`);
 
         const kind = this.chooseSubmitKind(letter.kind);
+
+        // Need to query this from CDS (since it's a RUNO)
         if (kind === "runo") {
-            // Need to query this from CDS (since it's a RUNO)
             const { docs } = await this.posteway.cds_find(letter.codePdf);
             return this.updateById(letter.id, {
                 $set: {
@@ -556,6 +557,15 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         }))
                     }
                 }
+            });
+        }
+
+        // Need to query this from telegrams endpoint
+        if (kind === "tol") {
+            const { requestId } = letter.posteway;
+            const { telegrams } = await this.posteway.status_telegram(requestId);
+            return this.updateById(letter.id, {
+                $set: { "posteway.telegram.status": telegrams }
             });
         }
 
@@ -777,6 +787,30 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
             throw { message: `Error while calling PosteWay TELEGRAM CONFIRM endpoint`, error: err };
         }
+
+        // Everything went fine, generate provision
+        try {
+            updated.provision = await this.provisionService.generateProvision(letter);
+            await updated.save();
+        } catch (err) {
+            logFile?.error(`Error while generating the provision!`, err);
+            logger.error(`[TELEGRAM ${letter.codePdf}] Error while generating the provision for telegram '${letter.codePdf}'! Got this error: `, err);
+
+            // Inform the user that there was an error
+            this.noticeService.save({
+                user: userId,
+                title: "Creazione della provvigione fallita",
+                content: `Errore durante la creazione della provvigione per il telegramma '${letter.codePdf}'.`,
+                data: { error: err },
+                kind: NoticeKind.LETTER,
+                error: true
+            });
+
+            throw err;
+        }
+
+        // Finally inform the client that this letter is ready
+        logger.info(`[TELEGRAM ${letter.codePdf}] Provision was generated with ID ${updated?.provision?.id}.`);
 
         return updated;
     }
