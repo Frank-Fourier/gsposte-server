@@ -349,6 +349,7 @@ export const LetterSchema = new Schema<Letter>({
         status: String,
         prices: Schema.Types.Mixed,
         track: Schema.Types.Mixed,
+        telegram: Schema.Types.Mixed,
     }, { _id: false }),
     telegramShowSenderAddress: {
         type: Boolean,

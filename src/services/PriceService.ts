@@ -65,22 +65,35 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
     }
 
     /**
+     * Given a telegram, counts its words and returns it
+     *
+     * @param telegram {LetterDocument} Telegram to get words for
+     * @returns {Promise<Number>} Word count
+     */
+    public async countTelegramWords(telegram: LetterDocument): Promise<number> {
+        const { text } = telegram;
+        return text?.split(" ").length ?? 0;
+    }
+
+    /**
      * Calculates and returns the price of a single letter
      *
      * @param letter {LetterDocument} Letter to calculate the price for
      * @returns {Promise<number>} Calculated price
      */
     public async calculatePrice(letter: LetterDocument): Promise<number> {
-        if (letter.isTelegramma()) {
-            // I only accept the price calculated from Poste Italiane
-            return ((letter.posteway?.telegram?.price?.total ?? 0) / letter.recipients.length) || undefined;
+        if (!letter.isTelegramma()) {
+            const { pages, weight } = await this.calculateWeight(letter);
+            const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
+
+            logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: ${price}€ with ${extra}€ as extra`);
+            return letter.bw ? price : (price + extra);
         }
 
-        const { pages, weight } = await this.calculateWeight(letter);
-        const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
-
-        logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: ${price}€ with ${extra}€ as extra`);
-        return letter.bw ? price : (price + extra);
+        // Telegram case: count words
+        const words = await this.countTelegramWords(letter);
+        const { price } = await this.getPriceForWeight(words, letter.kind);
+        return price;
     }
 
 }

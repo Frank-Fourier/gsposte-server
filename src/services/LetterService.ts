@@ -737,10 +737,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         try {
             const { telegrams } = await this.posteway.status_telegram(submit.requestId);
             updated = await this.updateById(letter.id, {
-                $set: {
-                    price: await this.priceService.calculatePrice(updated),
-                    "posteway.telegram.status": telegrams
-                }
+                $set: { "posteway.telegram.status": telegrams }
             });
         } catch (err) {
             logFile?.error(`Error while calling PosteWay TELEGRAM STATUS endpoint`, err);
