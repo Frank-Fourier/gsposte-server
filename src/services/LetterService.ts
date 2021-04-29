@@ -665,7 +665,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 recipients: letter.recipients.map((r: RecipientDocument) => mapRecipientToPerson(r, letter.kind)),
                 text: letter.text,
                 notes: letter.subject,
-                showSenderAddress: letter.telegramShowSenderAddress ?? false,
+                showSenderAddress: false,
             });
         } catch (err) {
             logFile?.error(`Error while calling PosteWay TELEGRAM SEND endpoint`, err);
