@@ -29,6 +29,7 @@ import winston from "winston";
 import moment from "moment";
 import httpErrors from "http-errors";
 import { generateRandomCode } from "@utils/random";
+import { insert } from "@utils/misc";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -328,7 +329,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             user: userId,
                             title: "Errore durante l'invio della lettera",
                             content: `Errore durante la conferma della lettera '${letter.codePdf}' tramite PosteWay. L'invio non è stato accettato da Poste Italiane, che ha risposto con il codice '${statusResponse.status}'`,
-                            data: { requestId: statusResponse.request.requestId, status: statusResponse.status },
+                            data: {
+                                requestId: statusResponse.request.requestId,
+                                status: statusResponse.status,
+                                codePdf: letter.codePdf,
+                            },
                             kind: NoticeKind.LETTER,
                             error: true
                         });
@@ -353,7 +358,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         user: userId,
                         title: "Errore durante l'invio della lettera",
                         content: `Errore durante la conferma della lettera '${letter.codePdf}'.`,
-                        data: { error: err },
+                        data: {
+                            error: err,
+                            codePdf: letter.codePdf,
+                        },
                         kind: NoticeKind.LETTER,
                         error: true
                     });
@@ -381,7 +389,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     user: userId,
                     title: "Lettera inviata - Errore di tracciatura",
                     content: `La lettera '${letter.codePdf}' è stata inviata correttamente, ma si è verificato un errore durante il primo tracciamento.`,
-                    data: { error: err },
+                    data: {
+                        error: err,
+                        codePdf: letter.codePdf,
+                    },
                     kind: NoticeKind.LETTER
                 });
 
@@ -412,7 +423,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     user: userId,
                     title: "Lettera inviata - Errore di aggiornamento",
                     content: `La lettera '${letter.codePdf}' è stata inviata correttamente, ma si è verificato un errore durante l'aggiornamento del suo stato nel database.`,
-                    data: { error: err },
+                    data: {
+                        error: err,
+                        codePdf: letter.codePdf,
+                    },
                     kind: NoticeKind.LETTER
                 });
 
@@ -432,7 +446,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 user: userId,
                 title: "Lettera inviata",
                 content: `La lettera '${letter.codePdf}' è stata inviata correttamente.`,
-                data: { letter: updated },
+                data: {
+                    letter: updated,
+                    codePdf: letter.codePdf,
+                },
                 kind: NoticeKind.LETTER
             });
 
@@ -475,7 +492,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     user: userId,
                     title: "Errore durante l'invio della lettera",
                     content: `Errore durante la richiesta di invio della lettera '${letter.codePdf}' tramite PosteWay!`,
-                    data: { error: err },
+                    data: {
+                        error: err,
+                        codePdf: letter.codePdf,
+                    },
                     kind: NoticeKind.LETTER,
                     error: true
                 });
@@ -492,7 +512,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     user: userId,
                     title: "Errore durante l'invio della lettera",
                     content: "La lettera contiene dei campi non validi. Controllare la risposta e riprovare.",
-                    data: { result: submit },
+                    data: {
+                        result: submit,
+                        codePdf: letter.codePdf,
+                    },
                     kind: NoticeKind.LETTER,
                     error: true
                 });
@@ -782,7 +805,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 user: userId,
                 title: "Invio effettuato - Generazione cashback fallita",
                 content: `${letter.isTelegramma() ? 'Il telegramma' : 'La lettera'} '${letter.codePdf}' è stata inviata correttamente, ma non è stato possibile generare il suo cashback.`,
-                data: { error: err },
+                data: {
+                    error: err,
+                    ...insert(!letter.isTelegramma(), { codePdf: letter.codePdf }, {})
+                },
                 kind: NoticeKind.LETTER
             });
 
