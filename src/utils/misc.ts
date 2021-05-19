@@ -26,8 +26,8 @@ export function groupBy<T>(array: Array<T>, property: (x: T) => string): { [key:
  * Insert an object into another object based on a condition.
  *
  * @param condition {boolean} Condition to respect
- * @param obj {object} Object to insert
- * @param defaultValue {any} Default value to insert if the condition is falsy. Defaults to {}
+ * @param onTrue {object} Object to insert
+ * @param onFalse {any} Default value to insert if the condition is falsy. Defaults to {}
  * @returns {object} Object ready to be inserted via the rest operator
  * @example
  * {
@@ -35,8 +35,8 @@ export function groupBy<T>(array: Array<T>, property: (x: T) => string): { [key:
  *     oranges: 1
  * }
  */
-export function insert(condition: boolean, obj: any, defaultValue?: any): any {
-    return condition ? obj : (defaultValue || {})
+export function insert(condition: boolean, onTrue: any, onFalse?: any): any {
+    return condition ? onTrue : (onFalse || {})
 }
 
 /**

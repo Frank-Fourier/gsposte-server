@@ -270,10 +270,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * Please note that this does not generate a real invoice, rather a note for a single letter, a "distinta"
      *
      * @param letter {LetterDocument} Letter to generate invoice from
-     * @param root {string} Optional path root
+     * @param directory {string} Optional path to directory. If not specified, it will use public/pdf/{codePdf}
      * @returns {Promise<Buffer>} Promise resolvingu to the PDF file path
      */
-    public async generateLetterInvoicePDF(letter: LetterDocument, root?: string): Promise<string> {
+    public async generateLetterInvoicePDF(letter: LetterDocument, directory?: string): Promise<string> {
         if (!letter.sent) {
             throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
         }
@@ -284,8 +284,14 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
         }
 
+        // Make directory if not already present
+        const fileDirectory = directory ?? `${PDF_ROOT}/${letter.codePdf}`;
+        if (!fs.existsSync(fileDirectory)) {
+            fs.mkdirSync(fileDirectory);
+        }
+
         // Avoid generating PDF again if it's already there
-        const path = `${root ? root : `${PDF_ROOT}/${letter.codePdf}`}/invoice.pdf`;
+        const path = `${fileDirectory}/invoice.pdf`;
         if (fs.existsSync(path)) {
             return path;
         }

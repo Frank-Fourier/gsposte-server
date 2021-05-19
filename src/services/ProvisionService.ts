@@ -435,7 +435,9 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
     }
 
     getAmountForUserId(provision: ProvisionDocument, userId: string) {
-        return provision.depopulate("referrers.user").referrers.find((ref: any) => ref.user.toString() === userId)?.amount ?? 0;
+        return provision.referrers.find((ref: any) =>
+            (ref.user instanceof String ? ref.user.toString() : String(ref.user._id)) === userId
+        )?.amount ?? 0;
     }
 
     getUserTotalProvisionPayments(user: UserDocument) {
