@@ -222,7 +222,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         // Filter only letters that are recent
         const toQuery = await this.find({
             sent: true,
-            createdAt: { $gte: moment().subtract(14, "days").toDate() },
+            createdAt: { $gte: moment().subtract(30, "days").toDate() },
             error: { $ne: true },
             posteway: { $exists: true }
         }, { populate: "sender recipients" });
