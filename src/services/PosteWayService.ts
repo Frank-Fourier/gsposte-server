@@ -53,7 +53,7 @@ export class PosteWayService {
     }
 
     cds_find(code: string): Promise<PW_PaginateResult<PW_LetterDocument>> {
-        return this.call(`/letter/query`, { query: { code }, pagination: false }, "POST", { "Content-Type": "application/json" });
+        return this.call(`/letter/query`, { query: { code }, paginate: false }, "POST", { "Content-Type": "application/json" });
     }
 
     send_telegram(submit: TelegramSubmit): Promise<TelegramSubmitResponse> {
