@@ -300,11 +300,21 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         }
 
         if (kind === "tol") {
-            return this.sendTelegram(letter, userId, logFile);
+            try {
+                return await this.sendTelegram(letter, userId, logFile);
+            } catch (err) {
+                await this.updateById(letter.id, { $set: { error: true }});
+                throw err;
+            }
         }
 
         if (kind === "runo") {
-            return this.sendRUNO(letter, user, logFile);
+            try {
+                return await this.sendRUNO(letter, user, logFile);
+            } catch (err) {
+                await this.updateById(letter.id, { $set: { error: true }});
+                throw err;
+            }
         }
 
         const confirmAndTrackLetter = async (submit: SubmitResponse, kind: SubmitKind) => {
