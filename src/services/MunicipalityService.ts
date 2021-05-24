@@ -68,7 +68,7 @@ export class MunicipalityService extends MongoRepository<Municipality, Municipal
                 province: m.sigla,
                 region: m.regione.nome,
                 zip: m.cap,
-                country: "IT",
+                country: "ITALY",
                 code: m.codiceCatastale,
                 istat: m.codice,
             }

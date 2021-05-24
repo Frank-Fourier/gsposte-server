@@ -95,8 +95,7 @@ export const AddressSchema = new Schema<Address>({
     },
     country: {
         type: String,
-        default: "IT",
-        minlength: 2, maxlength: 2
+        default: "ITALY",
     }
 }, {
     _id: false

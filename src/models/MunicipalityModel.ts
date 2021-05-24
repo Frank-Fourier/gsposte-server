@@ -100,8 +100,7 @@ export const MunicipalitySchema = new Schema<Municipality>({
     }],
     country: {
         type: String,
-        default: "IT",
-        minlength: 2, maxlength: 2
+        default: "ITALY",
     },
     code: {
         type: String,
