@@ -559,7 +559,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
         // Need to query this from CDS (since it's a RUNO)
         if (kind === "runo") {
-            const { docs } = await this.posteway.cds_find(letter.codePdf);
+            const docs = await this.posteway.cds_find(letter.codePdf);
             return this.updateById(letter.id, {
                 $set: {
                     "posteway.track": {

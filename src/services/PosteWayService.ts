@@ -52,7 +52,7 @@ export class PosteWayService {
         return this.call(`/letter/bulk`, { letters, pdf }, "POST", { "Content-Type": "application/json" })
     }
 
-    cds_find(code: string): Promise<PW_PaginateResult<PW_LetterDocument>> {
+    cds_find(code: string): Promise<PW_LetterDocument[]> {
         return this.call(`/letter/query`, { query: { code }, paginate: false }, "POST", { "Content-Type": "application/json" });
     }
 
