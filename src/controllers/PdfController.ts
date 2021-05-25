@@ -16,9 +16,12 @@ export class PdfController {
     }
 
     public async merge(req: Request, res: Response) {
-        const { urls } = req.body;
+        const urls = req.body.urls as string[];
         if (!urls?.length) {
             throw new httpErrors.BadRequest("You must provide one or more PDF urls!");
+        }
+        if (!urls.every(url => url.startsWith(process.env.SERVER_HOST))) {
+            throw new httpErrors.BadRequest(`All URLs must start with ${process.env.SERVER_HOST}!`);
         }
 
         const code = await this.pdf.merge(urls);
