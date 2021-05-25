@@ -381,6 +381,34 @@ export class PdfService {
         }
     }
 
+    /**
+     * Merges one or more PDFs into a single one.
+     * Returns the generated PDF code.
+     *
+     * @param urls {string[]} Array of PDF URLs
+     */
+    public async merge(urls: string[]): Promise<string> {
+        const documents = await Promise.all(urls.map(
+            async url => PDFDocument.load(await this.fetchBinary(url)))
+        );
+
+        const merged = await PDFDocument.create();
+        for (const document of documents) {
+            const pages = await merged.copyPages(document, document.getPageIndices());
+            pages.forEach(page => merged.addPage(page));
+        }
+
+        const code = `GS${generateRandomCode()}`;
+        await fs.promises.mkdir(`${process.env.PDF_ROOT}/${code}`);
+        await fs.promises.writeFile(`${process.env.PDF_ROOT}/${code}/original.pdf`, await merged.save());
+
+        return code;
+    }
+
+    private async fetchBinary(url: string): Promise<Buffer> {
+        return (await fetch(url)).buffer();
+    }
+
     private drawPostelBoxes(page: PDFPage, px: (mm: number) => number) {
         const height = page.getHeight();
 

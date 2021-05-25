@@ -47,6 +47,47 @@ export class PdfRoute extends Route {
                 method: RequestMethod.POST,
                 requiresAuth: true,
                 handler: (req, res) => this.pdfController.upload(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /pdf/merge:
+             *   post:
+             *     tags:
+             *       - PDF
+             *     description: Merge one or more PDF files into a single one
+             *     consumes:
+             *       - application/json
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: PDF URLs array
+             *         required: true
+             *         in: body
+             *         schema:
+             *           type: object
+             *           required:
+             *             - urls
+             *           properties:
+             *             urls:
+             *               type: array
+             *               items:
+             *                 type: string
+             *     responses:
+             *       201:
+             *         description: PDF merged correctly, returns its code (you can access the PDF through /:code/original.pdf)
+             *       400:
+             *         description: You must provide one or more PDF URLs in the request body!
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/merge",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.pdfController.merge(req, res)
             }
         ]);
     }
