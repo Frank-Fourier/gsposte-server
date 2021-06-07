@@ -1,1 +1,166 @@
-[{"_id":"5e7e4f97557578402c9ee065","extra":0.2,"price":1.5,"minWeight":0,"maxWeight":20,"kind":"LETTERA SEMPLICE","__v":0},{"_id":"5e7e4fab557578402c9ee067","extra":0.6,"price":3.8,"minWeight":51,"maxWeight":100,"kind":"LETTERA SEMPLICE","__v":0},{"_id":"5e7e4fa3557578402c9ee066","extra":0.4,"price":3.2,"minWeight":21,"maxWeight":50,"kind":"LETTERA SEMPLICE","__v":0},{"_id":"5e7e4fe5557578402c9ee06c","extra":0.32,"price":4.42,"minWeight":0,"maxWeight":20,"kind":"RACCOMANDATA","__v":0},{"_id":"5e7e4fee557578402c9ee06d","extra":0.49,"price":5.69,"minWeight":21,"maxWeight":50,"kind":"RACCOMANDATA","__v":0},{"_id":"5e7e4ff7557578402c9ee06e","extra":0.65,"price":6.1,"minWeight":51,"maxWeight":100,"kind":"RACCOMANDATA","__v":0},{"_id":"5f19bf14d8d3190006287756","extra":0.32,"price":5,"minWeight":0,"maxWeight":20,"kind":"RACCOMANDATA AR","__v":0},{"_id":"5f19bf24d8d3190006287757","extra":0.49,"price":6.27,"minWeight":21,"maxWeight":50,"kind":"RACCOMANDATA AR","__v":0},{"_id":"5f19bf32d8d3190006287758","extra":0.65,"price":6.68,"minWeight":51,"maxWeight":100,"kind":"RACCOMANDATA AR","__v":0}]
+[
+    {
+        "_id": "5e7e4f97557578402c9ee065",
+        "extra": 0.2,
+        "price": 1.5,
+        "minWeight": 0,
+        "maxWeight": 20,
+        "kind": "LETTERA SEMPLICE",
+        "__v": 0
+    },
+    {
+        "_id": "5e7e4fab557578402c9ee067",
+        "extra": 0.6,
+        "price": 3.8,
+        "minWeight": 51,
+        "maxWeight": 10000,
+        "kind": "LETTERA SEMPLICE",
+        "__v": 0
+    },
+    {
+        "_id": "5e7e4fa3557578402c9ee066",
+        "extra": 0.4,
+        "price": 3.2,
+        "minWeight": 21,
+        "maxWeight": 50,
+        "kind": "LETTERA SEMPLICE",
+        "__v": 0
+    },
+    {
+        "_id": "5e7e4fe5557578402c9ee06c",
+        "extra": 0.32,
+        "price": 4.42,
+        "minWeight": 0,
+        "maxWeight": 20,
+        "kind": "RACCOMANDATA",
+        "__v": 0
+    },
+    {
+        "_id": "5e7e4fee557578402c9ee06d",
+        "extra": 0.49,
+        "price": 5.69,
+        "minWeight": 21,
+        "maxWeight": 50,
+        "kind": "RACCOMANDATA",
+        "__v": 0
+    },
+    {
+        "_id": "5e7e4ff7557578402c9ee06e",
+        "extra": 0.65,
+        "price": 6.1,
+        "minWeight": 51,
+        "maxWeight": 10000,
+        "kind": "RACCOMANDATA",
+        "__v": 0
+    },
+    {
+        "_id": "5f19bf14d8d3190006287756",
+        "extra": 0.32,
+        "price": 5,
+        "minWeight": 0,
+        "maxWeight": 20,
+        "kind": "RACCOMANDATA AR",
+        "__v": 0
+    },
+    {
+        "_id": "5f19bf24d8d3190006287757",
+        "extra": 0.49,
+        "price": 6.27,
+        "minWeight": 21,
+        "maxWeight": 50,
+        "kind": "RACCOMANDATA AR",
+        "__v": 0
+    },
+    {
+        "_id": "5f19bf32d8d3190006287758",
+        "extra": 0.65,
+        "price": 6.68,
+        "minWeight": 51,
+        "maxWeight": 10000,
+        "kind": "RACCOMANDATA AR",
+        "__v": 0
+    },
+    {
+        "_id": "5fd727728765410007939366",
+        "extra": 0.2,
+        "price": 2.8,
+        "minWeight": 0,
+        "maxWeight": 20,
+        "kind": "LETTERA PRIORITARIA"
+    },
+    {
+        "_id": "5fd7282f8765410007939367",
+        "extra": 0.4,
+        "price": 3.2,
+        "minWeight": 21,
+        "maxWeight": 50,
+        "kind": "LETTERA PRIORITARIA"
+    },
+    {
+        "_id": "5fd728458765410007939368",
+        "extra": 0.6,
+        "price": 3.8,
+        "minWeight": 51,
+        "maxWeight": 10000,
+        "kind": "LETTERA PRIORITARIA"
+    },
+    {
+        "_id": "604fa388876541000793936a",
+        "extra": 0.32,
+        "price": 7.46,
+        "minWeight": 0,
+        "maxWeight": 20,
+        "kind": "RACCOMANDATA UNO AR",
+        "__v": 0
+    },
+    {
+        "_id": "60506627876541000793936c",
+        "extra": 0.4,
+        "price": 9.35,
+        "minWeight": 21,
+        "maxWeight": 50,
+        "kind": "RACCOMANDATA UNO AR",
+        "__v": 0
+    },
+    {
+        "_id": "60506660876541000793936e",
+        "extra": 0.65,
+        "price": 9.35,
+        "minWeight": 51,
+        "maxWeight": 10000,
+        "kind": "RACCOMANDATA UNO AR",
+        "__v": 0
+    },
+    {
+        "_id": "608ad808876541000793936f",
+        "extra": 0,
+        "price": 5.7,
+        "minWeight": 0,
+        "maxWeight": 20,
+        "kind": "TELEGRAMMA"
+    },
+    {
+        "_id": "608ad83c8765410007939370",
+        "extra": 0,
+        "price": 7.3,
+        "minWeight": 21,
+        "maxWeight": 50,
+        "kind": "TELEGRAMMA"
+    },
+    {
+        "_id": "608ad8528765410007939371",
+        "extra": 0,
+        "price": 10,
+        "minWeight": 51,
+        "maxWeight": 100,
+        "kind": "TELEGRAMMA"
+    },
+    {
+        "_id": "608ad8698765410007939372",
+        "extra": 0,
+        "price": 13,
+        "minWeight": 101,
+        "maxWeight": 500,
+        "kind": "TELEGRAMMA"
+    }
+]

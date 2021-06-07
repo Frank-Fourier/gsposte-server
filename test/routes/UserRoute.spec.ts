@@ -67,7 +67,7 @@ const API = process.env.API_PATH;
                 iva: "DUPLICATE",
                 phone: "4242424242"
             })
-            .expect(409);
+            .expect(400);
     }
 
     @test async "Should not register with invalid user inputs" () {

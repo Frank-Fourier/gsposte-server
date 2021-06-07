@@ -37,6 +37,9 @@ import { LetterKind } from "@models/LetterModel";
  *       notes:
  *         type: string
  *         example: The sister of prosecutor Sae Nijima, and student council president at Shujin. She tries to blackmail the Thieves to force them to change the heart of a Yakuza boss, awakening to her Persona in the process. She is the canonic love interest for the protagonist.
+ *       phoneNumber:
+ *         type: string
+ *         example: 3396635621
  *   RecipientDocument:
  *     allOf:
  *       - $ref: '#/definitions/Recipient'
@@ -62,6 +65,9 @@ export interface Recipient {
     tv?: TvUser
     cf?: string
     notes?: string
+    phoneNumber?: string
+    email?: string
+    pec?: string
 }
 export interface RecipientDocument extends Recipient, Document {
     address: AddressDocument
@@ -73,6 +79,9 @@ export const recipientDecoder: Decoder<Recipient> = object({
     tv: optional(tvUserDecoder),
     cf: optional(string()),
     notes: optional(string()),
+    phoneNumber: optional(string()),
+    email: optional(string()),
+    pec: optional(string()),
 });
 
 export function mapRecipientToPerson(recipient: RecipientDocument, letterKind: LetterKind, notes?: string): Person {
@@ -101,10 +110,11 @@ export const RecipientSchema = new Schema<Recipient>({
         type: String,
         required: "Name is required.",
         maxlength: 40,
+        trim: true,
     },
     address: {
         type: AddressSchema,
-        required: "Address is required."
+        required: "Address is required.",
     },
     tv: new Schema<TvUser>({
         username: {
@@ -126,12 +136,32 @@ export const RecipientSchema = new Schema<Recipient>({
     }, { _id: false }),
     cf: {
         type: String,
-        maxlength: 16
+        maxlength: 16,
+        trim: true,
+        uppercase: true,
     },
     notes: {
         type: String,
         maxlength: 500,
+        trim: true,
     },
+    phoneNumber: {
+        type: String,
+        maxlength: 30,
+        trim: true,
+    },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        maxlength: 100,
+    },
+    pec: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        maxlength: 100,
+    }
 }, {
     timestamps: {
         createdAt: true,

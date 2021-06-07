@@ -10,6 +10,18 @@ export interface ImportResponse<T extends Document> {
     errors: Array<{ row: number, description: string, data?: any }>
 }
 
+// Validators for XLSX fields
+export const validators = {
+    notEmpty: (field: string) => (value: string) => ({
+        valid: !!value,
+        error: `Il campo '${field}' è obbligatorio`
+    }),
+    maxLength: (field: string, max: number) => (value: string) => ({
+        valid: value ? value.length <= max : true,
+        error: `Il campo '${field}' supera la lunghezza massima consentita (${max})`
+    }),
+};
+
 // Setup XLSX upload middleware
 export const xlsxUploader = multer({
     storage: diskStorage({

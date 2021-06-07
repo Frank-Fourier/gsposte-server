@@ -265,7 +265,6 @@ import { generateMockAddress } from "../mocks/address";
                         city: "Brindisi",
                         zip: "72100",
                         province: "BR",
-                        country: "IT"
                     }
                 })).id,
             ],

@@ -9,7 +9,7 @@ import { MunicipalityService } from "@services/MunicipalityService";
 import { MunicipalityDocument } from "@models/MunicipalityModel";
 import { AddressDocument } from "@models/schemas/AddressSchema";
 import { Request, Response } from "express";
-import { CellValidator, ImportResponse, uploadXLSX } from "@utils/xlsx-uploader";
+import { CellValidator, ImportResponse, uploadXLSX, validators } from "@utils/xlsx-uploader";
 import { RubricService } from "@services/RubricService";
 
 /**
@@ -48,6 +48,25 @@ export interface RecipientXLSX {
     EMAIL?: string
     "CODICE FISCALE"?: string
     RUBRICA: string
+
+    // FORMATO EXCEL DANEA
+    Denominazione?: string // -> Denominazione
+    Indirizzo?: string // -> INDIRIZZO
+    Città?: string // -> COMUNE
+    Prov?: string // -> PROVINCIA
+    CodFisc?: string // -> CODICE FISCALE
+    Email?: string // -> EMAIL
+    Pec?: string
+    Tel1?: string
+    Tel2?: string
+    Tel3?: string
+    Note?: string
+    // Spedizioni: Se presente, ha la priorità su Indirizzo standard
+    "Spedizioni: nome"?: string
+    "Spedizioni: Indirizzo"?: string // -> INDIRIZZO
+    "Spedizioni: CAP"?: string // -> CAP
+    "Spedizioni: Città"?: string // -> COMUNE
+    "Spedizioni: Prov"?: string // -> PROVINCIA
 }
 
 @provide(RecipientService)
@@ -108,34 +127,28 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             throw new httpErrors.BadRequest("The XLSX file does not have any valid sheet to read data from.");
         }
 
-        const validators = {
-            notEmpty: (field: string) => (value: string) => ({
-                valid: !!value,
-                error: `Il campo '${field}' è obbligatorio`
-            }),
-            maxLength: (field: string, max: number) => (value: string) => ({
-                valid: value ? value.length <= max : true,
-                error: `Il campo '${field}' supera la lunghezza massima consentita (${max})`
-            }),
-        };
-
         const sheetJson = utils.sheet_to_json(sheet);
         for (let row = 0; row < sheetJson.length; ++row) {
             const data: RecipientXLSX = sheetJson[row] as RecipientXLSX;
             const cellValue = (columnName: keyof RecipientXLSX) =>
                 data[columnName] ? String(data[columnName]).trim() : null;
 
-            // DENOMINAZIONE, INDIRIZZO, CAP, COMUNE, PROVINCIA
-            const rowName     = cellValue("DENOMINAZIONE"),
-                  rowStreet   = cellValue("INDIRIZZO"),
-                  rowZip      = cellValue("CAP"),
-                  rowCityName = cellValue("COMUNE"),
-                  // rowProvince = cellValue(4), -- not used
+            const rowName     = cellValue("Spedizioni: nome") || cellValue("DENOMINAZIONE") || cellValue("Denominazione"),
+                  rowStreet   = cellValue("Spedizioni: Indirizzo") || cellValue("INDIRIZZO") || cellValue("Indirizzo"),
+                  rowZip      = cellValue("Spedizioni: CAP") || cellValue("CAP"),
+                  rowCityName = cellValue("Spedizioni: Città") || cellValue("COMUNE") || cellValue("Città"),
+                  // rowProvince = cellValue("Spedizioni: Prov") ?? cellValue("PROVINCIA") ?? cellValue("Prov"), -- NOT USED
                   rowUsername = cellValue("USERNAME"),
                   rowPassword = cellValue("PASSWORD"),
-                  rowEmail    = cellValue("EMAIL"),
-                  rowCf       = cellValue("CODICE FISCALE"),
-                  rowRubric   = cellValue("RUBRICA");
+                  rowEmail    = cellValue("EMAIL") || cellValue("Email"),
+                  rowPEC      = cellValue("Pec"),
+                  rowCf       = cellValue("CODICE FISCALE") || cellValue("CodFisc"),
+                  rowRubric   = cellValue("RUBRICA"),
+                  rowNotes    = cellValue("Note");
+
+            // 3 phone numbers
+            const rowPhoneNumber = [ cellValue("Tel1"), cellValue("Tel2"), cellValue("Tel3") ]
+               .filter(tel => tel?.replace(/[^\d-]/gi, "").trim().startsWith("3"))?.[0];
 
             const validateCell = (val: string, validators: CellValidator[]) =>
                 validators.filter(v => !v(val).valid).map(nv => {
@@ -147,7 +160,11 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             if (!validateCell(rowStreet, [ validators.notEmpty("INDIRIZZO"), validators.maxLength("INDIRIZZO", 40) ])) continue;
             if (!validateCell(rowZip, [ validators.notEmpty("CAP"), validators.maxLength("CAP", 5) ])) continue;
             if (!validateCell(rowCityName, [ validators.notEmpty("COMUNE"), validators.maxLength("COMUNE", 40) ])) continue;
+            if (!validateCell(rowEmail, [ validators.maxLength("EMAIL", 100) ])) continue;
+            if (!validateCell(rowPEC, [ validators.maxLength("PEC", 100) ])) continue;
             if (!validateCell(rowCf, [ validators.maxLength("CODICE FISCALE", 16) ])) continue;
+            if (!validateCell(rowNotes, [ validators.maxLength("NOTE", 250) ])) continue;
+            if (!validateCell(rowPhoneNumber, [ validators.maxLength("TELEFONO", 30) ])) continue;
 
             // Query municipality
             let municipality: MunicipalityDocument = null;
@@ -194,8 +211,15 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                         password: rowPassword.trim()
                     }
                 } : {}),
-                ...(rowCf ? { cf: rowCf.trim() } : {}),
-                notes: `Contatto importato da file ${fileName ? `'${fileName}'` : "Excel"}`
+                // ...(rowCf ? { cf: rowCf.trim() } : {}),
+                // ...(rowNotes ? { notes: rowNotes.trim() } : {}),
+                // ...(rowEmail ? { email: rowEmail.trim() } : {}),
+                // ...(rowPEC ? { pec: rowPEC.trim() } : {}),
+                cf: rowCf?.trim(),
+                notes: rowNotes?.trim(),
+                email: rowEmail?.trim(),
+                pec: rowPEC?.trim(),
+                phoneNumber: rowPhoneNumber?.trim(),
             };
 
             try {

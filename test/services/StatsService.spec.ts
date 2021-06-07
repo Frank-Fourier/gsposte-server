@@ -23,9 +23,9 @@ import { LetterKind } from "@models/LetterModel";
         await importMunicipalities();
         await importPrices();
 
-        await saveMockLetter({ user: this.system.id, kind: LetterKind.LETTERA_SEMPLICE });
-        await saveMockLetter({ user: this.system.id, kind: LetterKind.RACCOMANDATA });
-        await saveMockLetter({ user: this.system.id, kind: LetterKind.RACCOMANDATA_AR });
+        await saveMockLetter({ user: this.system, kind: LetterKind.LETTERA_SEMPLICE });
+        await saveMockLetter({ user: this.system, kind: LetterKind.RACCOMANDATA });
+        await saveMockLetter({ user: this.system, kind: LetterKind.RACCOMANDATA_AR });
 
         try {
             const stats = await this.statsService.fetchStats(this.system.id);

@@ -14,6 +14,6 @@ export function generateMockAddress(): Address {
         city: municipality["nome"],
         zip: municipality["cap"][Math.floor(Math.random() * municipality["cap"].length)],
         province: municipality["sigla"],
-        country: "IT",
+        country: "ITALY",
     }
 }

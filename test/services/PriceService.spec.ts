@@ -84,7 +84,7 @@ import faker from "faker/locale/it";
         }
 
         expect(prices).to.exist;
-        expect(prices.length).to.equal(3);
+        expect(prices.length).to.equal(2);
     }
 
     @test async "Should update price by id" () {

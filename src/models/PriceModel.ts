@@ -69,10 +69,12 @@ export const priceDecoder: Decoder<Price> = object({
     maxWeight: number(),
     kind: oneOf(
         constant(LetterKind.LETTERA_SEMPLICE),
+        constant(LetterKind.LETTERA_PRIORITARIA),
         constant(LetterKind.RACCOMANDATA),
         constant(LetterKind.RACCOMANDATA_AR),
         constant(LetterKind.RACCOMANDATA_UNO),
         constant(LetterKind.RACCOMANDATA_UNO_AR),
+        constant(LetterKind.TELEGRAMMA),
     ),
     extra: optional(number()),
 });
@@ -97,10 +99,12 @@ export const PriceSchema = new Schema<Price>({
         type: String,
         enum: [
             LetterKind.LETTERA_SEMPLICE,
+            LetterKind.LETTERA_PRIORITARIA,
             LetterKind.RACCOMANDATA,
             LetterKind.RACCOMANDATA_AR,
             LetterKind.RACCOMANDATA_UNO,
             LetterKind.RACCOMANDATA_UNO_AR,
+            LetterKind.TELEGRAMMA,
         ],
         required: "Kind is required.",
     },

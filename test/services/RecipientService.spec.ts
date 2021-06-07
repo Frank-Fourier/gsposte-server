@@ -179,7 +179,7 @@ import faker from "faker/locale/it";
             city: "Andria",
             zip: "76123",
             province: "BT",
-            country: "IT"
+            country: "ITALY"
         });
 
         expect(res.imported[1].fullName).to.equal("Silvio Troia");
@@ -189,7 +189,7 @@ import faker from "faker/locale/it";
             city: "Acerno",
             zip: "84042",
             province: "SA",
-            country: "IT"
+            country: "ITALY"
         });
 
         expect(res.errors.length).to.equal(2);
@@ -249,6 +249,18 @@ import faker from "faker/locale/it";
         expect(giovanni.id).to.exist;
 
         // console.log(JSON.stringify(await Promise.all(rubrics.map(r => r.populate("recipients").execPopulate())), null, 2));
+    }
+
+    @timeout(60000)
+    @test async "Should import recipients correctly following DANEA format" () {
+        // Import municipalities into test database
+        await importMunicipalities();
+        await this.recipientService.deleteAll();
+
+        const xlsx_danea = await fs.promises.readFile("test/assets/xlsx/import_recipients_danea.xlsx");
+        const res = await this.recipientService.importFromXLSX(xlsx_danea, this.system.id, "import_recipients_danea.xlsx");
+        expect(res.imported.length).to.equal(50);
+        expect(res.errors.length).to.equal(1); // PAJERNE Svizzero non esistente
     }
 
     static after() { cleanTestDB(); }
