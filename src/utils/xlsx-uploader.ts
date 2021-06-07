@@ -4,10 +4,16 @@ import { logger } from "@utils/winston";
 import httpErrors from "http-errors";
 import { Document } from "mongoose";
 
+export interface ImportError {
+    row: number
+    description: string
+    data?: any
+}
+
 export type CellValidator = (value: string, ...params: any[]) => { valid: boolean, error: string };
 export interface ImportResponse<T extends Document> {
     imported: Array<T>
-    errors: Array<{ row: number, description: string, data?: any }>
+    errors: Array<ImportError>
 }
 
 // Validators for XLSX fields

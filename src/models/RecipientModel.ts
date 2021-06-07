@@ -109,7 +109,7 @@ export const RecipientSchema = new Schema<Recipient>({
     fullName: {
         type: String,
         required: "Name is required.",
-        maxlength: 40,
+        maxlength: 44,
         trim: true,
     },
     address: {

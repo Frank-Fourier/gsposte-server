@@ -5,6 +5,7 @@ import { Request } from "express";
 import { connection } from "mongoose";
 import { logger } from "@utils/winston";
 import multer, { memoryStorage } from "multer";
+import { ImportError } from "@utils/xlsx-uploader";
 
 // Setup JSON upload middleware
 export const jsonUploader = multer({
@@ -40,12 +41,6 @@ interface JsonMunicipality {
     sigla: string
     codiceCatastale: string
     cap: Array<string>
-}
-
-export interface ImportError {
-    row: number
-    description: string
-    data?: any
 }
 
 @provide(MunicipalityService)

@@ -168,7 +168,7 @@ import faker from "faker/locale/it";
         await importMunicipalities();
 
         const xlsx_standard = await fs.promises.readFile("test/assets/xlsx/import_standard.xlsx");
-        let res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id, "import_standard.xlsx");
+        let res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id);
 
         expect(res.imported.length).to.equal(4);
 
@@ -199,7 +199,7 @@ import faker from "faker/locale/it";
         expect(res.errors[1].description).to.equal("Il campo 'Comune' è obbligatorio");
 
         const xlsx_errors = await fs.promises.readFile("test/assets/xlsx/import_errors.xlsx");
-        res = await this.recipientService.importFromXLSX(xlsx_errors, this.system.id, "import_errors.xlsx");
+        res = await this.recipientService.importFromXLSX(xlsx_errors, this.system.id);
 
         console.log(JSON.stringify(res, null, 2));
         expect(res.imported.length).to.equal(1);
@@ -231,7 +231,7 @@ import faker from "faker/locale/it";
         });
 
         const xlsx_standard = await fs.promises.readFile("test/assets/xlsx/import_rubrics.xlsx");
-        const res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id, "import_rubrics.xlsx");
+        const res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id);
         expect(res.imported.length).to.equal(6);
         expect(res.errors.length).to.equal(0);
 
@@ -258,7 +258,7 @@ import faker from "faker/locale/it";
         await this.recipientService.deleteAll();
 
         const xlsx_danea = await fs.promises.readFile("test/assets/xlsx/import_recipients_danea.xlsx");
-        const res = await this.recipientService.importFromXLSX(xlsx_danea, this.system.id, "import_recipients_danea.xlsx");
+        const res = await this.recipientService.importFromXLSX(xlsx_danea, this.system.id);
         expect(res.imported.length).to.equal(50);
         expect(res.errors.length).to.equal(1); // PAJERNE Svizzero non esistente
     }

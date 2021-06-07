@@ -96,6 +96,7 @@ export interface Sender {
     bank?: string
     iban?: string
     swift?: string
+    info?: string
 }
 export interface SenderDocument extends Sender, Document {
     address: AddressDocument
@@ -115,6 +116,10 @@ export const senderDecoder: Decoder<Sender> = object({
     cf: optional(string()),
     email: optional(string()),
     notes: optional(string()),
+    bank: optional(string()),
+    iban: optional(string()),
+    swift: optional(string()),
+    info: optional(string()),
 });
 
 export function mapSenderToPerson(sender: SenderDocument, letterKind: LetterKind, notes?: string, useAddressAR?: boolean): Person {
@@ -150,7 +155,7 @@ export const SenderSchema = new Schema<Sender>({
     name: {
         type: String,
         required: "Name is required.",
-        maxlength: 40,
+        maxlength: 44,
     },
     description: {
         type: String,
@@ -208,6 +213,11 @@ export const SenderSchema = new Schema<Sender>({
         trim: true,
         maxlength: 100,
     },
+    info: {
+        type: String,
+        trim: true,
+        maxlength: 500,
+    }
 }, {
     timestamps: {
         createdAt: true,

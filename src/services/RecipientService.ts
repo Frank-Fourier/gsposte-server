@@ -98,10 +98,9 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
      *
      * @param xlsx {Buffer} Entire XLSX document
      * @param userId {string} Owner of the imported recipients
-     * @param fileName {string} [Optional] Original XLSX document file name
      * @returns {Promise<{ imported: Array<RecipientDocument>, errors: Array<{ row: number, description: string, data?: any }> }> } Promise resolved when the whole document is traversed and contacts are imported. Contains all the errors that occured during the process.
      */
-    public async importFromXLSX(xlsx: Buffer, userId: string, fileName?: string): Promise<RecipientsImportResponse> {
+    public async importFromXLSX(xlsx: Buffer, userId: string): Promise<RecipientsImportResponse> {
         logger.info(`Requested an import of recipients from XLSX.`);
 
         const imported: Array<RecipientDocument> = [];
@@ -142,14 +141,14 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     return nv;
                 }).length === 0;
 
-            if (!validateCell(rowName, [ validators.notEmpty("DENONIMAZIONE"), validators.maxLength("DENONIMAZIONE", 40) ])) continue;
-            if (!validateCell(rowStreet, [ validators.notEmpty("INDIRIZZO"), validators.maxLength("INDIRIZZO", 40) ])) continue;
+            if (!validateCell(rowName, [ validators.notEmpty("DENONIMAZIONE"), validators.maxLength("DENONIMAZIONE", 44) ])) continue;
+            if (!validateCell(rowStreet, [ validators.notEmpty("INDIRIZZO"), validators.maxLength("INDIRIZZO", 44) ])) continue;
             if (!validateCell(rowZip, [ validators.notEmpty("CAP"), validators.maxLength("CAP", 5) ])) continue;
-            if (!validateCell(rowCityName, [ validators.notEmpty("COMUNE"), validators.maxLength("COMUNE", 40) ])) continue;
+            if (!validateCell(rowCityName, [ validators.notEmpty("COMUNE"), validators.maxLength("COMUNE", 44) ])) continue;
             if (!validateCell(rowEmail, [ validators.maxLength("EMAIL", 100) ])) continue;
             if (!validateCell(rowPEC, [ validators.maxLength("PEC", 100) ])) continue;
             if (!validateCell(rowCf, [ validators.maxLength("CODICE FISCALE", 16) ])) continue;
-            if (!validateCell(rowNotes, [ validators.maxLength("NOTE", 250) ])) continue;
+            if (!validateCell(rowNotes, [ validators.maxLength("NOTE", 500) ])) continue;
             if (!validateCell(rowPhoneNumber, [ validators.maxLength("TELEFONO", 30) ])) continue;
 
             const municipality = await this.municipalityService.assertMunicipalityExists(rowCityName, rowZip, row, errors);
@@ -206,7 +205,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
                     !rubric.name && await rubric.updateOne({ $set: {
                         user: userId,
                         name: rowRubric,
-                        notes: `Rubrica creata da file ${fileName ? `'${fileName}'` : "Excel"}`
+                        notes: `Rubrica importata da file Excel`,
                     }}).exec();
                 }
 

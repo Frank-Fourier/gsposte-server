@@ -1,15 +1,16 @@
-import { suite, test } from "mocha-typescript";
+import { suite, test, timeout } from "mocha-typescript";
 import { expect } from "chai";
 import { ioc } from "@ioc";
 import { SenderService } from "@services/SenderService";
 import { UserDocument } from "@models/UserModel";
 import { generateSystemUser } from "@utils/system";
-import { assertSameSender, getSystemUser } from "../test_utils";
+import { assertSameSender, getSystemUser, importMunicipalities } from "../test_utils";
 import { generateMockSender } from "../mocks/sender";
 import { SenderDocument } from "@models/SenderModel";
 import { cleanTestDB } from "@utils/mongo";
 // @ts-ignore
 import faker from "faker/locale/it";
+import fs from "fs";
 
 @suite ("SenderService") class SenderServiceTests {
 
@@ -159,6 +160,30 @@ import faker from "faker/locale/it";
         }
 
         expect(deleted).not.to.exist;
+    }
+
+    @timeout(60000)
+    @test async "Should import senders correctly following DANEA standard format" () {
+        // Import municipalities into test database
+        await importMunicipalities();
+        await this.senderService.deleteAll();
+
+        const xlsx_danea = await fs.promises.readFile("test/assets/xlsx/import_senders_danea.xlsx");
+        const res = await this.senderService.importFromXLSX(xlsx_danea, this.system.id);
+        expect(res.imported.length).to.equal(165);
+        expect(res.errors.length).to.equal(0);
+    }
+
+    @timeout(60000)
+    @test async "Should import senders correctly following DANEA extended format" () {
+        // Import municipalities into test database
+        await importMunicipalities();
+        await this.senderService.deleteAll();
+
+        const xlsx_danea = await fs.promises.readFile("test/assets/xlsx/import_senders_danea_extended.xlsx");
+        const res = await this.senderService.importFromXLSX(xlsx_danea, this.system.id);
+        expect(res.imported.length).to.equal(50);
+        expect(res.errors.length).to.equal(0);
     }
 
     static after() { cleanTestDB(); }

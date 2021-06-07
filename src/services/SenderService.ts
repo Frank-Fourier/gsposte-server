@@ -1,7 +1,7 @@
 import { provide } from "inversify-binding-decorators";
 import { MongoRepository } from "@services/MongoRepository";
 import { Sender, senderDecoder, SenderDocument, SenderModel } from "@models/SenderModel";
-import { ImportResponse } from "@utils/xlsx-uploader";
+import { CellValidator, ImportResponse, validators } from "@utils/xlsx-uploader";
 import { logger } from "@utils/winston";
 import { read, utils, WorkBook } from "xlsx";
 import httpErrors from "http-errors";
@@ -82,10 +82,9 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
      *
      * @param xlsx {Buffer} Entire XLSX document
      * @param userId {string} Owner of the imported senders
-     * @param fileName {string} [Optional] Original XLSX document file name
-     * @returns {Promise<{ imported: Array<SenderDocument>, errors: Array<{ row: number, description: string, data?: any }> }> } Promise resolved when the whole document is traversed and senders are imported. Contains all the errors that occured during the process.
+     * @returns {Promise<{ imported: Array<SenderDocument>, errors: Array<ImportError> } Promise resolved when the whole document is traversed and senders are imported. Contains all the errors that occured during the process.
      */
-    public async importFromXLSX(xlsx: Buffer, userId: string, fileName?: string): Promise<SendersImportResponse> {
+    public async importFromXLSX(xlsx: Buffer, userId: string): Promise<SendersImportResponse> {
         logger.info(`Requested an import of senders from XLSX.`);
 
         const imported: Array<SenderDocument> = [];
@@ -103,7 +102,7 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
             const cellValue = (columnName: keyof SenderXLSX) =>
                 data[columnName] ? String(data[columnName]).trim() : null;
 
-            const rowName     = cellValue("Denominazione") || `${cellValue("Tipo")} ${cellValue("Nome")}`,
+            const rowName     = cellValue("Denominazione") || cellValue("Nome"),
                   rowCf       = cellValue("Codice fiscale") || cellValue("CodFiscale"),
                   rowStreet   = cellValue("Indirizzo"),
                   rowZip      = cellValue("Cap") || cellValue("CAP"),
@@ -111,7 +110,23 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
                   rowBank     = cellValue("Banca"),
                   rowIBAN     = cellValue("IBAN"),
                   rowSWIFT    = cellValue("SWIFT"),
-                  rowData     = cellValue("Dati catastali");
+                  rowInfo     = cellValue("Dati catastali");
+
+            const validateCell = (val: string, validators: CellValidator[]) =>
+                validators.filter(v => !v(val).valid).map(nv => {
+                    errors.push({ row: row + 2, description: nv(val).error });
+                    return nv;
+                }).length === 0;
+
+            if (!validateCell(rowName, [ validators.notEmpty("Denominazione"), validators.maxLength("Denominazione", 44) ])) continue;
+            if (!validateCell(rowStreet, [ validators.notEmpty("Indirizzo"), validators.maxLength("Indirizzo", 44) ])) continue;
+            if (!validateCell(rowZip, [ validators.notEmpty("CAP"), validators.maxLength("CAP", 5) ])) continue;
+            if (!validateCell(rowCityName, [ validators.notEmpty("Città"), validators.maxLength("Città", 44) ])) continue;
+            if (!validateCell(rowCf, [ validators.maxLength("Codice Fiscale", 16) ])) continue;
+            if (!validateCell(rowBank, [ validators.maxLength("Banca", 100) ])) continue;
+            if (!validateCell(rowIBAN, [ validators.maxLength("IBAN", 100) ])) continue;
+            if (!validateCell(rowSWIFT, [ validators.maxLength("SWIFT", 100) ])) continue;
+            if (!validateCell(rowInfo, [ validators.maxLength("Dati catastali", 500) ])) continue;
 
             const municipality = await this.municipalityService.assertMunicipalityExists(rowCityName, rowZip, row, errors);
             if (!municipality) {
@@ -136,7 +151,7 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
                 bank: rowBank,
                 iban: rowIBAN,
                 swift: rowSWIFT,
-                notes: rowData,
+                info: rowInfo,
             };
 
             try {
