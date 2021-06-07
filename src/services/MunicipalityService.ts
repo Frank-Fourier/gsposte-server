@@ -42,6 +42,12 @@ interface JsonMunicipality {
     cap: Array<string>
 }
 
+export interface ImportError {
+    row: number
+    description: string
+    data?: any
+}
+
 @provide(MunicipalityService)
 export class MunicipalityService extends MongoRepository<Municipality, MunicipalityDocument> {
 
@@ -81,6 +87,37 @@ export class MunicipalityService extends MongoRepository<Municipality, Municipal
 
         logger.info(`Ok! ${imported.length} municipalities imported.`);
         return imported.length;
+    }
+
+    public async assertMunicipalityExists(city: string, zip: string, row: number, errors: Array<ImportError>): Promise<MunicipalityDocument> {
+        // Query municipality
+        let municipality: MunicipalityDocument = null;
+        try {
+            municipality = await this.findOne({
+                name: { $regex: `^${city}$`, $options: "i" }
+            } as object);
+        } catch (err) {
+            if (err.status !== 404) logger.error(`Got an error while querying for the municipality on row ${row + 2}! ${err}`);
+            errors.push({
+                row: row + 2,
+                description: err.status === 404 ?
+                    `Non è stato trovato alcun comune di nome '${city}'. Potrebbe essere necessario richiedere l'inserimento di questo comune nel sistema tramite l'apposito modulo.` :
+                    `Errore durante la ricerca del comune di nome '${city}' nel database.`,
+                data: err.status === 404 ? undefined : (err.message || err)
+            });
+            return null;
+        }
+
+        // Found the municipality in db, check the zip code
+        if (!municipality.zip.includes(zip)) {
+            errors.push({
+                row: row + 2,
+                description: `Il CAP ${zip} per ${city} non corrisponde ad alcun CAP registrato per questo comune.`
+            });
+            return null;
+        }
+
+        return municipality;
     }
 
 }

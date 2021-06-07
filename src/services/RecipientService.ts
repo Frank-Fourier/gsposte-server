@@ -6,10 +6,8 @@ import { logger } from "@utils/winston";
 import httpErrors from "http-errors";
 import { inject } from "inversify";
 import { MunicipalityService } from "@services/MunicipalityService";
-import { MunicipalityDocument } from "@models/MunicipalityModel";
 import { AddressDocument } from "@models/schemas/AddressSchema";
-import { Request, Response } from "express";
-import { CellValidator, ImportResponse, uploadXLSX, validators } from "@utils/xlsx-uploader";
+import { CellValidator, ImportResponse, validators } from "@utils/xlsx-uploader";
 import { RubricService } from "@services/RubricService";
 
 /**
@@ -37,7 +35,7 @@ import { RubricService } from "@services/RubricService";
  */
 export type RecipientsImportResponse = ImportResponse<RecipientDocument>
 
-export interface RecipientXLSX {
+interface RecipientXLSX {
     DENOMINAZIONE: string
     INDIRIZZO: string
     CAP: string
@@ -93,18 +91,6 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
         }
 
         return super.save(recipient);
-    }
-
-    /**
-     * Utility method to simplify the Multer upload routine
-     * Call this directly from Controller with req and res params
-     *
-     * @param req {Request} Express Request object
-     * @param res {Response} Express Response object
-     * @returns Promise resolved with XLSX file name when the upload is done. Throws with status code if the upload fails
-     */
-    public upload(req: Request, res: Response): Promise<string> {
-        return uploadXLSX(req, res);
     }
 
     /**
@@ -166,30 +152,8 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             if (!validateCell(rowNotes, [ validators.maxLength("NOTE", 250) ])) continue;
             if (!validateCell(rowPhoneNumber, [ validators.maxLength("TELEFONO", 30) ])) continue;
 
-            // Query municipality
-            let municipality: MunicipalityDocument = null;
-            try {
-                municipality = await this.municipalityService.findOne({
-                    name: { $regex: `^${rowCityName}$`, $options: "i" }
-                } as object);
-            } catch (err) {
-                if (err.status !== 404) logger.error(`Got an error while querying for the municipality on row ${row + 2}! ${err}`);
-                errors.push({
-                    row: row + 2,
-                    description: err.status === 404 ?
-                        `Non è stato trovato alcun comune di nome '${rowCityName}'. Potrebbe essere necessario richiedere l'inserimento di questo comune nel sistema tramite l'apposito modulo.` :
-                        `Errore durante la ricerca del comune di nome '${rowCityName}' nel database.`,
-                    data: err.status === 404 ? undefined : (err.message || err)
-                });
-                continue;
-            }
-
-            // Found the municipality in db, check the zip code
-            if (!municipality.zip.includes(rowZip)) {
-                errors.push({
-                    row: row + 2,
-                    description: `Il CAP ${rowZip} per ${rowCityName} non corrisponde ad alcun CAP registrato per questo comune.`
-                });
+            const municipality = await this.municipalityService.assertMunicipalityExists(rowCityName, rowZip, row, errors);
+            if (!municipality) {
                 continue;
             }
 

@@ -28,7 +28,7 @@ import { LetterKind } from "@models/LetterModel";
         await saveMockLetter({ user: this.system, kind: LetterKind.RACCOMANDATA_AR });
 
         try {
-            const stats = await this.statsService.fetchStats(this.system.id);
+            const stats = await this.statsService.fetchStats(this.system);
             expect(stats).to.exist;
         } catch (err) {
             logger.info(err);

@@ -93,6 +93,9 @@ export interface Sender {
     cf?: string
     email?: string
     notes?: string
+    bank?: string
+    iban?: string
+    swift?: string
 }
 export interface SenderDocument extends Sender, Document {
     address: AddressDocument
@@ -189,6 +192,21 @@ export const SenderSchema = new Schema<Sender>({
     notes: {
         type: String,
         maxlength: 500,
+    },
+    bank: {
+        type: String,
+        trim: true,
+        maxlength: 100,
+    },
+    iban: {
+        type: String,
+        trim: true,
+        maxlength: 100,
+    },
+    swift: {
+        type: String,
+        trim: true,
+        maxlength: 100,
     },
 }, {
     timestamps: {

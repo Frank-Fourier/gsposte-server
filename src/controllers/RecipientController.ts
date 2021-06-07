@@ -4,6 +4,7 @@ import { RecipientService } from "@services/RecipientService";
 import { CrudController } from "@controllers/CrudController";
 import { Request, Response } from "express";
 import fs from "fs";
+import { uploadXLSX } from "@utils/xlsx-uploader";
 
 @provide(RecipientController)
 export class RecipientController extends CrudController {
@@ -16,7 +17,7 @@ export class RecipientController extends CrudController {
         const user = await this.authService.getUserFromRequest(req);
 
         // Save the document on filesystem
-        const file = await this.recipientService.upload(req, res);
+        const file = await uploadXLSX(req, res);
         const xlsx = await fs.promises.readFile(`${process.env.XLSX_ROOT}/${file}`);
 
         // Start the import process
