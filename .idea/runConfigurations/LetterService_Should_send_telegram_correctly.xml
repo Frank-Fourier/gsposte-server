@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Format for Postel Test" type="mocha-javascript-test-runner">
-    <node-interpreter>project</node-interpreter>
+  <configuration default="false" name="LetterService.Should send telegram correctly" type="mocha-javascript-test-runner">
+    <node-interpreter>$USER_HOME$/.nvm/versions/node/v13.14.0/bin/node</node-interpreter>
     <node-options />
     <mocha-package>$PROJECT_DIR$/node_modules/mocha</mocha-package>
     <working-directory>$PROJECT_DIR$</working-directory>
@@ -8,10 +8,10 @@
     <ui>mocha-typescript</ui>
     <extra-mocha-options />
     <test-kind>TEST</test-kind>
-    <test-file>$PROJECT_DIR$/test/services/PdfService.spec.ts</test-file>
+    <test-file>$PROJECT_DIR$/test/services/LetterService.spec.ts</test-file>
     <test-names>
-      <name value="PdfService" />
-      <name value="Should format for Postel correctly" />
+      <name value="LetterService" />
+      <name value="Should send telegram correctly" />
     </test-names>
     <method v="2">
       <option name="TypeScript.Before.Run" enabled="true" FAIL_ON_ERROR="true" CONFIG_PATH="$PROJECT_DIR$/tsconfig.json" />

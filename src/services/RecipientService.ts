@@ -149,7 +149,7 @@ export class RecipientService extends MongoRepository<Recipient, RecipientDocume
             if (!validateCell(rowPEC, [ validators.maxLength("PEC", 100) ])) continue;
             if (!validateCell(rowCf, [ validators.maxLength("CODICE FISCALE", 16) ])) continue;
             if (!validateCell(rowNotes, [ validators.maxLength("NOTE", 500) ])) continue;
-            if (!validateCell(rowPhoneNumber, [ validators.maxLength("TELEFONO", 30) ])) continue;
+            if (!validateCell(rowPhoneNumber, [ validators.maxLength("TELEFONO", 18) ])) continue;
 
             const municipality = await this.municipalityService.assertMunicipalityExists(rowCityName, rowZip, row, errors);
             if (!municipality) {

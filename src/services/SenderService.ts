@@ -1,7 +1,7 @@
 import { provide } from "inversify-binding-decorators";
 import { MongoRepository } from "@services/MongoRepository";
 import { Sender, senderDecoder, SenderDocument, SenderModel } from "@models/SenderModel";
-import { CellValidator, ImportResponse, validators } from "@utils/xlsx-uploader";
+import { CellValidator, ImportError, ImportResponse, validators } from "@utils/xlsx-uploader";
 import { logger } from "@utils/winston";
 import { read, utils, WorkBook } from "xlsx";
 import httpErrors from "http-errors";
@@ -88,7 +88,7 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
         logger.info(`Requested an import of senders from XLSX.`);
 
         const imported: Array<SenderDocument> = [];
-        const errors: Array<{ row: number, description: string, data?: any }> = [];
+        const errors: Array<ImportError> = [];
 
         const wb: WorkBook = read(xlsx, { type: "buffer" });
         const sheet = Object.values(wb.Sheets).filter(s => !!s)[0];

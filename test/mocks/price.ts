@@ -6,7 +6,7 @@ import { LetterKind } from "@models/LetterModel";
 export function generateMockPrice(): Price {
     const min = faker.random.number(150);
     return {
-        price: faker.random.number(20),
+        price: faker.random.number(200),
         minWeight: min,
         maxWeight: min + faker.random.number(500),
         kind: LetterKind.RACCOMANDATA,

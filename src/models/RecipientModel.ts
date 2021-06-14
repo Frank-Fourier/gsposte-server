@@ -147,7 +147,7 @@ export const RecipientSchema = new Schema<Recipient>({
     },
     phoneNumber: {
         type: String,
-        maxlength: 30,
+        maxlength: 18,
         trim: true,
     },
     email: {

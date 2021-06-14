@@ -170,8 +170,8 @@ import fs from "fs";
 
         const xlsx_danea = await fs.promises.readFile("test/assets/xlsx/import_senders_danea.xlsx");
         const res = await this.senderService.importFromXLSX(xlsx_danea, this.system.id);
-        expect(res.imported.length).to.equal(165);
-        expect(res.errors.length).to.equal(0);
+        expect(res.imported.length).to.equal(183);
+        expect(res.errors.length).to.equal(29);
     }
 
     @timeout(60000)
@@ -182,8 +182,8 @@ import fs from "fs";
 
         const xlsx_danea = await fs.promises.readFile("test/assets/xlsx/import_senders_danea_extended.xlsx");
         const res = await this.senderService.importFromXLSX(xlsx_danea, this.system.id);
-        expect(res.imported.length).to.equal(50);
-        expect(res.errors.length).to.equal(0);
+        expect(res.imported.length).to.equal(61);
+        expect(res.errors.length).to.equal(2);
     }
 
     static after() { cleanTestDB(); }

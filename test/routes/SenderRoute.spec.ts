@@ -173,13 +173,6 @@ const API = process.env.API_PATH;
         const mockUser = await saveMockUserAndLogin();
         const mockSender = generateMockSender(mockUser.user._id);
         const sender = await this.senderService.save(mockSender);
-
-        await this.http
-            .post(`${API}/sender`)
-            .set("Authorization", this.token)
-            .send(mockSender)
-            .expect(201);
-
         const newCF = "RCLGNN99S26C983U";
 
         const { body } = await this.http

@@ -128,7 +128,7 @@ import faker from "faker/locale/it";
             updated = await this.recipientService.updateById(saved._id, { "address.street": newStreet });
         } catch (err) {
             expect(err).to.exist;
-            expect(err.message).to.equal("Path `street` (`" + newStreet + "`) is longer than the maximum allowed length (40).");
+            expect(err.message).to.equal("Path `street` (`" + newStreet + "`) is longer than the maximum allowed length (44).");
         }
 
         expect(updated).not.to.exist;
@@ -170,7 +170,7 @@ import faker from "faker/locale/it";
         const xlsx_standard = await fs.promises.readFile("test/assets/xlsx/import_standard.xlsx");
         let res = await this.recipientService.importFromXLSX(xlsx_standard, this.system.id);
 
-        expect(res.imported.length).to.equal(4);
+        expect(res.imported.length).to.equal(2);
 
         expect(res.imported[0].fullName).to.equal("Carmine Conversano");
         expect(res.imported[0].user.toString()).to.equal(this.system.id);
@@ -196,7 +196,7 @@ import faker from "faker/locale/it";
         expect(res.errors[0].row).to.equal(4);
         expect(res.errors[0].description).to.equal("Il CAP 70031 per Andria non corrisponde ad alcun CAP registrato per questo comune.");
         expect(res.errors[1].row).to.equal(5);
-        expect(res.errors[1].description).to.equal("Il campo 'Comune' è obbligatorio");
+        expect(res.errors[1].description).to.equal("Il campo 'COMUNE' è obbligatorio");
 
         const xlsx_errors = await fs.promises.readFile("test/assets/xlsx/import_errors.xlsx");
         res = await this.recipientService.importFromXLSX(xlsx_errors, this.system.id);
