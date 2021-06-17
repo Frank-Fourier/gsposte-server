@@ -230,7 +230,7 @@ export class PostelService {
         // Call Postel
         const res = await this.callPostelApi("Upload", xml);
         if (!res.ok) {
-            throw new httpErrors.InternalServerError("Upload API call to Postel failed!");
+            throw new httpErrors.InternalServerError("Chiamata di UPLOAD su Postel fallita.");
         }
 
         return this.parseUploadResponse(await res.text());
@@ -243,7 +243,7 @@ export class PostelService {
         // Call Postel
         const res = await this.callPostelApi("MpxQuery", xml);
         if (!res.ok) {
-            throw new httpErrors.InternalServerError("Query API call to Postel failed!");
+            throw new httpErrors.InternalServerError("Chiamata di QUERY su Postel fallita.");
         }
 
         return this.parseQueryResponse(await res.text());

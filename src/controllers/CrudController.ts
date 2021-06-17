@@ -66,7 +66,7 @@ export class CrudController {
         if (this.userBased) {
             const user = await this.authService.getUserFromRequest(req);
             if ((obj as any).user.toString() !== user._id.toString() && !user.isAdmin()) {
-                throw new httpErrors.Forbidden("You are not authorized to view recipients that aren't yours!");
+                throw new httpErrors.NotFound("Risorsa non trovata nel sistema.");
             }
         }
 
@@ -83,7 +83,7 @@ export class CrudController {
             const user = await this.authService.getUserFromRequest(req);
             const obj = await this.service.findById(req.params.id);
             if ((obj as any).user.toString() !== user._id.toString() && !user.isAdmin()) {
-                throw new httpErrors.Forbidden("You are not authorized to update recipients that aren't yours!");
+                throw new httpErrors.NotFound("Risorsa non trovata nel sistema.");
             }
         }
 
@@ -101,7 +101,7 @@ export class CrudController {
             const user = await this.authService.getUserFromRequest(req);
             const obj = await this.service.findById(req.params.id);
             if ((obj as any).user.toString() !== user._id.toString() && !user.isAdmin()) {
-                throw new httpErrors.Forbidden("You are not authorized to delete recipients that aren't yours!");
+                throw new httpErrors.NotFound("Risorsa non trovata nel sistema.");
             }
         }
 

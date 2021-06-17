@@ -52,7 +52,7 @@ export class InvoiceController extends CrudController {
 
     public async generateInvoicePDF(req: Request, res: Response) {
         if (!req.params.id) {
-            throw new httpErrors.BadRequest("Invoice ID is required");
+            throw new httpErrors.BadRequest("ID della fattura mancante.");
         }
 
         const invoice = await this.invoiceService.findById(req.params.id);
@@ -61,7 +61,7 @@ export class InvoiceController extends CrudController {
         await fs.promises.writeFile(path, pdf);
 
         return res.status(201).send({
-            message: `Invoice PDF created correctly. Available at ${path}`,
+            message: `Documento PDF della fattura generato correttamente.`,
             url: `${process.env.SERVER_HOST}${(process.env.NODE_ENV === "production" ? "" : `:${process.env.SERVER_PORT}`)}/invoices/invoice_${invoice.id}.pdf`
         });
     }
@@ -69,7 +69,7 @@ export class InvoiceController extends CrudController {
     public async exportOneToFIC(req: Request, res: Response) {
         const user = await this.authService.adminOnly(req);
         if (!req.params.id) {
-            throw new httpErrors.BadRequest("Invoice ID is required");
+            throw new httpErrors.BadRequest("ID della fattura mancante.");
         }
 
         const invoice = await this.invoiceService.findById(req.params.id);
@@ -82,7 +82,7 @@ export class InvoiceController extends CrudController {
         const user = await this.authService.adminOnly(req);
         await this.invoiceService.bulkExportToFIC(user, true);
         return res.status(200).send({
-            message: "Started export process on FIC"
+            message: "La procedura di esportazione su Fatture in Cloud è iniziata correttamente."
         });
     }
 

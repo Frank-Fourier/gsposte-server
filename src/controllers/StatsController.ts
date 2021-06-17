@@ -14,7 +14,7 @@ export class StatsController {
     public async fetchStatsForUser(req: Request, res: Response) {
         const user = await this.authService.getUserFromRequest(req);
         if (user.id !== req.params.id && !user.isAdmin()) {
-            throw new httpErrors.Forbidden("You are not allowed to request stats for other users!");
+            throw new httpErrors.Forbidden("Non è possibile richiedere le statistiche per altri utenti.");
         }
 
         const year = !!req.query.year ? parseInt(req.query.year) : null;
@@ -28,7 +28,7 @@ export class StatsController {
     public async fetchSystemSpentStats(req: Request, res: Response) {
         const user = await this.authService.getUserFromRequest(req);
         if (!user.isAdmin()) {
-            throw new httpErrors.Forbidden("You are not allowed to access this data.");
+            throw new httpErrors.Forbidden("Solo gli amministratori possono leggere le statistiche di sistema.");
         }
 
         const systemStats = await this.statsService.fetchSystemSpentStats(!!req.params.year ? parseInt(req.params.year) : null);

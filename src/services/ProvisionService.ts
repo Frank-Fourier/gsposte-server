@@ -424,7 +424,7 @@ export class ProvisionService extends MongoRepository<Provision, ProvisionDocume
             }
         ]).exec();
         if (total_due === null || total_due === undefined) {
-            throw new httpErrors.InternalServerError("Failed to calculate total due");
+            throw new httpErrors.InternalServerError("Non è stato possibile calcolare l'ammontare totale.");
         }
 
         const payments = this.getUserTotalProvisionPayments(user);

@@ -132,7 +132,7 @@ export class PdfService {
 
         // There's no point if there are no recipients
         if (recipients.length === 0) {
-            throw new httpErrors.BadRequest("Can't format a PDF with no recipients!");
+            throw new httpErrors.BadRequest("Nessun destinatario presente.");
         }
 
         // Get PDF buffer with margins
@@ -253,7 +253,7 @@ export class PdfService {
             return await this.htmlToPdf(html);
         } catch (err) {
             logger.error(`Error while creating new PDF file with Puppeteer from margins HTML.`, err);
-            throw new httpErrors.InternalServerError(`Error while creating new PDF file with Puppeteer from margins HTML. ${err}`);
+            throw new httpErrors.InternalServerError(`Errore durante la creazione del file PDF marginato. ${err}`);
         }
     }
 
@@ -319,7 +319,7 @@ export class PdfService {
             return images;
         } catch (err) {
             logger.error(`Error while converting PDF pages to images.`, err || err.error || "Unknown");
-            throw new httpErrors.InternalServerError(`Error while converting PDF pages to images.`);
+            throw new httpErrors.InternalServerError("Errore durante la conversione delle pagine del PDF a immagini.");
         }
     }
 
@@ -340,7 +340,7 @@ export class PdfService {
             return Buffer.from(await fs.promises.readFile(path.resolve(pdf_path))).toString("base64");
         } catch (err) {
             logger.error(`Error while converting PDF from '${pdf_path}' to base64.`, err);
-            throw new httpErrors.InternalServerError(`Failed to convert PDF from '${pdf_path}' to base64. Error: ${err || 'unknown'}`);
+            throw new httpErrors.InternalServerError(`Errore durante la codifica del PDF '${pdf_path}' in formato Base64. Errore: ${err || 'Sconosciuto'}`);
         }
     }
 

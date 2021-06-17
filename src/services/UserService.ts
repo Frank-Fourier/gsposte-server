@@ -43,7 +43,7 @@ export class UserService extends MongoRepository<User, UserDocument> {
 
     public async updatePassword(user: UserDocument, passwordUpdate: UserPasswordUpdate) {
         if (!await comparePasswords(user.password, passwordUpdate.currentPassword)) {
-            throw new httpErrors.Unauthorized("Wrong old password!");
+            throw new httpErrors.Unauthorized("La vecchia password non è corretta.");
         }
         await this.updateById(user._id, { password: passwordUpdate.newPassword });
     }

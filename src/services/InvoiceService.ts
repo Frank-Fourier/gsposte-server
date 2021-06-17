@@ -78,7 +78,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         errors: Array<{ letter: LetterDocument, error: Error | any }>
     }> {
         if (letters.length === 0) {
-            throw new httpErrors.BadRequest("Letters array is empty! Can't generate invoice.");
+            throw new httpErrors.BadRequest("Non è presente alcuna lettera per cui generare fattura.");
         }
 
         const errors: Array<{ letter: LetterDocument, error: Error | any }> = [];
@@ -87,20 +87,20 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         for (const letter of letters) {
             letter.depopulate("sender user");
             if (letter.sender.toString() !== letters[0].sender.toString()) {
-                throw new httpErrors.BadRequest("Letters to generate an invoice from must all have the same sender!");
+                throw new httpErrors.BadRequest("Le lettere per cui generare fattura devono avere tutte lo stesso mittente.");
             }
 
             try {
                 if (!letter.sent) {
-                    throw new httpErrors.BadRequest("This letter is not sent so I won't include it in the invoice.");
+                    throw new httpErrors.BadRequest("Questa lettera non è inviata, quindi non sarà inclusa in fattura.");
                 }
                 if (letter.error) {
-                    throw new httpErrors.BadRequest("This letter is in an error state so I won't include it in the invoice.");
+                    throw new httpErrors.BadRequest("Questa lettera non è stata inviata a causa di un errore, quindi non sarà inclusa in fattura.");
                 }
 
                 const taxable = letter.getTotalPrice();
                 if (taxable <= 0 || isNaN(taxable)) {
-                    throw new httpErrors.BadRequest("Can't create an invoice for a letter without a price!");
+                    throw new httpErrors.BadRequest("Questa lettera non ha un prezzo associato, quindi non è possibile includerla in fattura.");
                 }
 
                 taxableSum += taxable;
@@ -275,13 +275,13 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async generateLetterInvoicePDF(letter: LetterDocument, directory?: string): Promise<string> {
         if (!letter.sent) {
-            throw new httpErrors.Forbidden("You are not allowed to create an invoice for a letter that was not sent!");
+            throw new httpErrors.Forbidden("Non è possibile generare la distinta per una lettera non ancora inviata.");
         }
         if (letter.error) {
-            throw new httpErrors.Forbidden("You are not allowed to create an invoice for an errored letter!");
+            throw new httpErrors.Forbidden("Non è possibile generare la distinta per una lettera che non è stata inviata a causa di un errore.");
         }
         if (!letter.posteway) {
-            throw new httpErrors.BadRequest("The letter has no 'posteway' field, so I can't generate an invoice.");
+            throw new httpErrors.BadRequest("Non è possibile generare la distinta per una lettera che non ha comunicato con PosteWay.");
         }
 
         // Make directory if not already present
@@ -400,7 +400,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async exportToFIC(exporter: UserDocument, invoice: InvoiceDocument): Promise<InvoiceDocument> {
         if (!exporter.isAdmin()) {
-            throw new httpErrors.Forbidden("You can't export documents to FIC!");
+            throw new httpErrors.Forbidden("Permessi insufficienti per effettuare la richiesta.");
         }
 
         if (!!invoice.fic) {
@@ -436,10 +436,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async bulkExportToFIC(exporter: UserDocument, wait = true): Promise<void> {
         if (!exporter.isAdmin()) {
-            throw new httpErrors.Forbidden("You can't export documents to FIC!");
+            throw new httpErrors.Forbidden("Permessi insufficienti per effettuare la richiesta.");
         }
         if (this.exportFlags.exporting) {
-            throw new httpErrors.BadRequest("A export is already in progress.");
+            throw new httpErrors.BadRequest("Un'esportazione è già in corso.");
         }
 
         const toExport = await this.find({

@@ -66,10 +66,10 @@ export class AuthService {
                 try {
                     const user = await this.userService.findById(payload.userId);
                     if (!user) {
-                        return done(null, null, { error: "User by token not found!" });
+                        return done(null, null, { error: "Impossibile autenticare l'utente: Questo utente non è presente nel sistema." });
                     }
                     if (user && !user.active) {
-                        return done(null, null, { error: "User is not active!" });
+                        return done(null, null, { error: "Impossibile autenticare l'utente: Questo utente non è attivo." });
                     }
                     return done(null, user);
                 } catch (err) {
@@ -89,7 +89,7 @@ export class AuthService {
                 try {
                     const user = await this.recipientService.findById(payload.userId);
                     if (!user || !user.tv) {
-                        return done(null, null, {error: "TV user by token not found!"});
+                        return done(null, null, { error: "Impossibile autenticare l'utente: Questo utente non è presente nel sistema." });
                     }
                     return done(null, user.tv);
                 } catch (err) {
@@ -118,12 +118,12 @@ export class AuthService {
 
     public decodeToken(token: string): JwtToken {
         if (!token) {
-            throw new httpErrors.BadRequest("Empty token!");
+            throw new httpErrors.BadRequest("Impossibile autenticare l'utente: Token di autenticazione vuoto o mancante.");
         }
 
         const split = token.split(" ");
         if (split.length !== 2) {
-            throw new httpErrors.BadRequest("Invalid encoded token!");
+            throw new httpErrors.BadRequest("Impossibile autenticare l'utente: Token di autenticazione non valido.");
         }
 
         return jwt.decode(split[1], process.env.JWT_SECRET);
@@ -141,7 +141,7 @@ export class AuthService {
             await this.comparePasswords(user.password, payload.password);
             return this.createToken(user);
         } catch (err) {
-            throw new httpErrors.Unauthorized("Invalid username or password!");
+            throw new httpErrors.Unauthorized("Username/Email non esistente o password errata.");
         }
     }
 
@@ -157,7 +157,7 @@ export class AuthService {
             await this.comparePasswords(recipient.tv.password, payload.password);
             return this.createToken(recipient);
         } catch (err) {
-            throw new httpErrors.Unauthorized("Invalid username or password!");
+            throw new httpErrors.Unauthorized("Username/Email non esistente o password errata.");
         }
     }
 
@@ -186,21 +186,21 @@ export class AuthService {
     public async roleOnly(req: Request, role: UserRoles) {
         const user = await this.getUserFromRequest(req);
         if (!user.isAdmin() && !user.roles.includes(role)) { // Admins can go regardless
-            throw new httpErrors.Forbidden(`This call can only be made by ${role}. Your roles are ${user.roles}`);
+            throw new httpErrors.Forbidden(`Permessi insufficienti per effettuare la richiesta. Ruolo richiesto: ${role}. I tuoi ruoli sono: ${user.roles}.`);
         }
     }
 
     public async adminOnly(req: Request) {
         const user = await this.getUserFromRequest(req);
         if (!user.isAdmin()) {
-            throw new httpErrors.Forbidden("Only admins can make this call. You are not an admin.");
+            throw new httpErrors.Forbidden("Permessi insufficienti per effettuare la richiesta.");
         }
         return user;
     }
 
     private async comparePasswords(password: string, candidate: string) {
         if (!await comparePasswords(password, candidate)) {
-            throw new httpErrors.Unauthorized("Invalid username or password!");
+            throw new httpErrors.Unauthorized("Username/Email non esistente o password errata.");
         }
     }
 

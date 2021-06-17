@@ -54,10 +54,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         const recipientsGift = letter.recipientsGift ?? 0;
 
         if (recipientsGift > letter.recipients.length) {
-            throw new httpErrors.BadRequest(`Can't assign more recipients gift than the actual recipients!`);
+            throw new httpErrors.BadRequest(`Non è possibile assegnare più invii omaggio di quanti sono i destinatari.`);
         }
         if (user.recipientsGift < recipientsGift) {
-            throw new httpErrors.Forbidden(`Can't assign more recipients gift than you have! You have ${user.recipientsGift} gifts left.`);
+            throw new httpErrors.Forbidden(`Non hai abbastanza invii omaggio. Hai ${user.recipientsGift} invii omaggio nel tuo account.`);
         }
 
         // Subtract gifts from user
@@ -510,7 +510,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     error: true
                 });
 
-                throw { message: `Error while calling PosteWay SEND endpoint`, error: err };
+                throw { message: `Errore durante la chiamata PosteWay SEND.`, error: err };
             }
 
             if (!submit.ok) {
@@ -530,7 +530,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     error: true
                 });
 
-                throw { message: `PosteWay SEND API result was not ok.`, result: submit };
+                throw { message: `PosteWay SEND: Invio rifiutato.`, result: submit };
             }
 
             // Launch the 60 seconds wait async
@@ -688,7 +688,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 error: true
             });
 
-            throw { message: `This telegram does not have text.` };
+            throw { message: `Non è possibile inviare un telegramma privo di testo.` };
         }
 
         let submit: TelegramSubmitResponse;
@@ -714,7 +714,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 error: true
             });
 
-            throw { message: `Error while calling PosteWay TELEGRAM SEND endpoint`, error: err };
+            throw { message: `Errore durante la chiamata TELEGRAM SEND.`, error: err };
         }
 
         if (!submit.ok) {
@@ -731,7 +731,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 error: true
             });
 
-            throw { message: `PosteWay TELEGRAM SEND API result was not ok.`, result: submit };
+            throw { message: `PosteWay TELEGRAM SEND: Invio rifiutato.`, result: submit };
         }
 
         updated = await this.updateById(letter.id, {
@@ -765,7 +765,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 error: true
             });
 
-            throw { message: `Error while calling PosteWay TELEGRAM STATUS endpoint`, error: err };
+            throw { message: `Errore durante la chiamata PosteWay TELEGRAM STATUS.`, error: err };
         }
 
         try {
@@ -787,7 +787,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 error: true
             });
 
-            throw { message: `Error while calling PosteWay TELEGRAM CONFIRM endpoint`, error: err };
+            throw { message: `Errore durante la chiamata TELEGRAM CONFIRM.`, error: err };
         }
 
         // Everything went fine, generate provision

@@ -18,10 +18,10 @@ export class PdfController {
     public async merge(req: Request, res: Response) {
         const urls = req.body.urls as string[];
         if (!urls?.length) {
-            throw new httpErrors.BadRequest("You must provide one or more PDF urls!");
+            throw new httpErrors.BadRequest("Lista di URL vuota. Non è possibile procedere all'unione dei file.");
         }
         if (!urls.every(url => url.startsWith(process.env.SERVER_HOST))) {
-            throw new httpErrors.BadRequest(`All URLs must start with ${process.env.SERVER_HOST}!`);
+            throw new httpErrors.BadRequest(`Tutti gli URL devono cominciare con ${process.env.SERVER_HOST} per ragioni di sicurezza.`);
         }
 
         const code = await this.pdf.merge(urls);

@@ -238,7 +238,7 @@ export class MongoRepository<DTO, Doc extends Document> {
 
     public checkValidObjectId(id: string | number | ObjectId) {
         if (!ObjectId.isValid(id)) {
-            throw new httpErrors.BadRequest("Malformed object id!");
+            throw new httpErrors.BadRequest("Object ID malformato.");
         }
     }
 

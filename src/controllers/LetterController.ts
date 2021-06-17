@@ -52,7 +52,7 @@ export class LetterController extends CrudController {
     public async updateById(req: Request, res: Response) {
         const letter = await this.letterService.findById(req.params.id);
         if (letter.sent) {
-            throw new httpErrors.Forbidden("This letter is marked as sent, so it can't be updated anymore.");
+            throw new httpErrors.Forbidden("Non è possibile modificare lettere già inviate.");
         }
 
         // Can proceed with the update call
@@ -61,19 +61,19 @@ export class LetterController extends CrudController {
 
     public async generateInvoice(req: Request, res: Response) {
         if (!req.params.id) {
-            throw new httpErrors.BadRequest("Letter ID is required");
+            throw new httpErrors.BadRequest("ID della lettera mancante.");
         }
         const letter = (await this.letterService.findById(req.params.id)).depopulate("user");
 
         // const user = await this.authService.getUserFromRequest(req);
         // if (!user.isAdmin() && letter.user !== user.id) {
-        //     throw new httpErrors.Forbidden("You are not authorized to generate invoices for other users!");
+        //     throw new httpErrors.Forbidden("Non è possibile generare distinte per altri utenti.");
         // }
 
-        const path = await this.invoiceService.generateLetterInvoicePDF(letter);
+        await this.invoiceService.generateLetterInvoicePDF(letter);
 
         return res.status(201).send({
-            message: `Invoice created correctly. Available at ${path}`,
+            message: `Distinta generata correttamente.`,
             url: `${process.env.SERVER_HOST}${(process.env.NODE_ENV === "production" ? "" : `:${process.env.SERVER_PORT}`)}/documents/${letter.codePdf}/invoice.pdf`
         });
     }
@@ -83,7 +83,7 @@ export class LetterController extends CrudController {
 
         const user = await this.authService.getUserFromRequest(req);
         if (!user.isAdmin() && letter.user !== user.id) {
-            throw new httpErrors.Forbidden("You are not authorized to update letters from other users!");
+            throw new httpErrors.Forbidden("Non è possibile aggiornare lettere di altri utenti.");
         }
 
         const doc = await this.letterService.queryLetter(letter);

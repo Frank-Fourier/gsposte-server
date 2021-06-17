@@ -12,7 +12,7 @@ export class AuthController {
     async login(req: Request, res: Response) {
         const payload: LoginPayload = req.body;
         if (!payload.usernameOrEmail || !payload.password) {
-            throw new httpErrors.Unauthorized("Invalid username or password!");
+            throw new httpErrors.Unauthorized("Username/Email non esistente o password errata.");
         }
 
         const token = await this.authService.login(payload);
@@ -22,7 +22,7 @@ export class AuthController {
     async tvLogin(req: Request, res: Response) {
         const payload: LoginPayload = req.body;
         if (!payload.usernameOrEmail || !payload.password) {
-            throw new httpErrors.Unauthorized("Invalid username or password!");
+            throw new httpErrors.Unauthorized("Username/Email non esistente o password errata.");
         }
 
         const token = await this.authService.tvLogin(payload);

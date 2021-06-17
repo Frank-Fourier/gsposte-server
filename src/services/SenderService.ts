@@ -71,7 +71,7 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
             name: sender.name,
         });
         if (dup.length > 0) {
-            throw new httpErrors.Conflict("Senders must be unique on a user basis.");
+            throw new httpErrors.Conflict("Mittente duplicato.");
         }
 
         return super.save(sender);
@@ -93,7 +93,7 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
         const wb: WorkBook = read(xlsx, { type: "buffer" });
         const sheet = Object.values(wb.Sheets).filter(s => !!s)[0];
         if (!sheet) {
-            throw new httpErrors.BadRequest("The XLSX file does not have any valid sheet to read data from.");
+            throw new httpErrors.BadRequest("File Excel non valido.");
         }
 
         const sheetJson = utils.sheet_to_json(sheet);

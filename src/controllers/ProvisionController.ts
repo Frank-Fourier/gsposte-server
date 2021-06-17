@@ -16,7 +16,7 @@ export class ProvisionController {
     public async generate(req: Request, res: Response) {
         const letterId = req.params.letterId;
         if (!letterId) {
-            throw new httpErrors.BadRequest("Letter ID is required to generate a provision.");
+            throw new httpErrors.BadRequest("ID della lettera mancante.");
         }
 
         const letter = await this.letterService.findById(letterId);
@@ -34,7 +34,7 @@ export class ProvisionController {
 
     public async calculateRevenue(req: Request, res: Response) {
         if (!req.params.userId) {
-            throw new httpErrors.BadRequest("User ID is required.");
+            throw new httpErrors.BadRequest("ID dell'utente mancante.");
         }
         const revenue = await this.provisionService.calculateRevenue(req.params.userId, req.body || {});
         return res.status(200).send({ revenue });
@@ -42,7 +42,7 @@ export class ProvisionController {
 
     public async calculateRevenuesMonthly(req: Request, res: Response) {
         if (!req.params.userId) {
-            throw new httpErrors.BadRequest("User ID is required.");
+            throw new httpErrors.BadRequest("ID dell'utente mancante.");
         }
         const year = !!req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
 
@@ -52,7 +52,7 @@ export class ProvisionController {
 
     public async calculateRevenueYearly(req: Request, res: Response) {
         if (!req.params.userId) {
-            throw new httpErrors.BadRequest("User ID is required.");
+            throw new httpErrors.BadRequest("ID dell'utente mancante.");
         }
         const year = !!req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
 
@@ -62,7 +62,7 @@ export class ProvisionController {
 
     public async calculateUserDueRevenue(req: Request, res: Response) {
         if (!req.params.userId) {
-            throw new httpErrors.BadRequest("User ID is required.");
+            throw new httpErrors.BadRequest("ID dell'utente mancante.");
         }
 
         const user = await this.userService.findById(req.params.userId);
