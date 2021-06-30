@@ -348,6 +348,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             price: formatCurrency(price),
             total: formatCurrency(price * letter.recipients.length),
             subject: letter.subject,
+            text: letter.text,
         });
 
         // I wait until networkidle2 to let all the images on the HTML load before converting
