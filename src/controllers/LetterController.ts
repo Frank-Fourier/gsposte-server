@@ -32,19 +32,6 @@ export class LetterController extends CrudController {
             }
         }
 
-        if (!!req.body.query["$senderName"]) {
-            const senderName = req.body.query["$senderName"];
-            delete req.body.query["$senderName"];
-            const result = await this.letterService.paginateBySenderName(senderName, req.body.query, pagination);
-            return res.status(200).send(result);
-        }
-        if (!!req.body.query["$recipientName"]) {
-            const recipientName = req.body.query["$recipientName"];
-            delete req.body.query["$recipientName"];
-            const result = await this.letterService.paginateByRecipientName(recipientName, req.body.query, pagination);
-            return res.status(200).send(result);
-        }
-
         const result = await this.letterService.paginate(req.body.query, pagination);
         return res.status(200).send(result);
     }

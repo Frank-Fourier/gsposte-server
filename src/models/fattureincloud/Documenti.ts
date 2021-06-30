@@ -134,7 +134,7 @@ export namespace FIC {
     export function mapCredentialsToAuth(): Auth {
         const { FIC_API_UID, FIC_API_KEY } = process.env;
         if (!FIC_API_UID || !FIC_API_KEY) {
-            throw new Error("Le credenziali di accesso a Fatture in Cloud non sono definite. Non è possibile accedervi.");
+            throw new httpErrors.InternalServerError("Le credenziali di accesso a Fatture in Cloud non sono definite. Non è possibile accedervi.");
         }
 
         return {

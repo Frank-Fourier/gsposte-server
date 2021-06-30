@@ -1,5 +1,5 @@
 import { provide } from "inversify-binding-decorators";
-import { MongoQuery, MongoRepository, Paginated, PaginateOptions } from "@services/MongoRepository";
+import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { PdfService } from "@services/PdfService";
 import { PriceService } from "@services/PriceService";
 import { NoticeService } from "@services/NoticeService";
@@ -105,69 +105,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         }
 
         return updated;
-    }
-
-    public async paginateByPopulateField(collection: string, field: string, text: string, query: any, pagination: PaginateOptions): Promise<Paginated<LetterDocument>> {
-        // let $text: string;
-        // if (query["$text"]) {
-        //     $text = query["$text"];
-        //     delete query["$text"];
-        // }
-
-        // const match = {
-        //     ...(query || {}),
-        //     ...($text ? {
-        //         $or: this.searchFields.map(field => ({
-        //             [field]: {
-        //                 $regex: $text,
-        //                 $options: "i"
-        //             }
-        //         }))
-        //     } : {})
-        // };
-
-        const [{ meta, docs }] = await this.letterModel.aggregate([
-            // insert(Object.keys(match).length > 0, { $match: match }, undefined),
-            {
-                $lookup: {
-                    from: collection,
-                    let: { [field]: `$${field}` },
-                    pipeline: [{ $match: { [field]: new RegExp(text, "i") } }],
-                    as: collection
-                }
-            },
-            { $unwind: `$${collection}` },
-            // insert(!!pagination.sort, { $sort: pagination.sort }, undefined),
-            // insert(!!pagination.select, { $select: pagination.select }, undefined),
-            {
-                $facet: {
-                    meta: [
-                        { $count: "total" },
-                        { $project: { total: 1, pages: { $divide: [ "$total", pagination.pageSize ] } } }
-                    ],
-                    docs: [
-                        { $skip: pagination.pageIndex * pagination.pageSize },
-                        { $limit: pagination.pageSize }
-                    ]
-                }
-            }
-        ]).exec();
-
-        return {
-            meta: {
-                total: meta[0]?.total ?? 0,
-                pages: Math.ceil(meta[0]?.pages ?? 0)
-            },
-            docs: docs ?? []
-        };
-    }
-
-    public paginateBySenderName(senderName: string, query: any, pagination: PaginateOptions): Promise<Paginated<LetterDocument>> {
-        return this.paginateByPopulateField("senders", "name", senderName, query, pagination);
-    }
-
-    public paginateByRecipientName(recipientName: string, query: any, pagination: PaginateOptions): Promise<Paginated<LetterDocument>> {
-        return this.paginateByPopulateField("recipients", "fullName", recipientName, query, pagination);
     }
 
     public getOriginalPdfLink(letter: LetterDocument): string | null {
