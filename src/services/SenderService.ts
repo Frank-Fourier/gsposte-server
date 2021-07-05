@@ -158,7 +158,7 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
                 const saved = await this.updateOne({
                     user: userId,
                     name: sender.name,
-                }, sender, true);
+                }, sender, true, true, false);
 
                 imported.push(saved);
             } catch (err) {

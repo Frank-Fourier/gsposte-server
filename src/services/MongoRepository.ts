@@ -195,13 +195,13 @@ export class MongoRepository<DTO, Doc extends Document> {
         }
     }
 
-    public async updateOne(query: MongoQuery<DTO & Doc>, updateBody: (Partial<DTO> | any), upsert = false, runValidators = true): Promise<Doc> {
+    public async updateOne(query: MongoQuery<DTO & Doc>, updateBody: (Partial<DTO> | any), upsert = false, runValidators = true, setDefaultsOnInsert = true): Promise<Doc> {
         try {
             return await this.model.findOneAndUpdate(query, updateBody, {
                 new: true,
                 runValidators: runValidators,
                 upsert: upsert,
-                setDefaultsOnInsert: true,
+                setDefaultsOnInsert: setDefaultsOnInsert,
                 context: "query"
             }).exec();
         } catch (err) {

@@ -172,6 +172,11 @@ import fs from "fs";
         const res = await this.senderService.importFromXLSX(xlsx_danea, this.system.id);
         expect(res.imported.length).to.equal(183);
         expect(res.errors.length).to.equal(29);
+
+        res.imported.forEach(imp => {
+            expect(imp.addressAR).to.not.exist;
+            expect(imp.addressBill).to.not.exist;
+        });
     }
 
     @timeout(60000)
@@ -184,6 +189,11 @@ import fs from "fs";
         const res = await this.senderService.importFromXLSX(xlsx_danea, this.system.id);
         expect(res.imported.length).to.equal(61);
         expect(res.errors.length).to.equal(2);
+
+        res.imported.forEach(imp => {
+            expect(imp.addressAR).to.not.exist;
+            expect(imp.addressBill).to.not.exist;
+        });
     }
 
     static after() { cleanTestDB(); }
