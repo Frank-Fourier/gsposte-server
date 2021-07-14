@@ -67,11 +67,12 @@ export class LetterController extends CrudController {
 
     public async updateStatus(req: Request, res: Response) {
         const letter = await this.letterService.findById(req.params.id);
-
-        const user = await this.authService.getUserFromRequest(req);
-        if (!user.isAdmin() && letter.user !== user.id) {
-            throw new httpErrors.Forbidden("Non è possibile aggiornare lettere di altri utenti.");
-        }
+        /*
+            const user = await this.authService.getUserFromRequest(req);
+            if (!user.isAdmin() && letter.user !== user.id) {
+                throw new httpErrors.Forbidden("Non è possibile aggiornare lettere di altri utenti.");
+            }
+        */
 
         const doc = await this.letterService.queryLetter(letter);
         return res.status(200).send(doc);

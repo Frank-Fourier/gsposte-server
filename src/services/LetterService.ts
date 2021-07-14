@@ -24,7 +24,7 @@ import {
 import { isProdEnv, isTestEnv } from "@utils/system";
 import { ProvisionService } from "@services/ProvisionService";
 import { NoticeKind } from "@models/NoticeModel";
-import { UserDocument } from "@models/UserModel";
+import { User, UserDocument } from "@models/UserModel";
 import { UserService } from "@services/UserService";
 import winston from "winston";
 import moment from "moment";
@@ -387,7 +387,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
 
             // Send SMS to recipients
-            if (letter.smsText && (letter.sender as Sender).smsName) {
+            if (letter.smsText) {
                 await this.sendSMS(letter);
             }
             
@@ -566,8 +566,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         logger.info(`Sending SMS to ${numbers.length} numbers!`);
         const res = await this.sms.sendSMS({
             to: numbers.join(","),
-            from: (letter.sender as Sender).smsName,
-            text: `${letter.smsText} ${this.getOriginalPdfLink(letter)}`
+            from: String((letter.user as User).smsName),
+            text: `${letter.smsText}\n${this.getOriginalPdfLink(letter)}`
         });
         logger.info(`SMS response code: ${res.code} with detail ${res.detail}`);
 
@@ -638,6 +638,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
         // Finally inform the client that this letter is ready
         logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision}.`);
+
+        // Send SMS to recipients
+        if (letter.smsText) {
+            await this.sendSMS(letter);
+        }
 
         return updated;
     }

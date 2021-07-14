@@ -65,6 +65,11 @@ export interface ProvisionPayment {
  *       avatar:
  *         type: string
  *         description: Avatar URL
+ *       smsName:
+ *         type: string
+ *         description: Username to send sms
+ *         example: 'Carmine'
+ *         maxlenght: 11
  *   UserDocument:
  *     allOf:
  *       - $ref: '#/definitions/User'
@@ -97,6 +102,7 @@ export interface User {
     avatar?: string
     recipientsGift?: number
     provisionPayments?: Array<ProvisionPayment>
+    smsName?: string
     isAdmin?: () => boolean
     isTvManager?: () => boolean
 }
