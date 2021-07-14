@@ -7,6 +7,7 @@ import { PdfService } from "@services/PdfService";
 import { logger } from "@utils/winston";
 
 export type WeightRanges = "0-20" | "21-50" | "51-10000";
+export const SMS_PRICE = 0.15;
 
 @provide(PriceService)
 export class PriceService extends MongoRepository<Price, PriceDocument> {
@@ -87,7 +88,7 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
             const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
 
             logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: € ${price} with € ${extra} as extra`);
-            return letter.bw ? price : (price + extra);
+            return (letter.bw ? price : (price + extra)) + (!!letter.smsText ? SMS_PRICE : 0);
         }
 
         // Telegram case: count words

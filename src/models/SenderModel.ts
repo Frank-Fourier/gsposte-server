@@ -83,6 +83,7 @@ import { LetterKind } from "@models/LetterModel";
 export interface Sender {
     user?: string | UserDocument
     name: string
+    smsName?: string
     description: string
     address: Address
     addressAR?: Address
@@ -197,6 +198,11 @@ export const SenderSchema = new Schema<Sender>({
     notes: {
         type: String,
         maxlength: 500,
+    },
+    smsName: {
+        type: String,
+        trim: true,
+        maxlength: 11,
     },
     bank: {
         type: String,

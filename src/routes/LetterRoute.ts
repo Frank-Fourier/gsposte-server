@@ -252,7 +252,7 @@ export class LetterRoute extends Route {
                 method: RequestMethod.PUT,
                 requiresAuth: true,
                 handler: (req, res) => this.letterController.updateStatus(req, res)
-            }
+            },
         ]);
     }
 

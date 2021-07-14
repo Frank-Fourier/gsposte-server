@@ -1,12 +1,13 @@
 import { provide } from "inversify-binding-decorators";
 import { MongoQuery, MongoRepository } from "@services/MongoRepository";
 import { PdfService } from "@services/PdfService";
+import { SmsService } from "@services/SmsService";
 import { PriceService } from "@services/PriceService";
 import { NoticeService } from "@services/NoticeService";
 import { Letter, letterDecoder, LetterDocument, LetterKind, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
-import { mapSenderToPerson, SenderDocument } from "@models/SenderModel";
-import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel";
+import { mapSenderToPerson, Sender, SenderDocument } from "@models/SenderModel";
+import { mapRecipientToPerson, recipientDecoder, RecipientDocument } from "@models/RecipientModel";
 import { createLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
@@ -30,11 +31,13 @@ import moment from "moment";
 import httpErrors from "http-errors";
 import { generateRandomCode } from "@utils/random";
 import { insert } from "@utils/misc";
+import { Sms, SmsStatusResponse } from "sms";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     @inject(PdfService) private pdf: PdfService;
+    @inject(SmsService) private sms: SmsService;
     @inject(PosteWayService) private posteway: PosteWayService;
     @inject(PriceService) private priceService: PriceService;
     @inject(ProvisionService) private provisionService: ProvisionService;
@@ -108,6 +111,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public getOriginalPdfLink(letter: LetterDocument): string | null {
+        // return 'https://server.gsposte.it/documents/GSDESOESQAYE/original.pdf';
         if (!letter.codePdf) {
             return null;
         }
@@ -259,8 +263,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             let confirm: ConfirmResponse;
 
             try {
-                // Wait 60 seconds so I can be sure that the confirm endpoint will work
-                await sleep(60000);
+                // Wait POSTE_CONFIRM_WAIT_MS so I can be sure that the confirm endpoint will work
+                await sleep(parseInt(process.env.PW_CONFIRM_WAIT_MS));
 
                 // Before confirming, call status to check if everything went good
                 try {
@@ -320,8 +324,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 return;
             }
 
-            // Wait another 30 seconds so I can be sure that I will have tracking numbers
-            await sleep(30000);
+            // Wait another PW_TRACK_WAIT_MS so I can be sure that I will have tracking numbers
+            await sleep(parseInt(process.env.PW_TRACK_WAIT_MS));
 
             // Call track and recipients to get the info I need to fill the posteway object on document
             let track: TrackResponse;
@@ -382,6 +386,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
             logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
 
+            // Send SMS to recipients
+            if (letter.smsText && (letter.sender as Sender).smsName) {
+                await this.sendSMS(letter);
+            }
+            
             // Everything went fine, generate provision
             if (!await this.generateProvision(letter, userId, logFile)) {
                 return;
@@ -537,6 +546,32 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
        };
 
         return this.updateById(letter.id, temporary, false, false);
+    }
+
+    /**
+     * Send SMS with letter smsText and URL to PDF to all letter recipients.
+     * 
+     * @param letter {LetterDocument}
+     * @returns {SmsStatusResponse}
+     */
+    private async sendSMS(letter: LetterDocument) {
+        const numbers = letter.recipients
+            .filter((r: RecipientDocument) => !!r.phoneNumber)
+            .map((r: RecipientDocument) => `39${r.phoneNumber}`);
+
+        if (numbers.length === 0) {
+            return;
+        }
+
+        logger.info(`Sending SMS to ${numbers.length} numbers!`);
+        const res = await this.sms.sendSMS({
+            to: numbers.join(","),
+            from: (letter.sender as Sender).smsName,
+            text: `${letter.smsText} ${this.getOriginalPdfLink(letter)}`
+        });
+        logger.info(`SMS response code: ${res.code} with detail ${res.detail}`);
+
+        return res;
     }
 
     private async sendRUNO(letter: LetterDocument, user: UserDocument, logFile?: winston.Logger): Promise<LetterDocument> {

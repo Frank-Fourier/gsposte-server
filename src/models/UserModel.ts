@@ -194,6 +194,11 @@ export const UserSchema = new Schema<User>({
         type: Number,
         default: 0,
     },
+    smsName: {
+        type: String,
+        trim: true,
+        maxlength: 11,
+    },
     provisionPayments: [{
         type: new Schema<ProvisionPayment>({
             paymentDate: {

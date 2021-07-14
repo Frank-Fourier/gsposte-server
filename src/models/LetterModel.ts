@@ -105,6 +105,10 @@ export enum LetterKind {
  *         type: number
  *         description: How many recipients to gift for this letter
  *         example: 0
+ *       smsText:
+ *         type: string
+ *         description: Text of the SMS to send (max 160 chars)
+ *         example: Example text of SMS!
  *   LetterDocument:
  *     allOf:
  *       - $ref: '#/definitions/Letter'
@@ -162,6 +166,7 @@ export interface Letter {
     notes?: string
     recipientsGift?: number
     telegramShowSenderAddress?: boolean
+    smsText?: string
     isRaccomandata?: () => boolean
     isTelegramma?: () => boolean
     getTotalPrice?: (gifts?: number) => number
@@ -303,6 +308,10 @@ export const LetterSchema = new Schema<Letter>({
     text: {
         type: String,
         maxlength: 8192,
+    },
+    smsText: {
+        type: String,
+        maxlength: 160,
     },
     bw: {
         type: Boolean,
