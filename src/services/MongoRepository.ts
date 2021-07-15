@@ -156,7 +156,7 @@ export class MongoRepository<DTO, Doc extends Document> {
                         }
                     }))
                 } : {})
-            }, pagination).populate("user").orFail().exec();
+            }, pagination).orFail().exec();
         } catch (err) {
             if (err.name !== "DocumentNotFoundError") {
                 throw this.formatMongoError(err);
