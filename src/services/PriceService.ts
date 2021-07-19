@@ -5,6 +5,7 @@ import { LetterDocument, LetterKind } from "@models/LetterModel";
 import { inject } from "inversify";
 import { PdfService } from "@services/PdfService";
 import { logger } from "@utils/winston";
+import { RecipientDocument } from "@models/RecipientModel";
 
 export type WeightRanges = "0-20" | "21-50" | "51-10000";
 export const SMS_PRICE = 0.15;
@@ -88,7 +89,7 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
             const { price, extra } = await this.getPriceForWeight(weight, letter.kind);
 
             logger.info(`Calculated price for letter ${letter.codePdf} with ${pages} pages is: € ${price} with € ${extra} as extra`);
-            return (letter.bw ? price : (price + extra)) + (!!letter.smsText ? SMS_PRICE : 0);
+            return letter.bw ? price : (price + extra);
         }
 
         // Telegram case: count words
@@ -97,6 +98,20 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
 
         logger.info(`Calculated price for telegram ${letter.codePdf} with ${words} words is: € ${price}`);
         return price;
+    }
+
+    /**
+     * Calculates and returns the TOTAL price for the SMS of a campaign
+     *
+     * @param letter {LetterDocument} Letter to calculate the SMS price for
+     * @returns {number} Calculated price
+     */
+    public async calculatePriceSMS(letter: LetterDocument): Promise<number> {
+        if (!letter.smsText) {
+            return 0;
+        }
+        await letter.populate("recipients").execPopulate();
+        return letter.recipients.filter((r: RecipientDocument) => !!r.phoneNumber).length * SMS_PRICE;
     }
 
 }

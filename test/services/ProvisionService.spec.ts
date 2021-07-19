@@ -45,7 +45,7 @@ import { InvoiceService } from "@services/InvoiceService";
         try {
             await this.generateUsers();
 
-            const letter = await saveMockLetter({ user: this.userC2B1.id });
+            const letter = await saveMockLetter({ user: this.userC2B1.id, bw: false });
             let provision = await this.provisionService.generateProvision(letter);
 
             expect(provision.referrers.length).to.equal(3);

@@ -166,7 +166,7 @@ const API = process.env.API_PATH;
             .get(`${API}/sender/${sender._id}`)
             .set("Authorization", mockOtherUser.token)
             .send()
-            .expect(403);
+            .expect(404);
     }
 
     @test async "Should update sender by id correctly" () {
@@ -194,7 +194,7 @@ const API = process.env.API_PATH;
             .send({
                 cf: "modified"
             })
-            .expect(403);
+            .expect(404);
     }
 
     static after() { cleanTestDB(); }

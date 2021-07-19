@@ -103,7 +103,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                     throw new httpErrors.BadRequest("Questa lettera non ha un prezzo associato, quindi non è possibile includerla in fattura.");
                 }
 
-                taxableSum += taxable;
+                taxableSum += taxable + await this.priceService.calculatePriceSMS(letter);
                 giftSum += letter.recipientsGift ?? 0;
             } catch (err) {
                 errors.push({ letter: letter, error: err });

@@ -12,7 +12,18 @@ import { ioc } from "@ioc";
 import { SenderService } from "@services/SenderService";
 import { RecipientService } from "@services/RecipientService";
 
-export function generateMockLetter(user: string | UserDocument, sender: string | SenderDocument, recipients: Array<string | RecipientDocument>, codePdf: string, kind?: LetterKind): Letter {
+interface GenerateMockLetterParams {
+    user: string | UserDocument;
+    sender: string | SenderDocument;
+    recipients: Array<string | RecipientDocument>;
+    codePdf: string;
+    kind?: LetterKind;
+    bw?: boolean;
+    backSide?: boolean;
+    smsText?: string;
+}
+
+export function generateMockLetter({ user, sender, recipients, codePdf, kind, bw, backSide, smsText }: GenerateMockLetterParams): Letter {
     return {
         user: user,
         sender: sender,
@@ -21,6 +32,9 @@ export function generateMockLetter(user: string | UserDocument, sender: string |
         kind: kind || LetterKind.LETTERA_SEMPLICE,
         codePdf: codePdf,
         notes: faker.lorem.sentence(),
+        bw: bw ?? true,
+        backSide: backSide ?? true,
+        smsText: smsText
     };
 }
 
@@ -36,25 +50,38 @@ export function generateMockTelegram(user: string | UserDocument, sender: string
     };
 }
 
-export async function saveMockLetter(options: { user: string | UserDocument, sender?: string | SenderDocument, recipients?: Array<string | RecipientDocument>, codePdf?: string, sent?: boolean, kind?: LetterKind }) {
+export async function saveMockLetter(options: {
+    user: string | UserDocument,
+    sender?: string | SenderDocument,
+    recipients?: Array<string | RecipientDocument>,
+    codePdf?: string,
+    sent?: boolean,
+    kind?: LetterKind,
+    smsText?: string,
+    bw?: boolean,
+    backSide?: boolean,
+}) {
     const userId = typeof(options.user) === "object" ? (options.user as UserDocument).id : options.user;
     // THIS SHIT DOESN'T WORK!?!?!?!?
     // const recipients = await Promise.all(
     //    Array(numRecipients).map(async () => await ioc.resolve(RecipientService).save(generateMockRecipient(userId)))
     // );
-    const letter = await (await ioc.resolve(LetterService).save(generateMockLetter(
-        userId,
-        options.sender || (await ioc.resolve(SenderService).save(generateMockSender(userId))).id,
-        options.recipients || [
+    const letter = await (await ioc.resolve(LetterService).save(generateMockLetter({
+        user: userId,
+        sender: options.sender || (await ioc.resolve(SenderService).save(generateMockSender(userId))).id,
+        recipients: options.recipients || [
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
             await ioc.resolve(RecipientService).save(generateMockRecipient(userId)),
         ],
-        options.codePdf || TEST_CODE_PDF,
-        options.kind || LetterKind.LETTERA_SEMPLICE,
-    )));
+        codePdf: options.codePdf || TEST_CODE_PDF,
+        kind: options.kind || LetterKind.LETTERA_SEMPLICE,
+        smsText: options.smsText,
+        bw: options.bw,
+        backSide: options.backSide,
+    })));
     letter.sent = options.sent ?? false;
     return letter.save();
 }

@@ -6,8 +6,8 @@ import { PriceService } from "@services/PriceService";
 import { NoticeService } from "@services/NoticeService";
 import { Letter, letterDecoder, LetterDocument, LetterKind, LetterModel } from "@models/LetterModel";
 import { inject } from "inversify";
-import { mapSenderToPerson, Sender, SenderDocument } from "@models/SenderModel";
-import { mapRecipientToPerson, recipientDecoder, RecipientDocument } from "@models/RecipientModel";
+import { mapSenderToPerson, SenderDocument } from "@models/SenderModel";
+import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel";
 import { createLogFile, logger } from "@utils/winston";
 import { PosteWayService } from "@services/PosteWayService";
 import { sleep } from "@utils/sleep";
@@ -31,7 +31,7 @@ import moment from "moment";
 import httpErrors from "http-errors";
 import { generateRandomCode } from "@utils/random";
 import { insert } from "@utils/misc";
-import { Sms, SmsStatusResponse } from "sms";
+import { SmsStatusResponse } from "sms";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -390,7 +390,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             if (letter.smsText) {
                 await this.sendSMS(letter);
             }
-            
+
             // Everything went fine, generate provision
             if (!await this.generateProvision(letter, userId, logFile)) {
                 return;
@@ -550,7 +550,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
     /**
      * Send SMS with letter smsText and URL to PDF to all letter recipients.
-     * 
+     *
      * @param letter {LetterDocument}
      * @returns {SmsStatusResponse}
      */

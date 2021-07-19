@@ -202,9 +202,9 @@ import faker from "faker/locale/it";
         res = await this.recipientService.importFromXLSX(xlsx_errors, this.system.id);
 
         console.log(JSON.stringify(res, null, 2));
-        expect(res.imported.length).to.equal(1);
+        expect(res.imported.length).to.equal(2);
         expect(res.imported[0].fullName).to.equal("Pop☆Step");
-        expect(res.errors.length).to.equal(6);
+        expect(res.errors.length).to.equal(5);
     }
 
     @timeout(60000)

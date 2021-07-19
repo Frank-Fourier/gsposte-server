@@ -56,7 +56,7 @@ import { generateSystemUser } from "@utils/system";
         } catch (err) {
             expect(err).to.exist;
             expect(err.status).to.equal(401);
-            expect(err.message).to.equal("Invalid username or password!");
+            expect(err.message).to.equal("Username/Email non esistente o password errata.");
         }
 
         // Wrong email
@@ -69,7 +69,7 @@ import { generateSystemUser } from "@utils/system";
         } catch (err) {
             expect(err).to.exist;
             expect(err.status).to.equal(401);
-            expect(err.message).to.equal("Invalid username or password!");
+            expect(err.message).to.equal("Username/Email non esistente o password errata.");
         }
 
         // Wrong password
@@ -82,7 +82,7 @@ import { generateSystemUser } from "@utils/system";
         } catch (err) {
             expect(err).to.exist;
             expect(err.status).to.equal(401);
-            expect(err.message).to.equal("Invalid username or password!");
+            expect(err.message).to.equal("Username/Email non esistente o password errata.");
         }
 
         expect(wrongToken, "I should not get a token from an invalid login!").not.to.exist;

@@ -15,6 +15,8 @@ import { mapRecipientToPerson, RecipientDocument } from "@models/RecipientModel"
 import { generateUUID } from "@utils/random";
 import { LetterDocument, LetterKind } from "@models/LetterModel";
 import fs from "fs";
+import { RecipientService } from "@services/RecipientService";
+import { generateMockRecipient } from "../mocks/recipient";
 
 @suite ("InvoiceService") class InvoiceServiceTests {
 
@@ -22,6 +24,7 @@ import fs from "fs";
     letterService = ioc.resolve(LetterService);
     priceService = ioc.resolve(PriceService);
     senderService = ioc.resolve(SenderService);
+    recipientService = ioc.resolve(RecipientService);
     system: UserDocument;
 
     static async before() {
@@ -63,9 +66,9 @@ import fs from "fs";
             sender: sender.id,
             letters: letters,
             number: 1,
-            taxable: 42.5,
-            iva: 9.35,
-            total: 51.85,
+            taxable: 37.5,
+            iva: 8.25,
+            total: 45.75,
         }, invoice);
     }
 
@@ -76,19 +79,19 @@ import fs from "fs";
             await this.senderService.save(generateMockSender(this.system.id)),
         ];
         const firstBatch = [
-            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true }),
-            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true }),
-            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true, bw: false }),
+            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true, bw: false }),
+            await saveMockLetter({ user: this.system.id, sender: sender1.id, sent: true, bw: false }),
         ];
         const secondBatch = [
-            await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true }),
-            await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true, bw: false }),
+            await saveMockLetter({ user: this.system.id, sender: sender2.id, sent: true, bw: false }),
         ];
         const thirdBatch = [
-            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true }),
-            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true }),
-            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true }),
-            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true }),
+            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true, bw: false }),
+            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true, bw: false }),
+            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true, bw: false }),
+            await saveMockLetter({ user: this.system.id, sender: sender3.id, sent: true, bw: false }),
         ];
         const results = await this.invoiceService.generateInvoices();
         results[this.system.id].forEach(r => r.invoice.depopulate("recipients"));
@@ -218,6 +221,22 @@ import fs from "fs";
         const pdf = await this.invoiceService.generateInvoicePDF(invoice);
         expect(pdf).to.exist;
         await fs.promises.writeFile(`test/assets/pdf/invoices/fattooooora.pdf`, pdf);
+    }
+
+    @test async "Should add up SMS price to invoice total correctly" () {
+        const sender = await this.senderService.save(generateMockSender(this.system.id));
+        const letter = await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true, recipients: [
+            await this.recipientService.save(generateMockRecipient(this.system.id, true)),
+            await this.recipientService.save(generateMockRecipient(this.system.id, false)),
+        ], smsText: "CIAO MAMMA" });
+
+        const { invoice, errors } = await this.invoiceService.generateSingleInvoice(
+            [ letter ], await this.invoiceService.getLatestInvoiceNumber() + 1
+        );
+
+        expect(invoice).to.exist;
+        expect(errors.length).to.equal(0);
+        expect(invoice.taxable).to.equal(3.15);
     }
 
     static after() { cleanTestDB(); }
