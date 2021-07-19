@@ -98,6 +98,11 @@ html(lang="it")
                         td(width="10%") #{service.quantity}
                         td(width="10%") #{service.priceSingle}
                         td(width="5%") #{service.total}
+        if smsPrice !== '€ 0,00'
+            span(class="float-right") Imponibile SMS:
+                |
+                b  #{smsPrice}
+            br
         span(class="float-right") Imponibile Totale:
             |
             b  #{taxable}

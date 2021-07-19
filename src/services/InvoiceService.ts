@@ -365,8 +365,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      */
     public async generateInvoicePDF(invoice: InvoiceDocument): Promise<Buffer> {
         await invoice.populate("sender letters").execPopulate();
+        const smsPrice: Array<number> = await Promise.all(invoice.letters.map(async (letter: LetterDocument) => await this.priceService.calculatePriceSMS(letter)));
         const createdAt = moment(invoice.toObject()["createdAt"]);
-
         const html = compileFile(`${process.env.VIEWS_ROOT}/letters_invoice.pug`)({
             sender: (invoice.sender as SenderDocument).toObject(),
             number: `${invoice.number}/${createdAt.year()}`,
@@ -380,12 +380,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 total: formatCurrency(letter.price * letter.recipients.length),
                 code: letter.codePdf,
             })),
+            smsPrice: formatCurrency(smsPrice.reduce((a, b) => a + b, 0)),
             taxable: formatCurrency(invoice.taxable),
             discount: formatCurrency(invoice.discount ?? 0),
             iva: formatCurrency(invoice.iva),
             total: formatCurrency(invoice.total)
         });
-
         // I wait until networkidle2 to let all the images on the HTML load before converting
         return this.pdf.htmlToPdf(html, "networkidle2");
     }
