@@ -30,7 +30,8 @@ export class InvoiceController extends CrudController {
     public async generateInvoicesForUser(req: Request, res: Response) {
         await this.authService.adminOnly(req);
         const invoices = await this.invoiceService.generateInvoicesForUser(
-            req.params.id, req.body?.startNumber ? (req.body?.startNumber - 1) : null
+            req.params.id, req.body?.startNumber ? (req.body?.startNumber - 1) : null,
+            req.body?.minTotal ?? 0
         );
         return res.status(201).send(invoices);
     }
@@ -38,7 +39,8 @@ export class InvoiceController extends CrudController {
     public async generateInvoices(req: Request, res: Response) {
         await this.authService.adminOnly(req);
         const invoices = await this.invoiceService.generateInvoices(
-            req.body?.startNumber ? (req.body?.startNumber - 1) : null
+            req.body?.startNumber ? (req.body?.startNumber - 1) : null,
+            req.body?.minTotal ?? 0
         );
         return res.status(201).send(invoices);
     }

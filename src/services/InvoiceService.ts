@@ -152,9 +152,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      *
      * @param user {string} User id to search letters for
      * @param startNumber {number} Invoice number to start generation from
+     * @param minTotal {number} Number min total to generate invoice for User
      * @returns Array of results of generateSingleInvoice, one for each letter
      */
-    public async generateInvoicesForUser(user: string, startNumber?: number): Promise<Array<{
+    public async generateInvoicesForUser(user: string, startNumber?: number, minTotal?: number): Promise<Array<{
         invoice: InvoiceDocument,
         errors: Array<{ letter: LetterDocument, error: Error | any }>
     }>> {
@@ -178,12 +179,20 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         let lastNumber = startNumber ?? await this.getLatestInvoiceNumber();
         for (const letter of Object.values(aggregated)) {
             const result = await this.generateSingleInvoice(letter, lastNumber + 1);
+            logger.debug(`Total of single invoice: ${result.invoice.total}`);
             if (!result.invoice) {
                 continue;
             }
-
             results.push(result);
             lastNumber++;
+        }
+
+        const total = results.reduce((acc, cur) => acc + cur.invoice.total, 0);
+        logger.debug(`Total: ${total}`);
+        if (total < minTotal) {
+            logger.debug(`${total} < ${minTotal}`);
+            Promise.all(results.map(r => this.deleteById(r.invoice.id)));
+            return [];
         }
 
         return results;
@@ -193,9 +202,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * The most generic flavor of generateSingleInvoice, generates all the possible invoices, for every single user!
      *
      * @param startNumber {number} Optional invoice number to start from
+     * @param minTotal {number} Number min total to generate invoice for User
      * @returns Key-value where each key is the user id, and each value is the array of results
      */
-    public async generateInvoices(startNumber?: number): Promise<{
+    public async generateInvoices(startNumber?: number, minTotal?: number): Promise<{
         [key: string]: Array<{
             invoice: InvoiceDocument,
             errors: Array<{ letter: LetterDocument, error: Error | any }>
@@ -210,7 +220,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         } = {};
 
         for (const user of users) {
-            const res = await this.generateInvoicesForUser(user.id, startNumber);
+            const res = await this.generateInvoicesForUser(user.id, startNumber, minTotal);
             if (res.length > 0) {
                 results[user.id] = res;
             }
@@ -380,7 +390,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 total: formatCurrency(letter.price * letter.recipients.length),
                 code: letter.codePdf,
             })),
-            smsPrice: formatCurrency(smsPrice.reduce((a, b) => a + b, 0)),
+            smsPrice: formatCurrency(smsPrice.reduce((acc, cur) => acc + cur, 0)),
             taxable: formatCurrency(invoice.taxable),
             discount: formatCurrency(invoice.discount ?? 0),
             iva: formatCurrency(invoice.iva),

@@ -41,6 +41,10 @@ export class PriceService extends MongoRepository<Price, PriceDocument> {
      * @returns { pages: number, weight: number } The number of pages of the PDF and the weight
      */
     public async calculateWeight(letter: LetterDocument): Promise<{ pages: number, weight: number }> {
+        if (letter.isTelegramma()) {
+            return { pages: 1, weight: 1 };
+        }
+
         const envelopeWeight = parseFloat(process.env.ENVELOPE_WEIGHT || "5");
         const paperWeight = parseFloat(process.env.PAPER_WEIGHT || "5");
         let pages = 1;
