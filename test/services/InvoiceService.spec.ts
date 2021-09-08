@@ -239,6 +239,30 @@ import { generateMockRecipient } from "../mocks/recipient";
         expect(invoice.taxable).to.equal(3.15);
     }
 
+    @test async "Should have correct sender name" () {
+        const sender = await this.senderService.save(generateMockSender(this.system.id));
+        const letters = [ await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }) ];
+        const { invoice } = await this.invoiceService.generateSingleInvoice(
+            letters, await this.invoiceService.getLatestInvoiceNumber() + 1
+        );
+
+        expect(invoice.senderName).to.equal(sender.name);
+    }
+
+    @test async "Should update sender name consistently" () {
+        const sender = await this.senderService.save(generateMockSender(this.system.id));
+        const letters = [ await saveMockLetter({ user: this.system.id, sender: sender.id, sent: true }) ];
+        const { invoice: inv } = await this.invoiceService.generateSingleInvoice(
+            letters, await this.invoiceService.getLatestInvoiceNumber() + 1
+        );
+
+        await this.senderService.updateById(sender.id, { name: "NUOVO NOME" });
+        const invoice = await this.invoiceService.findById(inv.id);
+
+        expect(invoice).to.exist;
+        expect(invoice.senderName).to.equal("NUOVO NOME");
+    }
+
     static after() { cleanTestDB(); }
 
 }

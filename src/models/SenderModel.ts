@@ -11,6 +11,7 @@ import {
 import { Person } from "../posteway";
 import { insert } from "@utils/misc";
 import { LetterKind } from "@models/LetterModel";
+import { InvoiceModel } from "@models/InvoiceModel";
 
 /**
  * @swagger
@@ -223,6 +224,14 @@ export const SenderSchema = new Schema<Sender>({
         createdAt: true,
         updatedAt: true,
     }
+});
+
+SenderSchema.post("findOneAndUpdate", async function(this: any) {
+    const sender: SenderDocument = await this.model.findOne(this.getQuery());
+    if (!sender) {
+        return;
+    }
+    await InvoiceModel.updateMany({ sender: sender.id }, { $set:{ senderName: sender.name } }).exec();
 });
 
 export const SenderModel: Model<SenderDocument> = model("Sender", SenderSchema);

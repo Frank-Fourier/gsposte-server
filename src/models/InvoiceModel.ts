@@ -3,6 +3,8 @@ import { LetterDocument } from "@models/LetterModel";
 import { SenderDocument } from "@models/SenderModel";
 import { Document, model, Model, Schema } from "mongoose";
 import { array, Decoder, number, object, optional, string } from "@mojotech/json-type-validation";
+import { ioc } from "@ioc";
+import { SenderService } from "@services/SenderService";
 
 export interface InvoiceFIC {
     id: number
@@ -78,6 +80,7 @@ export interface Invoice {
     total: number
 }
 export interface InvoiceDocument extends Invoice, Document {
+    senderName?: string;
     paid: boolean
     number: number
     paymentDate?: Date | string
@@ -106,6 +109,7 @@ export const InvoiceSchema = new Schema({
         ref: "Sender",
         required: "Sender is required.",
     },
+    senderName: String,
     letters: [{
         type: Schema.Types.ObjectId,
         ref: "Letter",
@@ -153,6 +157,23 @@ export const InvoiceSchema = new Schema({
         createdAt: true,
         updatedAt: true,
     }
+});
+
+InvoiceSchema.pre("save", async function(this: InvoiceDocument) {
+    const sender: SenderDocument = await ioc.resolve(SenderService).findById(this.sender as string).catch(() => null);
+    this.set("senderName", sender?.name);
+});
+InvoiceSchema.post("findOneAndUpdate", async function(this: any) {
+    const invoice: InvoiceDocument = await this.model.findOne(this.getQuery());
+    if (!invoice) {
+        return;
+    }
+    const sender: SenderDocument = await ioc.resolve(SenderService).findById(this.sender as string).catch(() => null);
+    await invoice.updateOne({
+        $set: {
+            senderName: sender?.name
+        }
+    })
 });
 
 export const InvoiceModel: Model<InvoiceDocument> = model("Invoice", InvoiceSchema);
