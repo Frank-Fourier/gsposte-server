@@ -142,21 +142,23 @@ export class MongoRepository<DTO, Doc extends Document> {
             delete query["$text"];
         }
 
+        query = {
+            ...(query || {}),
+            ...($text ? {
+                $or: this.searchFields.map(field => ({
+                    [field]: {
+                        $regex: $text,
+                        $options: "i"
+                    }
+                }))
+            } : {})
+        }
+
         const docsCount = await this.model.find(query).countDocuments().exec();
         let docs: Doc[] = [];
 
         try {
-            docs = await this.queryMany({
-                ...(query || {}),
-                ...($text ? {
-                    $or: this.searchFields.map(field => ({
-                        [field]: {
-                            $regex: $text,
-                            $options: "i"
-                        }
-                    }))
-                } : {})
-            }, pagination).orFail().exec();
+            docs = await this.queryMany(query, pagination).orFail().exec();
         } catch (err) {
             if (err.name !== "DocumentNotFoundError") {
                 throw this.formatMongoError(err);
