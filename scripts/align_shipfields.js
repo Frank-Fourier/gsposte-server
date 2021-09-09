@@ -25,7 +25,8 @@ const DB_NAME = "gsposte_dev";
             process.stdout.write(`Associating invoice ${invoice._id} with sender name '${sender.name}'... `);
             await invoices.updateOne({ _id: invoice._id }, {
                 $set: {
-                    senderName: sender.name
+                    senderName: sender.name,
+                    senderBusinessName: sender.businessName,
                 }
             }, { w: 1 });
             process.stdout.write("Done!\n");

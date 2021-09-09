@@ -81,6 +81,7 @@ export interface Invoice {
 }
 export interface InvoiceDocument extends Invoice, Document {
     senderName?: string;
+    senderBusinessName?: string;
     paid: boolean
     number: number
     paymentDate?: Date | string
@@ -110,6 +111,7 @@ export const InvoiceSchema = new Schema({
         required: "Sender is required.",
     },
     senderName: String,
+    senderBusinessName: String,
     letters: [{
         type: Schema.Types.ObjectId,
         ref: "Letter",
@@ -162,6 +164,7 @@ export const InvoiceSchema = new Schema({
 InvoiceSchema.pre("save", async function(this: InvoiceDocument) {
     const sender: SenderDocument = await ioc.resolve(SenderService).findById(this.sender as string).catch(() => null);
     this.set("senderName", sender?.name);
+    this.set("senderBusinessName", sender?.businessName);
 });
 InvoiceSchema.post("findOneAndUpdate", async function(this: any) {
     const invoice: InvoiceDocument = await this.model.findOne(this.getQuery());
@@ -171,7 +174,8 @@ InvoiceSchema.post("findOneAndUpdate", async function(this: any) {
     const sender: SenderDocument = await ioc.resolve(SenderService).findById(this.sender as string).catch(() => null);
     await invoice.updateOne({
         $set: {
-            senderName: sender?.name
+            senderName: sender?.name,
+            senderBusinessName: sender?.businessName,
         }
     })
 });
