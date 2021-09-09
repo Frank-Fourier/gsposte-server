@@ -54,7 +54,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     }
 
     constructor(private invoiceModel = InvoiceModel) {
-        super(invoiceModel, invoiceDecoder, [ "senderName", "senderBusinessName" ]);
+        super(invoiceModel, invoiceDecoder, [ "userName", "senderName", "senderBusinessName" ]);
     }
 
     public async deleteById(id: string): Promise<InvoiceDocument> {

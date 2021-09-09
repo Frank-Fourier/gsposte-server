@@ -3,6 +3,7 @@ import { encryptPasswordSync } from "@utils/crypto";
 import { array, Decoder, number, object, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
 import { generateRandomCode } from "@utils/random";
+import { InvoiceModel } from "@models/InvoiceModel";
 
 export enum UserRoles {
     ROLE_USER = "ROLE_USER",
@@ -233,3 +234,15 @@ UserSchema.methods.isTvManager = function() {
 };
 
 export const UserModel: Model<UserDocument> = model("User", UserSchema);
+
+UserSchema.post("findOneAndUpdate", async function(this: any) {
+    const user: UserDocument = await this.model.findOne(this.getQuery());
+    if (!user) {
+        return;
+    }
+    await InvoiceModel.updateMany({ user: user.id }, {
+        $set: {
+            userName: user.username,
+        }
+    }).exec();
+});

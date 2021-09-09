@@ -231,7 +231,12 @@ SenderSchema.post("findOneAndUpdate", async function(this: any) {
     if (!sender) {
         return;
     }
-    await InvoiceModel.updateMany({ sender: sender.id }, { $set:{ senderName: sender.name } }).exec();
+    await InvoiceModel.updateMany({ sender: sender.id }, {
+        $set: {
+            senderName: sender.name,
+            senderBusinessName: sender.businessName,
+        }
+    }).exec();
 });
 
 export const SenderModel: Model<SenderDocument> = model("Sender", SenderSchema);

@@ -12,6 +12,7 @@ const DB_NAME = "gsposte_dev";
         const db = client.db(DB_NAME);
         console.log("Connected to database @ " + DB_URI);
 
+        const users = db.collection("users");
         const senders = db.collection("senders");
         const invoices = db.collection("invoices");
 
@@ -21,10 +22,16 @@ const DB_NAME = "gsposte_dev";
                 process.stdout.write(`Invoice ${invoice._id} does not have a valid sender! Skipping it...\n`);
                 continue;
             }
+            const user = await users.findOne({ _id: invoice.user });
+            if (!user) {
+                process.stdout.write(`Invoice ${invoice._id} does not have a valid user! Skipping it...\n`);
+                continue;
+            }
 
-            process.stdout.write(`Associating invoice ${invoice._id} with sender name '${sender.name}'... `);
+            process.stdout.write(`Associating invoice ${invoice._id} with user name '${user.username}', sender name '${sender.name}', business name '${sender.businessName}'... `);
             await invoices.updateOne({ _id: invoice._id }, {
                 $set: {
+                    userName: user.username,
                     senderName: sender.name,
                     senderBusinessName: sender.businessName,
                 }

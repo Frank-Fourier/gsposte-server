@@ -5,6 +5,7 @@ import { Document, model, Model, Schema } from "mongoose";
 import { array, Decoder, number, object, optional, string } from "@mojotech/json-type-validation";
 import { ioc } from "@ioc";
 import { SenderService } from "@services/SenderService";
+import { UserService } from "@services/UserService";
 
 export interface InvoiceFIC {
     id: number
@@ -80,6 +81,7 @@ export interface Invoice {
     total: number
 }
 export interface InvoiceDocument extends Invoice, Document {
+    userName?: string;
     senderName?: string;
     senderBusinessName?: string;
     paid: boolean
@@ -105,6 +107,7 @@ export const InvoiceSchema = new Schema({
         ref: "User",
         required: "User is required.",
     },
+    userName: String,
     sender: {
         type: Schema.Types.ObjectId,
         ref: "Sender",
@@ -162,7 +165,9 @@ export const InvoiceSchema = new Schema({
 });
 
 InvoiceSchema.pre("save", async function(this: InvoiceDocument) {
+    const user: UserDocument = await ioc.resolve(UserService).findById(this.user as string).catch(() => null);
     const sender: SenderDocument = await ioc.resolve(SenderService).findById(this.sender as string).catch(() => null);
+    this.set("userName", user?.username);
     this.set("senderName", sender?.name);
     this.set("senderBusinessName", sender?.businessName);
 });
@@ -171,9 +176,11 @@ InvoiceSchema.post("findOneAndUpdate", async function(this: any) {
     if (!invoice) {
         return;
     }
+    const user: UserDocument = await ioc.resolve(UserService).findById(this.user as string).catch(() => null);
     const sender: SenderDocument = await ioc.resolve(SenderService).findById(this.sender as string).catch(() => null);
     await invoice.updateOne({
         $set: {
+            userName: user?.username,
             senderName: sender?.name,
             senderBusinessName: sender?.businessName,
         }
