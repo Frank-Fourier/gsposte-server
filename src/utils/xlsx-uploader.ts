@@ -24,7 +24,7 @@ export const validators = {
     }),
     maxLength: (field: string, max: number) => (value: string) => ({
         valid: value ? value.length <= max : true,
-        error: `Il campo '${field}' supera la lunghezza massima consentita (${max})`
+        error: `Il valore '${value}' supera la lunghezza massima consentita (${max})`
     }),
 };
 
