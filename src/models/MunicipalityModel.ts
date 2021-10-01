@@ -81,33 +81,40 @@ export const MunicipalitySchema = new Schema<Municipality>({
         type: String,
         required: "Name is required.",
         maxlength: 40,
+        trim: true,
         unique: true
     },
     province: {
         type: String,
         required: "Province is required.",
+        trim: true,
         minlength: 2, maxlength: 2
     },
     region: {
         type: String,
         required: "Region is required",
+        trim: true,
         maxlength: 40,
     },
     zip: [{
         type: String,
         required: "Zip codes are required.",
+        trim: true,
         minlength: 5, maxlength: 5,
     }],
     country: {
         type: String,
+        trim: true,
         default: "ITALY",
     },
     code: {
         type: String,
+        trim: true,
         maxlength: 4,
     },
     istat: {
         type: String,
+        trim: true,
         maxlength: 6
     },
 });

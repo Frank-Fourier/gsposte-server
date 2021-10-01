@@ -68,6 +68,7 @@ export const RubricSchema = new Schema<Rubric>({
         type: String,
         required: "Name is required.",
         maxlength: 100,
+        trim: true,
     },
     recipients: [{
         type: Schema.Types.ObjectId,
@@ -77,6 +78,7 @@ export const RubricSchema = new Schema<Rubric>({
     notes: {
         type: String,
         maxlength: 500,
+        trim: true,
     }
 }, {
     timestamps: {

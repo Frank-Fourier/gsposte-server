@@ -73,29 +73,35 @@ export const AddressSchema = new Schema<Address>({
         type: String,
         required: "Street is required.",
         maxlength: 44,
+        trim: true,
     },
     secondary: {
         type: String,
         maxlength: 44,
+        trim: true,
     },
     city: {
         type: String,
         required: "City is required.",
         maxlength: 44,
+        trim: true,
     },
     zip: {
         type: String,
         required: "Zip code is required.",
+        trim: true,
         minlength: 5, maxlength: 5
     },
     province: {
         type: String,
         required: "Province is required.",
+        trim: true,
         minlength: 2, maxlength: 2
     },
     country: {
         type: String,
         default: "ITALY",
+        trim: true,
         maxlength: 44,
     }
 }, {

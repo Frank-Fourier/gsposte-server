@@ -105,6 +105,7 @@ export const TvReportSchema = new Schema<TvReport>({
         type: String,
         required: "Body is required.",
         maxlength: 500,
+        trim: true,
     },
     read: {
         type: Boolean,
@@ -115,14 +116,17 @@ export const TvReportSchema = new Schema<TvReport>({
             fileName: {
                 type: String,
                 required: "Attachment file name is required.",
+                trim: true,
             },
             filePath: {
                 type: String,
                 required: "Attachment file path is required.",
+                trim: true,
             },
             mimeType: {
                 type: String,
                 required: "Attachment mime type is required.",
+                trim: true,
             }
         }, { _id: false }),
         default: []

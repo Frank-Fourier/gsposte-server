@@ -155,6 +155,7 @@ export const UserSchema = new Schema<User>({
         type: String,
         required: "Username is required.",
         unique: true,
+        trim: true,
     },
     email: {
         type: String,
@@ -172,14 +173,17 @@ export const UserSchema = new Schema<User>({
         type: String,
         minlength: 11,
         maxlength: 16,
+        trim: true,
     },
     phone: {
         type: String,
         minlength: 6,
         maxlength: 13,
+        trim: true,
     },
     referFrom: {
-        type: String
+        type: String,
+        trim: true,
     },
     referCode: {
         type: String,

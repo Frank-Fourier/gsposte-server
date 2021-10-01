@@ -267,12 +267,15 @@ export const LetterSchema = new Schema<Letter>({
     recipientAR: new Schema({
         name: {
             type: String,
+            trim: true,
         },
         surname: {
             type: String,
+            trim: true,
         },
         businessName: {
             type: String,
+            trim: true,
         },
         address: {
             type: AddressSchema,
@@ -283,6 +286,7 @@ export const LetterSchema = new Schema<Letter>({
         type: String,
         required: "Subject is required.",
         maxlength: 100,
+        trim: true,
     },
     sendAt: {
         type: Date,
@@ -308,10 +312,12 @@ export const LetterSchema = new Schema<Letter>({
     text: {
         type: String,
         maxlength: 8192,
+        trim: true,
     },
     smsText: {
         type: String,
         maxlength: 160,
+        trim: true,
     },
     bw: {
         type: Boolean,
@@ -324,6 +330,7 @@ export const LetterSchema = new Schema<Letter>({
     notes: {
         type: String,
         maxlength: 500,
+        trim: true,
     },
     sent: {
         type: Boolean,

@@ -20,8 +20,6 @@ import { InvoiceModel } from "@models/InvoiceModel";
  *   Sender:
  *     type: object
  *     required:
- *       - name
- *       - description
  *       - address
  *       - businessName
  *       - invoiceCode
@@ -83,8 +81,8 @@ import { InvoiceModel } from "@models/InvoiceModel";
  */
 export interface Sender {
     user?: string | UserDocument
-    name: string
-    description: string
+    name?: string
+    description?: string
     address: Address
     addressAR?: Address
     addressBill?: Address
@@ -106,8 +104,8 @@ export interface SenderDocument extends Sender, Document {
 }
 export const senderDecoder: Decoder<Sender> = object({
     user: optional(string()),
-    name: string(),
-    description: string(),
+    name: optional(string()),
+    description: optional(string()),
     address: addressDecoder,
     addressAR: optional(addressDecoder),
     addressBill: optional(addressDecoder),
@@ -124,8 +122,8 @@ export const senderDecoder: Decoder<Sender> = object({
 });
 
 export function mapSenderToPerson(sender: SenderDocument, letterKind: LetterKind, notes?: string, useAddressAR?: boolean): Person {
-    const fullNameTrimmed = sender.name.trim().replace(/[\s]+/g, " ");
-    const hasSpace = fullNameTrimmed.includes(" ");
+    const fullNameTrimmed = sender.name?.trim().replace(/[\s]+/g, " ");
+    const hasSpace = fullNameTrimmed?.includes(" ");
     return {
         ...insert(hasSpace, {
             // MODIFICA IMPORTANTE:
@@ -155,13 +153,13 @@ export const SenderSchema = new Schema<Sender>({
     },
     name: {
         type: String,
-        required: "Name is required.",
         maxlength: 44,
+        trim: true,
     },
     description: {
         type: String,
-        required: "Description is required.",
         maxlength: 500,
+        trim: true,
     },
     address: {
         type: AddressSchema,
@@ -176,6 +174,8 @@ export const SenderSchema = new Schema<Sender>({
     businessName: {
         type: String,
         required: "Business name is required.",
+        maxlength: 44,
+        trim: true,
     },
     invoiceCode: {
         type: String,

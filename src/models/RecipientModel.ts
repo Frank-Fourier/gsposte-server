@@ -121,6 +121,7 @@ export const RecipientSchema = new Schema<Recipient>({
             type: String,
             unique: true,
             sparse: true,
+            trim: true,
         },
         email: {
             type: String,
