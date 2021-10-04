@@ -66,14 +66,21 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
     }
 
     public async save(sender: Sender): Promise<SenderDocument> {
-        const dup = await this.find({
-            user: sender.user,
-            name: sender.name,
+        const dup : Sender[] = await this.find({
+            $or: [
+                {
+                    user: sender.user,
+                    $and: [{iva: {$ne: ""}}, {iva: sender.iva} ],
+                },
+                {
+                    user: sender.user,
+                    $and: [{cf: {$ne: ""}}, {cf: sender.cf} ]
+                }
+            ]
         });
         if (dup.length > 0) {
-            throw new httpErrors.Conflict("Mittente duplicato.");
+            throw new httpErrors.Conflict("Mittente duplicato, Partita IVA o CF già in uso.");
         }
-
         return super.save(sender);
     }
 
