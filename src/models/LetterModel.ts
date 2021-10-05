@@ -285,7 +285,7 @@ export const LetterSchema = new Schema<Letter>({
     subject: {
         type: String,
         required: "Subject is required.",
-        maxlength: 100,
+        maxlength: 50,
         trim: true,
     },
     sendAt: {
