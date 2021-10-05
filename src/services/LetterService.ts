@@ -397,7 +397,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             }
 
             // Finally inform the client that this letter is ready
-            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision}. Informing WS client that the letter was sent...`);
             this.noticeService.save({
                 user: userId,
                 title: "Lettera inviata",
@@ -636,9 +635,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             return;
         }
 
-        // Finally inform the client that this letter is ready
-        logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${updated?.provision}.`);
-
         // Send SMS to recipients
         if (letter.smsText) {
             await this.sendSMS(letter);
@@ -772,9 +768,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             return;
         }
 
-        // Finally inform the client that this letter is ready
-        logger.info(`[TELEGRAM ${letter.codePdf}] Provision was generated with ID ${updated?.provision}.`);
-
         return updated;
     }
 
@@ -782,6 +775,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         try {
             letter.provision = await this.provisionService.generateProvision(letter);
             await letter.save();
+            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${letter.provision}.`);
             return true;
         } catch (err) {
             logFile?.error(`Error while generating the provision!`, err);
