@@ -180,7 +180,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         for (const letter of toQuery) {
             try {
                 await this.queryLetter(letter);
-                logger.info("Ok!");
+                logger.debug("Ok!");
             } catch (err) {
                 logger.error(`ARGH! Got an error while trying to query info about letter '${letter.codePdf}'!`, err);
                 errors++;
@@ -498,7 +498,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      * @returns {Promise<LetterDocument>}
      */
     public async queryLetter(letter: LetterDocument): Promise<LetterDocument> {
-        logger.info(`===== QUERYING LETTER '${letter.codePdf}' =====`);
+        logger.debug(`===== QUERYING LETTER '${letter.codePdf}' =====`);
 
         const kind = this.chooseSubmitKind(letter.kind);
 
@@ -775,7 +775,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         try {
             letter.provision = await this.provisionService.generateProvision(letter);
             await letter.save();
-            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${letter.provision}.`);
+            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${letter.provision.id}.`);
             return true;
         } catch (err) {
             logFile?.error(`Error while generating the provision!`, err);
