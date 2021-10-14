@@ -60,7 +60,7 @@ export class SenderService extends MongoRepository<Sender, SenderDocument> {
 
     constructor(private senderModel = SenderModel) {
         super(senderModel, senderDecoder, [
-            "name", "description", "address.street", "address.secondary", "address.city",
+            "name", "description", "businessName", "address.street", "address.secondary", "address.city",
             "address.zip", "address.province", "address.country", "iva", "cf", "email", "notes"
         ]);
     }
