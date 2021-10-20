@@ -270,6 +270,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
                 // Before confirming, call status to check if everything went good
                 try {
+                    logFile?.info("Confirm wait ended. Querying for status...");
+                    logger.info(`[LETTER ${letter.codePdf}] Confirm wait ended. Querying for status...`);
+
                     statusResponse = await this.posteway.status(kind, submit.request.requestId);
 
                     // If the status is not R - Prezzato, don't even bother...
@@ -296,15 +299,18 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     }
                 } catch (err) {
                     logFile?.error(`Error while calling PosteWay STATUS endpoint. This error will be ignored: `, err);
-                    logger.error(`Error while calling PosteWay STATUS endpoint. This error will be ignored: `, err);
+                    logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay STATUS endpoint. This error will be ignored: `, err);
                 }
+
+                logFile?.info(`STATUS call was successful and I got the following status: '${statusResponse.status}'. Confirming letter submit...`);
+                logger.info(`[LETTER ${letter.codePdf}] STATUS call was successful and I got the following status: '${statusResponse.status}'. Confirming letter submit...`);
 
                 // Confirm the request to get the Order ID
                 try {
                     confirm = await this.posteway.confirm(kind, submit.request.requestId);
                 } catch (err) {
                     logFile?.error(`Error while calling PosteWay CONFIRM endpoint`, err);
-                    logger.error(`Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
+                    logger.error(`[LETTER ${letter.codePdf}] Error while calling PosteWay CONFIRM endpoint. Got this error: `, err);
 
                     // Inform the user that there was an error
                     this.noticeService.save({
@@ -326,8 +332,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 return;
             }
 
+            logFile?.info(`CONFIRM call was successful. Result:`, confirm);
+            logger.info(`[LETTER ${letter.codePdf}] CONFIRM call was successful. Order ID is: ${confirm.orderId}. Recipients count: ${confirm.recipients?.length ?? 0}.`);
+
             // Wait another PW_TRACK_WAIT_MS so I can be sure that I will have tracking numbers
             await sleep(parseInt(process.env.PW_TRACK_WAIT_MS));
+
+            logFile?.info(`Tracking this letter...`);
+            logger.info(`[LETTER ${letter.codePdf}] Tracking this letter...`);
 
             // Call track and recipients to get the info I need to fill the posteway object on document
             let track: TrackResponse;
@@ -386,6 +398,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 return;
             }
 
+            logFile?.info(`Letter was tracked correctly:`, track);
             logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
 
             // Send SMS to recipients
@@ -480,6 +493,9 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 throw { message: `PosteWay SEND: Invio rifiutato.`, result: submit };
             }
 
+            logFile?.info(`SEND endpoint called correctly. Request ID is ${submit.request.requestId}`);
+            logger.info(`[LETTER ${letter.codePdf}] SEND endpoint called correctly. Request ID is ${submit.request.requestId}`);
+
             // Launch the 60 seconds wait async
             // noinspection ES6MissingAwait
             confirmAndTrackLetter(submit, kind);
@@ -564,13 +580,13 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             return;
         }
 
-        logger.info(`Sending SMS to ${numbers.length} numbers!`);
+        logger.info(`[LETTER ${letter.codePdf}] Sending SMS to ${numbers.length} numbers!`);
         const res = await this.sms.sendSMS({
             to: numbers.join(","),
             from: String((letter.user as User).smsName),
             text: `${letter.smsText}\n${this.getOriginalPdfLink(letter)}`
         });
-        logger.info(`SMS response code: ${res.code} with detail ${res.detail}`);
+        logger.info(`[LETTER ${letter.codePdf}] SMS response code: ${res.code} with detail ${res.detail}`);
 
         return res;
     }
