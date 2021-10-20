@@ -1,4 +1,5 @@
 import winston from "winston";
+import Sentry from "winston-transport-sentry-node";
 
 export const logger = winston.createLogger();
 const { combine, colorize, timestamp, splat, printf } = winston.format;
@@ -45,5 +46,12 @@ if (process.env.NODE_ENV === "production") {
                 `[${timestamp}] ${level.toUpperCase()}: ${message} ${Object.keys(args).length ? JSON.stringify(args, null, 2) : ""}`
             )
         ),
+    }));
+    logger.add(new Sentry({
+        sentry: {
+            dsn: process.env.SENTRY_DSN,
+            serverName: "gsposte-server",
+        },
+        level: "info",
     }));
 }
