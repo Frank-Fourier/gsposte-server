@@ -10,7 +10,7 @@ import { LetterDocument } from "@models/LetterModel";
 import { RecipientDocument } from "@models/RecipientModel";
 import { SenderDocument } from "@models/SenderModel";
 import { generateSystemUser } from "@utils/system";
-import { assertSameLetter, getSystemUser, importPrices, TEST_CODE_PDF } from "../test_utils";
+import { assertSameLetter, getSystemUser, importPrices, sleep, TEST_CODE_PDF } from "../test_utils";
 import { generateMockLetter, generateMockTelegram } from "../mocks/letter";
 import { generateMockSender } from "../mocks/sender";
 import { generateMockRecipient } from "../mocks/recipient";
@@ -20,7 +20,8 @@ import faker from "faker/locale/it";
 import * as fs from "fs";
 import { generateMockAddress } from "../mocks/address";
 
-@suite ("LetterService") class LetterServiceTests {
+@suite("LetterService")
+class LetterServiceTests {
 
     letterService = ioc.resolve(LetterService);
     senderService = ioc.resolve(SenderService);
@@ -32,16 +33,25 @@ import { generateMockAddress } from "../mocks/address";
         await generateSystemUser();
         await importPrices();
     }
-    async before() { this.system = await getSystemUser(); }
 
-    @test async "Should save letter" () {
+    async before() {
+        this.system = await getSystemUser();
+    }
+
+    @test
+    async "Should save letter"() {
         const sender = await this.senderService.save(generateMockSender(this.system.id));
         const recipients = [
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
         ];
-        const mock = generateMockLetter({user : this.system.id, sender : sender.id, recipients : recipients, codePdf : TEST_CODE_PDF});
+        const mock = generateMockLetter({
+            user: this.system.id,
+            sender: sender.id,
+            recipients: recipients,
+            codePdf: TEST_CODE_PDF
+        });
 
         let letter: LetterDocument;
         try {
@@ -53,12 +63,18 @@ import { generateMockAddress } from "../mocks/address";
         assertSameLetter(mock, letter);
     }
 
-    @test async "Should not save letter with invalid params" () {
-        const mock = generateMockLetter({user : this.system.id, sender : await this.senderService.save(generateMockSender(this.system.id)), recipients : [
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-            ], codePdf : TEST_CODE_PDF}
+    @test
+    async "Should not save letter with invalid params"() {
+        const mock = generateMockLetter({
+                user: this.system.id,
+                sender: await this.senderService.save(generateMockSender(this.system.id)),
+                recipients: [
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                ],
+                codePdf: TEST_CODE_PDF
+            }
         );
         const subj = mock.subject;
         delete mock.subject; // One of the required params;
@@ -79,24 +95,30 @@ import { generateMockAddress } from "../mocks/address";
             letter = await this.letterService.save(mock);
         } catch (err) {
             expect(err).to.exist;
-            expect(err.message).to.equal("Path `notes` (`" + mock.notes + "`) is longer than the maximum allowed length (500).")
+            expect(err.message).to.equal("Path `notes` (`" + mock.notes + "`) is longer than the maximum allowed length (500).");
         }
 
         expect(letter).not.to.exist;
     }
 
-    @test async "Should query letters" () {
+    @test
+    async "Should query letters"() {
         const sender = await this.senderService.save(generateMockSender(this.system.id));
         const recipients = [
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
             (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
         ];
-        const saved = await this.letterService.save(generateMockLetter({user : this.system.id, sender : sender, recipients : recipients, codePdf : TEST_CODE_PDF}));
+        const saved = await this.letterService.save(generateMockLetter({
+            user: this.system.id,
+            sender: sender,
+            recipients: recipients,
+            codePdf: TEST_CODE_PDF
+        }));
 
         let letter: LetterDocument;
         try {
-            letter = await this.letterService.findById(saved.id, { populate: "sender recipients" });
+            letter = await this.letterService.findById(saved.id, {populate: "sender recipients"});
         } catch (err) {
             expect(err).not.to.exist;
         }
@@ -108,11 +130,16 @@ import { generateMockAddress } from "../mocks/address";
         letter.recipients.forEach((rec: RecipientDocument) => expect(recipients).to.contain(rec.id));
 
         const other = generateMockLetter(
-            {user : this.system.id, sender : (await this.senderService.save(generateMockSender(this.system.id))).id, recipients : [
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-            ], codePdf : TEST_CODE_PDF}
+            {
+                user: this.system.id,
+                sender: (await this.senderService.save(generateMockSender(this.system.id))).id,
+                recipients: [
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                ],
+                codePdf: TEST_CODE_PDF
+            }
         );
         other.subject = saved.subject;
         await this.letterService.save(other);
@@ -120,7 +147,7 @@ import { generateMockAddress } from "../mocks/address";
         let letters: LetterDocument[];
         try {
             // Should find both saved and saved_other if I pass this subject
-            letters = await this.letterService.find({ subject: saved.subject });
+            letters = await this.letterService.find({subject: saved.subject});
         } catch (err) {
             expect(err).not.to.exist;
         }
@@ -129,19 +156,25 @@ import { generateMockAddress } from "../mocks/address";
         expect(letters.length).to.equal(2);
     }
 
-    @test async "Should update letter by id" () {
+    @test
+    async "Should update letter by id"() {
         const saved = await this.letterService.save(generateMockLetter(
-            {user : this.system.id, sender : (await this.senderService.save(generateMockSender(this.system.id))).id, recipients : [
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-            ], codePdf : TEST_CODE_PDF}
+            {
+                user: this.system.id,
+                sender: (await this.senderService.save(generateMockSender(this.system.id))).id,
+                recipients: [
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                ],
+                codePdf: TEST_CODE_PDF
+            }
         ));
         const newSubject = faker.fake("{{internet.userName}} New Test Letter");
 
         let updated: LetterDocument;
         try {
-            updated = await this.letterService.updateById(saved.id, { subject: newSubject });
+            updated = await this.letterService.updateById(saved.id, {subject: newSubject});
         } catch (err) {
             expect(err).not.to.exist;
         }
@@ -149,19 +182,25 @@ import { generateMockAddress } from "../mocks/address";
         expect(updated.subject).to.equal(newSubject);
     }
 
-    @test async "Should not update letter with wrong id" () {
+    @test
+    async "Should not update letter with wrong id"() {
         await this.letterService.save(generateMockLetter(
-            {user : this.system.id, sender : (await this.senderService.save(generateMockSender(this.system.id))).id, recipients : [
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-            ], codePdf : TEST_CODE_PDF}
+            {
+                user: this.system.id,
+                sender: (await this.senderService.save(generateMockSender(this.system.id))).id,
+                recipients: [
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                ],
+                codePdf: TEST_CODE_PDF
+            }
         ));
 
         let updated: LetterDocument;
         try {
             // I should be using saved.id, instead I use system.id so I get an error
-            updated = await this.letterService.updateById(this.system.id, { subject: "tax tax" });
+            updated = await this.letterService.updateById(this.system.id, {subject: "tax tax"});
         } catch (err) {
             expect(err).to.exist;
             expect(err.name).to.equal("NotFoundError");
@@ -170,19 +209,25 @@ import { generateMockAddress } from "../mocks/address";
         expect(updated).not.to.exist;
     }
 
-    @test async "Should not update letter by id with invalid params" () {
+    @test
+    async "Should not update letter by id with invalid params"() {
         const saved = await this.letterService.save(generateMockLetter(
-            {user : this.system.id, sender : (await this.senderService.save(generateMockSender(this.system.id))).id, recipients : [
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-            ], codePdf : TEST_CODE_PDF}
+            {
+                user: this.system.id,
+                sender: (await this.senderService.save(generateMockSender(this.system.id))).id,
+                recipients: [
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                ],
+                codePdf: TEST_CODE_PDF
+            }
         ));
         const newSubject = faker.lorem.sentence(500); // Subject max length is 100
 
         let updated: LetterDocument;
         try {
-            updated = await this.letterService.updateById(saved.id, { subject: newSubject });
+            updated = await this.letterService.updateById(saved.id, {subject: newSubject});
         } catch (err) {
             expect(err).to.exist;
             expect(err.message).to.equal("Path `subject` (`" + newSubject + "`) is longer than the maximum allowed length (100).");
@@ -191,13 +236,19 @@ import { generateMockAddress } from "../mocks/address";
         expect(updated).not.to.exist;
     }
 
-    @test async "Should delete letter by id" () {
+    @test
+    async "Should delete letter by id"() {
         const saved = await this.letterService.save(generateMockLetter(
-            {user : this.system.id, sender : (await this.senderService.save(generateMockSender(this.system.id))).id, recipients : [
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-            ], codePdf : TEST_CODE_PDF}
+            {
+                user: this.system.id,
+                sender: (await this.senderService.save(generateMockSender(this.system.id))).id,
+                recipients: [
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                ],
+                codePdf: TEST_CODE_PDF
+            }
         ));
 
         let deleted: LetterDocument;
@@ -210,13 +261,19 @@ import { generateMockAddress } from "../mocks/address";
         assertSameLetter(saved, deleted);
     }
 
-    @test async "Should not delete letter with wrong id" () {
+    @test
+    async "Should not delete letter with wrong id"() {
         await this.letterService.save(generateMockLetter(
-            {user : this.system.id, sender : await this.senderService.save(generateMockSender(this.system.id)), recipients : [
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-                (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
-            ], codePdf : TEST_CODE_PDF}
+            {
+                user: this.system.id,
+                sender: await this.senderService.save(generateMockSender(this.system.id)),
+                recipients: [
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                ],
+                codePdf: TEST_CODE_PDF
+            }
         ));
 
         let deleted: LetterDocument;
@@ -232,20 +289,26 @@ import { generateMockAddress } from "../mocks/address";
     }
 
     @timeout(120000)
-    @test async "Should send letter correctly" () {
+    @test
+    async "Should send letter correctly"() {
         const letter = await this.letterService.save(generateMockLetter(
-            {user : this.system.id, sender : await this.senderService.save(generateMockSender(this.system.id)), recipients : [
-                (await this.recipientService.save({
-                    user: this.system.id,
-                    fullName: "Zanzariello Piero & Lentini Concetta",
-                    address: {
-                        street: "Via Molise n.07",
-                        city: "Brindisi",
-                        zip: "72100",
-                        province: "BR",
-                    }
-                })).id,
-            ], codePdf : TEST_CODE_PDF}
+            {
+                user: this.system.id,
+                sender: await this.senderService.save(generateMockSender(this.system.id)),
+                recipients: [
+                    (await this.recipientService.save({
+                        user: this.system.id,
+                        fullName: "Zanzariello Piero & Lentini Concetta",
+                        address: {
+                            street: "Via Molise n.07",
+                            city: "Brindisi",
+                            zip: "72100",
+                            province: "BR",
+                        }
+                    })).id,
+                ],
+                codePdf: TEST_CODE_PDF
+            }
         ), false);
 
         await fs.promises.copyFile(`test/assets/pdf/${TEST_CODE_PDF}/original.pdf`, `${PDF_ROOT}/${TEST_CODE_PDF}/original.pdf`);
@@ -255,8 +318,34 @@ import { generateMockAddress } from "../mocks/address";
         expect(sent).to.exist;
     }
 
+    @timeout(800000)
+    @test
+    async "Should send many letters at once correctly"() {
+        const CONCURRENT_LETTERS = 5;
+        const letters = await Promise.all(Array(CONCURRENT_LETTERS).fill({}).map(async () =>
+            this.letterService.save(generateMockLetter(
+                {
+                    user: this.system.id,
+                    sender: await this.senderService.save(generateMockSender(this.system.id)),
+                    recipients: [
+                        (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                        (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                        (await this.recipientService.save(generateMockRecipient(this.system.id))).id,
+                    ],
+                    codePdf: TEST_CODE_PDF
+                }
+            ), false)
+        ))
+
+        await fs.promises.copyFile(`test/assets/pdf/${TEST_CODE_PDF}/original.pdf`, `${PDF_ROOT}/${TEST_CODE_PDF}/original.pdf`);
+        await Promise.all(letters.map(letter => this.letterService.sendLetter(letter)));
+
+        await sleep(180000);
+    }
+
     @timeout(120000)
-    @test async "Should send telegram correctly" () {
+    @test
+    async "Should send telegram correctly"() {
         const letter = await this.letterService.save(generateMockTelegram(
             this.system.id,
             await this.senderService.save({
@@ -298,6 +387,8 @@ import { generateMockAddress } from "../mocks/address";
         expect(sent).to.exist;
     }
 
-    static after() { cleanTestDB(); }
+    static after() {
+        cleanTestDB();
+    }
 
 }

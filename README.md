@@ -103,6 +103,11 @@ On OSX:
 $ brew install imagemagick ghostscript poppler
 ```
 
+On Windows (with [Chocolatey](https://chocolatey.org/)):
+```shell
+$ choco install imagemagick ghostscript poppler
+```
+
 Install the dependencies needed to run this project:
 ```shell
 $ yarn install

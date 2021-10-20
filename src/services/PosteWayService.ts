@@ -2,7 +2,7 @@ import { provide } from "inversify-binding-decorators";
 import {
     ConfirmResponse,
     PW_Letter,
-    PW_LetterDocument, PW_PaginateResult,
+    PW_LetterDocument,
     Recipient,
     StatusResponse,
     Submit,

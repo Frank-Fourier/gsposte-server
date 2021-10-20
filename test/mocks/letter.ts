@@ -28,7 +28,7 @@ export function generateMockLetter({ user, sender, recipients, codePdf, kind, bw
         user: user,
         sender: sender,
         recipients: recipients,
-        subject: faker.lorem.sentence(),
+        subject: faker.lorem.sentence(2),
         kind: kind || LetterKind.LETTERA_SEMPLICE,
         codePdf: codePdf,
         notes: faker.lorem.sentence(),

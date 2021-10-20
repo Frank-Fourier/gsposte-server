@@ -2,7 +2,6 @@ import express, { NextFunction, Request, Response } from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import http from "http";
-import ora from "ora";
 import helmet from "helmet";
 
 import { provide } from "inversify-binding-decorators";
@@ -26,15 +25,16 @@ import { TvReportRoute } from "@routes/TvReportRoute";
 import { StatsRoute } from "@routes/StatsRoute";
 import { ProvisionRoute } from "@routes/ProvisionRoute";
 import { NoticeRoute } from "@routes/NoticeRoute";
+import { ImageRoute } from "@routes/ImageRoute";
 
 import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
 import { cors } from "@utils/cors";
 import { swaggerUi, serveSwagger } from "@utils/swagger";
-import { generateSystemUser } from "@utils/system";
+import { generateSystemUser, isTestEnv } from "@utils/system";
 import { queryJob, uploadJob } from "@utils/cron";
 import { initializeWebSocketServer, WebSocketClient } from "@utils/websockets";
-import { ImageRoute } from "@routes/ImageRoute";
+import { initSentry, setupSentryErrorHandlers, setupSentryHandlers } from "@utils/sentry";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -68,6 +68,7 @@ export class ExpressServer {
         this.app = express();
         this.server = http.createServer(this.app);
 
+        this.setupSentry();
         this.setupConfig();
         this.setupDatabase();
         this.setupRoutes();
@@ -76,10 +77,11 @@ export class ExpressServer {
         this.setupSwagger();
         this.setupCronJobs();
         this.setupWebSocket();
+        this.setupSentryErrors();
     }
 
     private setupConfig() {
-        const spinner = this.makeSpinner("Setting up config!");
+        logger.info("Setting up config!");
         this.app.use(bodyParser.json());
         this.app.use((err: any, req: Request, res: Response, next: NextFunction) => {
             if (err instanceof SyntaxError && "body" in err) {
@@ -98,58 +100,49 @@ export class ExpressServer {
         this.app.use("/invoices", express.static(process.env.INVOICES_ROOT || "public/invoices"));
         this.app.use("/attachments", express.static(process.env.ATTACHMENTS_ROOT || "public/attachments"));
         this.app.use("/images", express.static(process.env.IMAGES_ROOT || "public/images"));
-
-        spinner && spinner.succeed();
     }
 
     private setupDatabase() {
-        const spinner = this.makeSpinner("Connecting to database!");
+        logger.info("Connecting to database...");
         mongoose.connect(MONGO_URI, {
             useNewUrlParser: true,
             useCreateIndex: true,
             useFindAndModify: false,
             useUnifiedTopology: true,
-        }).then(() => spinner && spinner.succeed("Connected to database!"))
-          .catch(err => {
-              spinner && spinner.fail("Couldn't connect to database...");
-              logger.error("◇ Failed to connect to MongoDB!", err);
-          });
+        }).then(() => logger.info("Connected to database!"))
+          .catch(err => logger.error("◇ Failed to connect to MongoDB!", err));
     }
 
     private setupRoutes() {
-        const spinner = this.makeSpinner("Setting up endpoints!");
+        logger.info("Setting up endpoints!");
         this.routes.forEach(route => route.makeRoutes(this.app));
-        spinner && spinner.succeed();
     }
 
     private setupPassport() {
-        const spinner = this.makeSpinner("Setting up passport authentication!");
+        logger.info("Setting up passport authentication!");
         this.app.use(this.authService.getPassportMiddleware());
-        spinner && spinner.succeed();
     }
 
     private async setupSystemUser() {
-        if (await this.userService.countDocuments() > 0 || process.env.NODE_ENV === "test") return;
+        if (await this.userService.countDocuments() > 0 || isTestEnv()) return;
         await generateSystemUser();
     }
 
     private setupSwagger() {
-        if (process.env.NODE_ENV === "test") return;
-        const spinner = this.makeSpinner("Setting up Swagger documentation!");
+        if (isTestEnv()) return;
+        logger.info("Setting up Swagger documentation!");
         this.app.use("/docs", serveSwagger, swaggerUi);
-        spinner && spinner.succeed("Swagger is available at /docs!");
     }
 
     private setupCronJobs() {
-        if (process.env.NODE_ENV === "test") return;
-        const spinner = this.makeSpinner("Starting CRON jobs...");
+        if (isTestEnv()) return;
+        logger.info("Starting CRON jobs...");
         uploadJob.start();
         queryJob.start();
-        spinner && spinner.succeed("CRON jobs are running!");
     }
 
     private setupWebSocket() {
-        const spinner = this.makeSpinner("Starting WebSocket...");
+        logger.info("Starting WebSocket...");
         const wss = initializeWebSocketServer(this.server);
         // Poll every 10 seconds to see if any WS client disconnected unexpectedly
         setInterval(() => {
@@ -163,12 +156,19 @@ export class ExpressServer {
                 ws.ping();
             });
         }, 60000);
-        spinner && spinner.succeed("WebSocket is ready!");
     }
 
-    private makeSpinner(text: string): ora.Ora {
-        if (process.env.NODE_ENV === "test") return null;
-        return ora(text).start();
+    private setupSentry() {
+        if (isTestEnv()) return;
+        logger.info("Setting up Sentry tracing handlers...")
+        initSentry(this.app);
+        setupSentryHandlers(this.app);
+    }
+
+    private setupSentryErrors() {
+        if (isTestEnv()) return;
+        logger.info("Setting up Sentry error handlers...");
+        setupSentryErrorHandlers(this.app);
     }
 
 }

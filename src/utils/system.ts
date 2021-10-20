@@ -1,10 +1,10 @@
-import ora from "ora";
 import { UserDocument, UserRoles } from "@models/UserModel";
 import { ioc } from "@ioc";
 import { UserService } from "@services/UserService";
+import { logger } from "@utils/winston";
 
 export async function generateSystemUser(): Promise<UserDocument> {
-    const spinner = process.env.NODE_ENV != "test" ? ora("Creating system user!").start() : null;
+    !isTestEnv() && logger.info("Creating system user!");
     try {
         return await ioc.resolve(UserService).save({
             username: "system",
@@ -16,9 +16,9 @@ export async function generateSystemUser(): Promise<UserDocument> {
             roles: [ UserRoles.ROLE_USER, UserRoles.ROLE_ADMIN ]
         });
     } catch (err) {
-        spinner && spinner.fail(`Failed to create system user! ${err}`);
+        logger.error("Failed to create system user!", err);
         return;
-    } finally { spinner && spinner.succeed("Created system user!"); }
+    }
 }
 
 export function isTestEnv(): boolean {
