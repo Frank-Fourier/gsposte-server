@@ -52,6 +52,6 @@ if (process.env.NODE_ENV === "production") {
             dsn: process.env.SENTRY_DSN,
             serverName: "gsposte-server",
         },
-        level: "info",
+        level: "error",
     }));
 }
