@@ -75,13 +75,13 @@ import fs from "fs";
         assertSameSender(saved, sender);
 
         const other = generateMockSender(this.system._id);
-        other.cf = saved.cf;
+        other.name = saved.name;
         await this.senderService.save(other);
 
         let senders: SenderDocument[];
         try {
-            // Should find both saved and saved_other if I pass this CF
-            senders = await this.senderService.find({ cf: saved.cf });
+            // Should find both saved and saved_other if I pass this name
+            senders = await this.senderService.find({ name: saved.name });
         } catch (err) {
             expect(err).not.to.exist;
         }

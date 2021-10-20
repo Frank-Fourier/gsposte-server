@@ -43,7 +43,7 @@ export function generateMockTelegram(user: string | UserDocument, sender: string
         user: user,
         sender: sender,
         recipients: recipients,
-        subject: faker.lorem.sentence(),
+        subject: faker.lorem.words(2),
         kind: LetterKind.TELEGRAMMA,
         text: text,
         notes: faker.lorem.sentence(),

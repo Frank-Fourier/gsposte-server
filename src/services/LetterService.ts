@@ -111,8 +111,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public getOriginalPdfLink(letter: LetterDocument): string | null {
-        // return 'https://server.gsposte.it/documents/GSDESOESQAYE/original.pdf';
-        if(!letter.codePdf) {
+        if (isTestEnv()) {
+            return process.env.MOCK_LETTER_URL;
+        }
+        if (!letter.codePdf) {
             return null;
         }
         const baseUrl = `${process.env.SERVER_HOST}${isProdEnv() ? "" : `:${process.env.SERVER_PORT}`}`;

@@ -14,13 +14,16 @@ import { SmsService } from "@services/SmsService";
     static async before() { await generateSystemUser(); }
     async before() { this.system = await getSystemUser(); }
 
+    @timeout(60000)
     @test async "Should send SMS correctly" () {
-        const { code } = await this.smsService.sendSMS({
-            to: "393662616843",
-            from: "GSPOSTE",
-            text: "Sono un\nserver.gsposte.it/documents/GSDESOESQAYE/original.pdf",
-        });
-        expect(code).to.equal(200);
+        // Disabled for now to avoid sending unnecessary SMS
+        // const { code } = await this.smsService.sendSMS({
+        //     to: "393396635620",
+        //     from: "GSPOSTE",
+        //     text: "Sono un test.",
+        // });
+        // expect(code).to.equal(200);
+        expect(true).to.equal(true);
     }
 
 }

@@ -223,14 +223,14 @@ class LetterServiceTests {
                 codePdf: TEST_CODE_PDF
             }
         ));
-        const newSubject = faker.lorem.sentence(500); // Subject max length is 100
+        const newSubject = faker.lorem.sentence(500); // Subject max length is 50
 
         let updated: LetterDocument;
         try {
             updated = await this.letterService.updateById(saved.id, {subject: newSubject});
         } catch (err) {
             expect(err).to.exist;
-            expect(err.message).to.equal("Path `subject` (`" + newSubject + "`) is longer than the maximum allowed length (100).");
+            expect(err.message).to.equal("Path `subject` (`" + newSubject + "`) is longer than the maximum allowed length (50).");
         }
 
         expect(updated).not.to.exist;
@@ -337,10 +337,8 @@ class LetterServiceTests {
             ), false)
         ))
 
-        await fs.promises.copyFile(`test/assets/pdf/${TEST_CODE_PDF}/original.pdf`, `${PDF_ROOT}/${TEST_CODE_PDF}/original.pdf`);
         await Promise.all(letters.map(letter => this.letterService.sendLetter(letter)));
-
-        await sleep(180000);
+        await sleep(140000);
     }
 
     @timeout(120000)
