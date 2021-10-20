@@ -77,13 +77,23 @@ export class PosteWayService {
                 ...(headers || {})
             }
         });
-        const json = await res.json();
+        const text = await res.text();
+
+        if (!res.ok && text.startsWith("<")) {
+            throw {
+                statusCode: res.status,
+                posteway: text
+            };
+        }
+
+        const json = JSON.parse(text);
         if (!res.ok) {
             throw {
                 statusCode: res.status,
                 posteway: json
             };
         }
+
         return json;
     }
 
