@@ -32,6 +32,7 @@ import httpErrors from "http-errors";
 import { generateRandomCode } from "@utils/random";
 import { insert } from "@utils/misc";
 import { SmsStatusResponse } from "sms";
+import { MailService } from "@services/MailService";
 
 @provide(LetterService)
 export class LetterService extends MongoRepository<Letter, LetterDocument> {
@@ -43,6 +44,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     @inject(ProvisionService) private provisionService: ProvisionService;
     @inject(NoticeService) private noticeService: NoticeService;
     @inject(UserService) private userService: UserService;
+    @inject(MailService) private mailService: MailService;
 
     constructor(private letterModel = LetterModel) {
         super(letterModel, letterDecoder, [
@@ -292,7 +294,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             },
                             kind: NoticeKind.LETTER,
                             error: true
-                        });
+                        }).then(notice => this.mailService.sendLetterErrorMail(user, letter, notice));
 
                         await this.updateById(letter.id, { $set: { error: true }});
                         return;
@@ -323,7 +325,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         },
                         kind: NoticeKind.LETTER,
                         error: true
-                    });
+                    }).then(notice => this.mailService.sendLetterErrorMail(user, letter, notice));
 
                     throw err;
                 }

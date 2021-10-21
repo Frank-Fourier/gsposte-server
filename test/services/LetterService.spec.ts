@@ -288,7 +288,7 @@ class LetterServiceTests {
         expect(deleted).not.to.exist;
     }
 
-    @timeout(120000)
+    @timeout(180000)
     @test
     async "Should send letter correctly"() {
         const letter = await this.letterService.save(generateMockLetter(
@@ -316,6 +316,7 @@ class LetterServiceTests {
 
         // If I'm here, it means sendLetter didn't throw so the routine is waiting 60 seconds
         expect(sent).to.exist;
+        await sleep(140000);
     }
 
     @timeout(800000)
