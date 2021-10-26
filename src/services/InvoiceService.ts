@@ -11,7 +11,7 @@ import { compileFile } from "pug";
 import { Document } from "mongoose";
 import { MongoRepository } from "@services/MongoRepository";
 import httpErrors from "http-errors";
-import { logger } from "@utils/winston";
+import { createLogFile, logger } from "@utils/winston";
 import { formatCurrency, groupBy, insert } from "@utils/misc";
 import { FICService } from "@services/FICService";
 import { FIC } from "@models/fattureincloud/Documenti";
@@ -457,7 +457,14 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             fic: { $exists: false }
         });
 
-        logger.info(`STARTED BULK EXPORT TO FATTURE IN CLOUD OF ${toExport.length} INVOICES!`);
+        const logFile = createLogFile(`fic_export_${Date.now()}.log`);
+        const log = (msg: string, level: string = "info", ...args: any[]) => {
+            logger.log(level, msg, ...args);
+            logFile?.log(level, msg, ...args);
+        }
+
+        log(`STARTED BULK EXPORT TO FATTURE IN CLOUD OF ${toExport.length} INVOICES!`);
+
         const response: InvoiceBulkExportResponse = { exported: [], errors: [] };
         this.exportFlags.exporting = true;
 
@@ -485,6 +492,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
 
                     wait && await sleep(7500);
                 } catch (err) {
+                    log(`Error while exporting invoice ${invoice.id} to FIC`, "error", err);
                     response.errors.push(err);
                     await this.noticeService.save({
                         user: exporter.id,
@@ -497,7 +505,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 }
             }
 
-            logger.info(`DONE! I EXPORTED ${response.exported.length} INVOICES TO FATTURE IN CLOUD! GOT ${response.errors.length} ERRORS.`);
+            log(`DONE! I EXPORTED ${response.exported.length} INVOICES TO FATTURE IN CLOUD! GOT ${response.errors.length} ERRORS.`);
             this.exportFlags = {
                 exporting: false,
                 exported: 0,
@@ -513,6 +521,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 kind: NoticeKind.INFO,
                 error: false
             });
+
+            logFile?.close();
         })();
     }
 
