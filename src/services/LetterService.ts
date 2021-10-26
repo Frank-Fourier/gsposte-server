@@ -142,15 +142,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         let errors = 0;
 
         for (const letter of toSend) {
-            const logFile = createLogFile(`${letter.codePdf}.log`);
             try {
                 logger.info(`Sending scheduled letter '${letter.codePdf}'...`);
-                await this.sendLetter(letter, logFile);
+                await this.sendLetter(letter, createLogFile(`${letter.codePdf}.log`));
             } catch (err) {
                 logger.error(`ARGH! Got an error while trying to send letter '${letter.codePdf}'!`, err);
                 errors++;
-            } finally {
-                logFile.close();
             }
         }
 
@@ -223,14 +220,14 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
      */
     public async sendLetter(letter: LetterDocument, logFile?: winston.Logger): Promise<LetterDocument> {
         logger.info(`===== SENDING LETTER '${letter.codePdf}' =====`);
-        let updated = await this.updateById(letter.id, { $set: { sent: true }});
+        letter = await this.updateById(letter.id, { $set: { sent: true }});
 
         const kind = this.chooseSubmitKind(letter.kind);
 
         if (!kind) {
             logger.error(`[LETTER ${letter.codePdf}] Unrecognized kind. Letter kind is ${letter.kind}. Can't send letter.`);
             logFile?.error(`Unrecognized kind. Letter kind is ${letter.kind}. Can't send letter.`);
-            return updated;
+            return letter;
         }
 
         // Populate needed fields
@@ -241,23 +238,29 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         if (!userId) {
             logger.error(`[LETTER ${letter.codePdf}] No user associated. Can't send letter.`);
             logFile?.error(`No user associated. Can't send letter.`);
-            return updated;
+            return letter;
         }
 
         if (kind === "tol") {
             try {
-                return await this.sendTelegram(letter, userId, logFile);
+                letter = await this.sendTelegram(letter, userId, logFile);
+                logFile?.close();
+                return letter;
             } catch (err) {
                 await this.updateById(letter.id, { $set: { error: true }});
+                logFile?.close();
                 throw err;
             }
         }
 
         if (kind === "runo") {
             try {
-                return await this.sendRUNO(letter, user, logFile);
+                letter = await this.sendRUNO(letter, user, logFile);
+                logFile?.close();
+                return letter;
             } catch (err) {
                 await this.updateById(letter.id, { $set: { error: true }});
+                logFile?.close();
                 throw err;
             }
         }
@@ -294,7 +297,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                             },
                             kind: NoticeKind.LETTER,
                             error: true
-                        }).then(notice => this.mailService.sendLetterErrorMail(user, letter, notice));
+                        }).then(notice => this.mailService.sendLetterErrorMail(user, letter, notice, this.getOriginalPdfLink(letter)));
 
                         await this.updateById(letter.id, { $set: { error: true }});
                         return;
@@ -325,12 +328,13 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         },
                         kind: NoticeKind.LETTER,
                         error: true
-                    }).then(notice => this.mailService.sendLetterErrorMail(user, letter, notice));
+                    }).then(notice => this.mailService.sendLetterErrorMail(user, letter, notice, this.getOriginalPdfLink(letter)));
 
                     throw err;
                 }
             } catch (err) {
                 await this.updateById(letter.id, { $set: { error: true }});
+                logFile?.close();
                 return;
             }
 
@@ -363,11 +367,12 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     kind: NoticeKind.LETTER
                 });
 
+                logFile?.close();
                 return;
             }
 
             try {
-                updated = await this.updateById(letter.id, {
+                letter = await this.updateById(letter.id, {
                     $set: {
                         posteway: {
                             requestId: submit.request?.requestId,
@@ -380,7 +385,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                         }
                     }
                 }, false, false);
-                logFile?.info(`MongoDB entry for this letter was updated successfully.`, updated.toObject());
+                logFile?.info(`MongoDB entry for this letter was updated successfully.`, letter.toObject());
             } catch (err) {
                 logFile?.error(`Error while updating the letter in Mongo!`, err);
                 logger.error(`[LETTER ${letter.codePdf}] Error while updating the letter in Mongo! Got this error: `, err);
@@ -397,6 +402,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     kind: NoticeKind.LETTER
                 });
 
+                logFile?.close();
                 return;
             }
 
@@ -405,11 +411,17 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
             // Send SMS to recipients
             if (letter.smsText) {
-                await this.sendSMS(letter);
+                try {
+                    await this.sendSMS(letter);
+                } catch (err) {
+                    logFile?.warn("Error while sending SMS to recipients: ", err);
+                    logger.warn(`[LETTER ${letter.codePdf}] Error while sending SMS to recipients: `, err);
+                }
             }
 
             // Everything went fine, generate provision
             if (!await this.generateProvision(letter, userId, logFile)) {
+                logFile?.close();
                 return;
             }
 
@@ -419,7 +431,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                 title: "Lettera inviata",
                 content: `La lettera '${letter.codePdf}' è stata inviata correttamente.`,
                 data: {
-                    letter: updated,
+                    letter: letter,
                     codePdf: letter.codePdf,
                 },
                 kind: NoticeKind.LETTER
@@ -427,6 +439,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
             logFile?.info("That's all folks!");
             logger.info(`[LETTER ${letter.codePdf}] Send routine completed correctly!`);
+
+            logFile?.close();
         };
 
         try {
@@ -504,10 +518,11 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
 
         } catch (err) {
             await this.updateById(letter.id, { $set: { error: true }});
+            logFile?.close();
             throw err;
         }
 
-        return updated;
+        return letter;
     }
 
     /**
