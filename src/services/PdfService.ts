@@ -269,10 +269,10 @@ export class PdfService {
         // Use Puppeteer to create a new PDF from this HTML file
         const browser = await puppeteer.launch({
             headless: true,
-            // On Docker I need to disable the usage of /dev/shm to store shared memory
+            // On Docker, I need to disable the usage of /dev/shm to store shared memory
             // Otherwise it will just crash on launch...
-            args: process.env.NODE_ENV === "production" ? [ "--disable-dev-shm-usage", "--no-sandbox" ] : [],
-            // On Docker I need to specify that I want to use my own Chromium
+            args: process.env.NODE_ENV === "production" ? [ "--disable-dev-shm-usage", "--no-sandbox", "--no-zygote" ] : [],
+            // On Docker, I need to specify that I want to use my own Chromium
             ...insert(process.env.NODE_ENV === "production", { executablePath: "/usr/bin/chromium-browser" }),
             // Ignore HTTPS errors in development/test environments
             ignoreHTTPSErrors: process.env.NODE_ENV !== "production"
