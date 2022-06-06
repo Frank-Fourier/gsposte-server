@@ -1,7 +1,7 @@
 import { provide } from "inversify-binding-decorators";
 import { Request, Response } from "express";
 import { inject } from "inversify";
-import { ProvisionService } from "@services/ProvisionService";
+import { DueRevenue, ProvisionService } from "@services/ProvisionService";
 import { LetterService } from "@services/LetterService";
 import { UserService } from "@services/UserService";
 import httpErrors from "http-errors";
@@ -66,6 +66,10 @@ export class ProvisionController {
         }
 
         const user = await this.userService.findById(req.params.userId);
+        if (user.isAdmin) {
+            return res.status(200).send({ due: 0, paid: 0 } as DueRevenue);
+        }
+
         const dueRevenue = await this.provisionService.calculateTotalDueRevenue(user);
         return res.status(200).send(dueRevenue);
     }
