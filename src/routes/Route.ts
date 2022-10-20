@@ -1,6 +1,7 @@
 import { Application, NextFunction, Request, Response } from "express";
 import { injectable, unmanaged } from "inversify";
 import { authenticate } from "passport";
+import { logger } from "@utils/winston";
 
 type ExpressMiddleware = (req: Request, res: Response, next?: NextFunction) => Promise<any>;
 
@@ -47,12 +48,15 @@ export class Route {
             const path = `${process.env.API_PATH || ""}${this.path}${route.path || ""}`;
 
             const handler = async (req: Request, res: Response) => {
-                route.handler(req, res).catch(err => res.status(err.statusCode || 500).send({
-                    error: err instanceof Error ? {
-                        type: err.name,
-                        details: err.message,
-                    } : err
-                }));
+                route.handler(req, res).catch(err => {
+                    logger.error(err);
+                    res.status(err.statusCode || 500).send({
+                        error: err instanceof Error ? {
+                            type: err.name,
+                            details: err.message,
+                        } : err
+                    });
+                });
             };
             app.route(path)[route.method]([
                 ...(route.requiresAuth ? [ authenticate(route.authStrategy || "jwt", { session: false }) ] : []),
