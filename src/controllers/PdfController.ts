@@ -24,7 +24,7 @@ export class PdfController {
             throw new httpErrors.BadRequest(`Tutti gli URL devono cominciare con ${process.env.SERVER_HOST} per ragioni di sicurezza.`);
         }
 
-        const code = await this.pdf.merge(urls);
+        const code = await this.pdf.merge(urls, req.body.backSide as boolean);
         return res.status(201).send({ code });
     }
 

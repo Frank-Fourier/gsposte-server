@@ -16,6 +16,8 @@ import puppeteer, { LoadEvent, PDFOptions } from "puppeteer";
 import { insert } from "@utils/misc";
 
 export const PDF_ROOT = process.env.PDF_ROOT || "public/pdf";
+const MAX_PDF_PAGE = 18;  // Se la lettera è fronte retro diventa (MAX_PDF_PAGE * 2)
+const MAX_PDF_MERGED_SIZE = 10 * 1000 * 1000 // ~10MB -> (decisione nostra)
 
 // Setup PDF upload middleware
 const uploader = multer({
@@ -386,8 +388,9 @@ export class PdfService {
      * Returns the generated PDF code.
      *
      * @param urls {string[]} Array of PDF URLs
+     * @param backSide {boolean}
      */
-    public async merge(urls: string[]): Promise<string> {
+    public async merge(urls: string[], backSide: boolean): Promise<string> {
         const documents = await Promise.all(urls.map(
             async url => PDFDocument.load(await this.fetchBinary(url)))
         );
@@ -398,9 +401,19 @@ export class PdfService {
             pages.forEach(page => merged.addPage(page));
         }
 
+        if ((backSide && merged.getPageCount() > (MAX_PDF_PAGE * 2)) || (!backSide && merged.getPageCount() > MAX_PDF_PAGE)) {
+            throw new httpErrors.BadRequest("Il numero di pagine supera il massimo consentito!");
+        }
+
         const code = `GS${generateRandomCode()}`;
         await fs.promises.mkdir(`${process.env.PDF_ROOT}/${code}`);
-        await fs.promises.writeFile(`${process.env.PDF_ROOT}/${code}/original.pdf`, await merged.save());
+
+        const saved = await merged.save();
+        if (saved.byteLength > MAX_PDF_MERGED_SIZE) {
+            throw new httpErrors.BadRequest("La dimensione del file supera il limite consentito");
+        }
+
+        await fs.promises.writeFile(`${process.env.PDF_ROOT}/${code}/original.pdf`, saved);
 
         return code;
     }
