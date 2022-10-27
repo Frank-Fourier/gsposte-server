@@ -16,7 +16,7 @@ const DB_NAME = "gsposte_prod";
         const invoices = db.collection("invoices");
 
         for (const obj of data) {
-            await invoices.updateOne({ _id: new ObjectID(obj.id) }, {
+            await invoices.updateOne({ _id: ObjectID.createFromHexString(obj.id) }, {
                 $set: {
                     number: +obj.new,
                     createdAt: new Date("2022-10-20T09:33:40.051Z"),
