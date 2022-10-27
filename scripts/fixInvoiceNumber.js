@@ -1,5 +1,5 @@
 // noinspection NpmUsedModulesInstalled
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectID } = require("mongodb");
 const data = require('./data.json');
 
 const DB_URI = "mongodb://localhost:27017";
@@ -16,7 +16,7 @@ const DB_NAME = "gsposte_prod";
         const invoices = db.collection("invoices");
 
         for (const obj of data) {
-            await invoices.updateOne({ number: +obj.prev }, {
+            await invoices.updateOne({ _id: new ObjectID(obj.id) }, {
                 $set: {
                     number: +obj.new,
                     createdAt: new Date("2022-10-20T09:33:40.051Z"),
