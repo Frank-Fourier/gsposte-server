@@ -13,8 +13,6 @@ import { MongoRepository } from "@services/MongoRepository";
 import httpErrors from "http-errors";
 import { createLogFile, logger } from "@utils/winston";
 import { formatCurrency, groupBy, insert } from "@utils/misc";
-import { FICService } from "@services/FICService";
-import { FIC } from "@models/fattureincloud/Documenti";
 import moment from "moment";
 import fs from "fs";
 import { sleep } from "@utils/sleep";
@@ -23,6 +21,15 @@ import { ws_message } from "@utils/websockets";
 import { NoticeKind } from "@models/NoticeModel";
 import { NoticeService } from "@services/NoticeService";
 import { RecipientDocument } from "@models/RecipientModel";
+import { authorizeOAuth2, callFicApi, findOauthRequest } from "@services/FicService";
+import { AuthorizeOAuth2ClientRequest, FicMessage, FicRequest } from "@models/FicModel";
+import {
+    CreateIssuedDocumentRequest,
+    IssuedDocument,
+    IssuedDocumentType,
+    PaymentAccount, ShowTotalsMode, VatKind
+} from "@fattureincloud/fattureincloud-ts-sdk";
+import process from "process";
 
 export const INVOICES_ROOT = process.env.INVOICES_ROOT || "public/invoices";
 export interface InvoiceBulkExportResponse {
@@ -43,7 +50,6 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     @inject(PriceService) private priceService: PriceService;
     @inject(UserService) private userService: UserService;
     @inject(LetterService) private letterService: LetterService;
-    @inject(FICService) private fic: FICService;
     @inject(NoticeService) private noticeService: NoticeService;
 
     private exportFlags: ExportFlags = {
@@ -401,6 +407,143 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     }
 
     /**
+     * mAP INVOICE TO DOCUMENT FOR Fatture in Cloud.
+     * Throws if external FIC API call fails.
+     *
+     * @param invoice {InvoiceDocument} Invoice to export
+     * @param payment_obj {PaymentAccount} Payment object
+     * @returns {Promise<IssuedDocument>} Promise resolving to the same invoice with FIC field
+     */
+    private async mapInvoiceToFattura(invoice: InvoiceDocument, payment_obj: PaymentAccount): Promise<IssuedDocument> {
+        invoice = await invoice.populate("sender letters").execPopulate();
+        const sender = invoice.sender as SenderDocument;
+        if (!sender) {
+            throw new httpErrors.BadRequest("Questa fattura non ha un mittente. Non è stato possibile esportarla.");
+        }
+
+        const name = sender.businessName ?? sender.name;
+        if (!name) {
+            throw new httpErrors.BadRequest("Questo mittente non ha un nominativo. Non è stato possibile esportare la sua fattura.");
+        }
+
+        const { iva, cf } = sender;
+        if (!iva && !cf) {
+            throw new httpErrors.BadRequest("Questo mittente non ha valorizzati nè P.IVA nè Codice Fiscale. Non è stato possibile esportare la sua fattura.");
+        }
+
+        const address = sender.addressBill ?? sender.addressAR ?? sender.address;
+        if (!address?.street) {
+            throw new httpErrors.BadRequest("Questo mittente non ha un indirizzo. Non è stato possibile esportare la sua fattura.");
+        }
+
+        // Generate invoice expiration date
+        const expiresAt = moment(invoice.createdAt).add(30, "days").format("YYYY-MM-DD");
+
+        return {
+            type: IssuedDocumentType.Invoice,
+            number: invoice.number,
+            numeration: `P`,
+            e_invoice: true,
+            ei_data: {
+                vat_kind: VatKind.I,
+                payment_method: "MP05" // Bonifico
+            },
+            entity: {
+                name,
+                address_street: address.street,
+                address_city: address.city,
+                vat_number: iva,
+                tax_code: address.zip,
+                email: sender.email
+            },
+            payment_method: {
+                name: "IBAN",
+                bank_beneficiary: process.env.FIC_IBAN,
+                is_default: true,
+                default_payment_account: {
+                    name: "IBAN",
+                    iban: process.env.FIC_IBAN
+                }
+            },
+            show_tspay_button: true,
+            show_totals: ShowTotalsMode.All,
+            show_payments: true,
+            date: moment(invoice.createdAt).format("YYYY-MM-DD"),
+            items_list: invoice.letters.map((letter: LetterDocument) => ({
+                name: `${letter.kind} ONLINE`,
+                qty: letter.recipients.length,
+                description: letter.subject,
+                net_price: letter.price,
+                cod_iva: 0, // Punta ad aliquota IVA 22% (Default)
+            })),
+            payments_list: [{
+                due_date: expiresAt,
+                payment_account: {
+                    id: payment_obj.id
+                },
+                amount: invoice.total,
+            }],
+            currency: {
+                id: "EUR",
+                symbol: "€"
+            }
+        };
+
+        // return {
+        //     ...auth,
+        //     nome: name,
+        //     indirizzo_via: address.street,
+        //     indirizzo_citta: address.city,
+        //     indirizzo_cap: address.zip,
+        //     indirizzo_provincia: address.province,
+        //     indirizzo_extra: address?.secondary,
+        //     paese: "Italia",
+        //     paese_iso: "IT",
+        //     lingua: "it",
+        //     piva: iva,
+        //     cf: cf,
+        //     autocompila_anagrafica: true,
+        //     salva_anagrafica: !isTestEnv(),
+        //     numero: !isTestEnv() ? `${invoice.number.toString()}P` : "P",
+        //     data: moment(invoice.createdAt).format("DD/MM/YYYY"),
+        //     valuta: "EUR",
+        //     nascondi_scadenza: false,
+        //     mostra_info_pagamento: true,
+        //     metodo_pagamento: "Bonifico",
+        //     metodo_titoloN: "IBAN",
+        //     metodo_descN: IBAN,
+        //     mostra_totali: "tutti",
+        //     lista_articoli: invoice.letters.map((letter: LetterDocument) => ({
+        //         nome: `${letter.kind} ONLINE`,
+        //         quantita: letter.recipients.length,
+        //         descrizione: letter.subject,
+        //         prezzo_netto: letter.price,
+        //         cod_iva: 0, // Punta ad aliquota IVA 22% (Default)
+        //     })),
+        //     lista_pagamenti: [{
+        //         data_scadenza: expiresAt,
+        //         metodo: "not",
+        //         importo: invoice.total,
+        //     }],
+        //     extra_anagrafica: {
+        //         mail: sender.email ?? "",
+        //     },
+        //     // Anagrafica PA B2B
+        //     PA: true,
+        //     PA_tipo_cliente: PA_TipoCliente.B2B,
+        //     PA_numero: !isTestEnv() ? `${invoice.number.toString()}P` : "P",
+        //     PA_data: moment(invoice.createdAt).format("DD/MM/YYYY"),
+        //     PA_codice: !sender.invoiceCode.includes("@") ? sender.invoiceCode : null,
+        //     PA_pec: sender.invoiceCode.includes("@") ? sender.invoiceCode : null,
+        //     PA_esigibilita: "N",
+        //     PA_modalita_pagamento: "MP05",
+        //     PA_iban: IBAN,
+        //     PA_beneficiario: "General Services SCC",
+        // };
+
+    }
+
+    /**
      * Exports an invoice to Fatture in Cloud account.
      * Requires credentials to be defined in process environment, populates FIC field on success.
      * Throws if external FIC API call fails.
@@ -409,7 +552,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * @param invoice {InvoiceDocument} Invoice to export
      * @returns {Promise<InvoiceDocument>} Promise resolving to the same invoice with FIC field
      */
-    public async exportToFIC(exporter: UserDocument, invoice: InvoiceDocument): Promise<InvoiceDocument> {
+    public async exportToFIC(exporter: UserDocument, invoice: InvoiceDocument, requestParams?: AuthorizeOAuth2ClientRequest): Promise<InvoiceDocument> {
         if (!exporter.isAdmin()) {
             throw new httpErrors.Forbidden("Permessi insufficienti per effettuare la richiesta.");
         }
@@ -419,18 +562,27 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             return invoice;
         }
 
-        const result = await this.fic.documenti.fatture.nuovo(
-            await FIC.mapInvoiceToFattura(invoice)
-        );
-        if (!(result as FIC.NuovoDocumentoResponse).success) {
-            const err = result as FIC.Error;
-            throw new httpErrors.InternalServerError(`Errore Fatture in Cloud [${err.error_code}]: ${err.error}`);
+        const oauthRequest = findOauthRequest(requestParams.authorization);
+        if (!oauthRequest?.access || !oauthRequest?.apiConfig) {
+            throw {
+                message: FicMessage.GET_AUTHORIZATION_URL,
+                ficAuthorizationUri: authorizeOAuth2(requestParams)
+            };
         }
 
-        const response = result as FIC.NuovoDocumentoResponse;
+        // const result = await this.fic.documenti.fatture.nuovo(
+        //     await FIC.mapInvoiceToFattura(invoice)
+        // );
+
+        const payments_list = (await  callFicApi(FicRequest.GET_LIST_PAYMENT_METHODS, oauthRequest)) as PaymentAccount[];
+
+        const result = await callFicApi(FicRequest.CREATE_INVOICE, oauthRequest, {
+            data: await this.mapInvoiceToFattura(invoice, payments_list[0])
+        } as CreateIssuedDocumentRequest) as IssuedDocument;
+
         invoice.fic = {
-            id: response.new_id,
-            token: response.token,
+            id: result.id,
+            token: result.attachment_token,
         };
         return invoice.save();
     }

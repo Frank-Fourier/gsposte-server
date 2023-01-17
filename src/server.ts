@@ -35,6 +35,7 @@ import { generateSystemUser, isTestEnv } from "@utils/system";
 import { queryJob, uploadJob } from "@utils/cron";
 import { initializeWebSocketServer, WebSocketClient } from "@utils/websockets";
 import { initSentry, setupSentryErrorHandlers, setupSentryHandlers } from "@utils/sentry";
+import { FicRoute } from "@routes/FicRoute";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -58,6 +59,7 @@ export class ExpressServer {
         ioc.resolve(ProvisionRoute),
         ioc.resolve(NoticeRoute),
         ioc.resolve(ImageRoute),
+        ioc.resolve(FicRoute),
     ];
 
     constructor(
