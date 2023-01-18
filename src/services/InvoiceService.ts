@@ -454,7 +454,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 address_city: address.city,
                 vat_number: iva,
                 tax_code: address.zip,
-                email: sender.email
+                email: sender.email,
+                e_invoice: true,
+                ei_code: sender.invoiceCode.length === 7 ? sender.invoiceCode : undefined,
+                certified_email: !(sender.invoiceCode.length === 7) ? sender.invoiceCode : undefined
             },
             payment_method: {
                 name: "IBAN",
@@ -550,6 +553,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      *
      * @param exporter {UserDocument} Who is exporting this invoice (must be an admin)
      * @param invoice {InvoiceDocument} Invoice to export
+     * @param requestParams {AuthorizeOAuth2ClientRequest} Fic v2 require param for connection
      * @returns {Promise<InvoiceDocument>} Promise resolving to the same invoice with FIC field
      */
     public async exportToFIC(exporter: UserDocument, invoice: InvoiceDocument, requestParams?: AuthorizeOAuth2ClientRequest): Promise<InvoiceDocument> {
@@ -595,14 +599,23 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      *
      * @param exporter {UserDocument} Who is exporting these invoices (must be an admin)
      * @param wait {boolean} True if you want to sleep 7.5 secs between each request
+     * @param requestParams {AuthorizeOAuth2ClientRequest} Fic v2 require param for connection
      * @returns {Promise<void>} Resolves after starting the process because the export process is async
      */
-    public async bulkExportToFIC(exporter: UserDocument, wait = true): Promise<void> {
+    public async bulkExportToFIC(exporter: UserDocument, wait = true, requestParams: AuthorizeOAuth2ClientRequest): Promise<void> {
         if (!exporter.isAdmin()) {
             throw new httpErrors.Forbidden("Permessi insufficienti per effettuare la richiesta.");
         }
         if (this.exportFlags.exporting) {
             throw new httpErrors.BadRequest("Un'esportazione è già in corso.");
+        }
+
+        const oauthRequest = findOauthRequest(requestParams.authorization);
+        if (!oauthRequest?.access || !oauthRequest?.apiConfig) {
+            throw {
+                message: FicMessage.GET_AUTHORIZATION_URL,
+                ficAuthorizationUri: authorizeOAuth2(requestParams)
+            };
         }
 
         const toExport = await this.find({
@@ -627,7 +640,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         (async () => {
             for (const invoice of toExport) {
                 try {
-                    const exported = await this.exportToFIC(exporter, invoice);
+                    const exported = await this.exportToFIC(exporter, invoice, requestParams);
                     this.exportFlags = {
                         exporting: true,
                         exported: response.exported.length,
