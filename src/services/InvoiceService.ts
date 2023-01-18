@@ -446,14 +446,16 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             e_invoice: true,
             ei_data: {
                 vat_kind: VatKind.I,
-                payment_method: "MP05" // Bonifico
+                payment_method: "MP05", // Bonifico
+                bank_beneficiary: "General Services SCC",
+                bank_iban: process.env.FIC_IBAN
             },
             entity: {
                 name,
                 address_street: address.street,
                 address_city: address.city,
                 vat_number: iva,
-                tax_code: address.zip,
+                tax_code: cf,
                 email: sender.email,
                 e_invoice: true,
                 ei_code: sender.invoiceCode.length === 7 ? sender.invoiceCode : undefined,
@@ -461,7 +463,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             },
             payment_method: {
                 name: "IBAN",
-                bank_beneficiary: process.env.FIC_IBAN,
+                bank_beneficiary: "General Services SCC",
+                bank_iban: process.env.FIC_IBAN,
                 is_default: true,
                 default_payment_account: {
                     name: "IBAN",
