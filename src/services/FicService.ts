@@ -189,9 +189,10 @@ export async function callFicApi(request: FicRequest,
             await refreshToken(oauthRequest.authorization);
             return await callFicApi(request, findOauthRequest(oauthRequest.authorization), params, true);
         }
+        const msg = error?.response?.data?.error.message ? error?.response?.data?.error.message : `Error in ${request}: ${knowError.title}: ${knowError.description}`;
 
-        logger.error(`[FIC]: Error in ${request}: ${knowError.title}: ${knowError.description} with stack: \n${error.stack}`);
-        throw new Error(error?.response?.data?.error.message ? error?.response?.data?.error.message : `Error in ${request}: ${knowError.title}: ${knowError.description}`);
+        logger.error(msg);
+        throw new Error(msg);
     }
 }
 
