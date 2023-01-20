@@ -185,10 +185,11 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         let lastNumber = startNumber ?? await this.getLatestInvoiceNumber();
         for (const letter of Object.values(aggregated)) {
             const result = await this.generateSingleInvoice(letter, lastNumber + 1);
-            logger.debug(`Total of single invoice: ${result.invoice.total}`);
             if (!result.invoice) {
                 continue;
             }
+
+            logger.debug(`Total of single invoice: ${result.invoice.total}`);
             results.push(result);
             lastNumber++;
         }

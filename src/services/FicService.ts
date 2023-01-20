@@ -94,11 +94,11 @@ async function getListVatTypes(oauthRequest: AuthorizeOAuth2Request): Promise<Va
     return data;
 }
 
-async function getPaymentMethods(oauthRequest: AuthorizeOAuth2Request): Promise<PaymentAccount[]> {
+async function getPaymentAccounts(oauthRequest: AuthorizeOAuth2Request): Promise<PaymentAccount[]> {
     const infoApi = new InfoApi(oauthRequest.apiConfig);
     const { data: { data } } = await infoApi.listPaymentAccounts(oauthRequest.companyId);
     if (data.length === 0) {
-        const created = await createPaymentAccount(oauthRequest, { key: FicRequest.CREATE_PAYMENT_METHOD, object: {
+        const created = await createPaymentAccount(oauthRequest, { key: FicRequest.CREATE_PAYMENT_ACCOUNT, object: {
                 data: {
                     name: "Auto generated Payment Account",
                     type: "bank",
@@ -165,11 +165,11 @@ export async function callFicApi(request: FicRequest,
             case FicRequest.GET_MY_COMPANY_ID:
                 return (await getMyCompanyId(oauthRequest)) as number;
 
-            case FicRequest.CREATE_PAYMENT_METHOD:
+            case FicRequest.CREATE_PAYMENT_ACCOUNT:
                 return (await createPaymentAccount(oauthRequest, params)) as PaymentAccount;
 
             case FicRequest.GET_LIST_PAYMENT_METHODS:
-                return (await getPaymentMethods(oauthRequest)) as PaymentAccount[];
+                return (await getPaymentAccounts(oauthRequest)) as PaymentAccount[];
 
             case FicRequest.CREATE_INVOICE:
                 return (await createOrModifyInvoice(oauthRequest, request, params)) as IssuedDocument;
