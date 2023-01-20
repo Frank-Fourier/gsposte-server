@@ -132,10 +132,10 @@ async function createOrModifyInvoice(oauthRequest: AuthorizeOAuth2Request, reque
     return data as IssuedDocument;
 }
 
-async function getReceivedDocument(oauthRequest: AuthorizeOAuth2Request, params: object): Promise<ReceivedDocument> {
-    const api = new ReceivedDocumentsApi(oauthRequest.apiConfig);
+async function getIssuedDocument(oauthRequest: AuthorizeOAuth2Request, params: object): Promise<IssuedDocument> {
+    const api = new IssuedDocumentsApi(oauthRequest.apiConfig);
     const documentId = (params as { documentId: number }).documentId;
-    const { data: { data } } = await api.getReceivedDocument(oauthRequest.companyId, documentId, null, "detailed");
+    const { data: { data } } = await api.getIssuedDocument(oauthRequest.companyId, documentId, null, "detailed");
     return data;
 }
 
@@ -179,6 +179,9 @@ export async function callFicApi(request: FicRequest,
 
             case FicRequest.LIST_RECEIVED_DOCUMENTS:
                 return (await listReceivedDocuments(oauthRequest, params)) as ReceivedDocument[]
+
+            case FicRequest.GET_ISSUED_DOCUMENT:
+                return (await getIssuedDocument(oauthRequest, params)) as IssuedDocument
 
             default: return;
         }

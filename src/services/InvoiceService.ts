@@ -26,8 +26,11 @@ import { AuthorizeOAuth2ClientRequest, FicMessage, FicRequest } from "@models/Fi
 import {
     CreateIssuedDocumentRequest,
     IssuedDocument,
+    IssuedDocumentStatus,
     IssuedDocumentType,
-    PaymentAccount, ShowTotalsMode, VatKind
+    PaymentAccount,
+    ShowTotalsMode,
+    VatKind
 } from "@fattureincloud/fattureincloud-ts-sdk";
 import process from "process";
 
@@ -266,9 +269,10 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * it will become false.
      *
      * @param invoice {InvoiceDocument} Invoice to toggle paid
+     * @param requestParams {AuthorizeOAuth2ClientRequest} Fic v2 require param for connection
      * @returns {Promise<InvoiceDocument>} Promise resolving to the updated invoice document
      */
-    public async toggleInvoicePaid(invoice: InvoiceDocument): Promise<InvoiceDocument> {
+    public async toggleInvoicePaid(invoice: InvoiceDocument, requestParams?: AuthorizeOAuth2ClientRequest): Promise<InvoiceDocument> {
         invoice = await invoice.populate("letters").execPopulate();
         await Promise.all(
             invoice.letters.map((letter: LetterDocument) =>
@@ -277,9 +281,38 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 })
             )
         );
-        return this.updateById(invoice.id, {
+        const updated = await this.updateById(invoice.id, {
             $set: { paid: !invoice.paid, paymentDate: Date.now() }
         });
+
+        if (!!updated.fic) {
+            logger.info("Updating invoice on fic");
+            // Check if fic token is present
+
+            const oauthRequest = findOauthRequest(requestParams.authorization);
+            if (!oauthRequest?.access || !oauthRequest?.apiConfig) {
+
+                await this.updateById(invoice.id, {
+                    $set: { paid: !updated.paid, paymentDate: undefined }
+                });
+
+                throw {
+                    message: FicMessage.GET_AUTHORIZATION_URL,
+                    ficAuthorizationUri: authorizeOAuth2(requestParams)
+                };
+            }
+
+            const payments_list = (await  callFicApi(FicRequest.GET_LIST_PAYMENT_METHODS, oauthRequest)) as PaymentAccount[];
+
+            await callFicApi(FicRequest.MODIFY_INVOICE, oauthRequest, {
+                id: invoice.fic.id,
+                data: await this.mapInvoiceToFattura(updated, payments_list[0])
+            });
+
+            logger.info("Updating invoice on fic completed!");
+        }
+
+        return updated;
     }
 
     /**
@@ -488,6 +521,8 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 payment_account: {
                     id: payment_obj.id
                 },
+                paid_date: invoice.paid ? moment(invoice.paymentDate).format("YYYY-MM-DD") : undefined,
+                status: invoice.paid ? IssuedDocumentStatus.Paid : IssuedDocumentStatus.NotPaid,
                 amount: invoice.total,
             }],
             currency: {
@@ -606,7 +641,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
      * @param requestParams {AuthorizeOAuth2ClientRequest} Fic v2 require param for connection
      * @returns {Promise<void>} Resolves after starting the process because the export process is async
      */
-    public async bulkExportToFIC(exporter: UserDocument, wait = true, requestParams: AuthorizeOAuth2ClientRequest): Promise<void> {
+    public async bulkExportToFIC(exporter: UserDocument, wait = true, requestParams?: AuthorizeOAuth2ClientRequest): Promise<void> {
         if (!exporter.isAdmin()) {
             throw new httpErrors.Forbidden("Permessi insufficienti per effettuare la richiesta.");
         }

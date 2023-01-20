@@ -48,9 +48,27 @@ export class InvoiceController extends CrudController {
 
     public async toggleInvoicePaid(req: Request, res: Response) {
         await this.authService.adminOnly(req);
+
+        if (!req.params.id || !req.body.requestUri) {
+            throw new httpErrors.BadRequest("ID della fattura mancante.");
+        }
+
         const toMark = await this.invoiceService.findById(req.params.id);
-        const updated = await this.invoiceService.toggleInvoicePaid(toMark);
-        return res.status(201).send(updated);
+
+        try {
+            const updated = await this.invoiceService.toggleInvoicePaid(toMark, {
+                action: FicMessage.CREATE_OR_UPDATE_INVOICE,
+                authorization: req.header("Authorization"),
+                requestUri: req.body.requestUri
+            });
+            return res.status(201).send(updated);
+        }
+        catch (err) {
+            if(err.message === FicMessage.GET_AUTHORIZATION_URL) {
+                return res.status(200).send({ ficAuthorizationUri: err.ficAuthorizationUri });
+            }
+            throw err;
+        }
     }
 
     public async generateInvoicePDF(req: Request, res: Response) {
