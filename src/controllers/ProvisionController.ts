@@ -66,7 +66,7 @@ export class ProvisionController {
         }
 
         const user = await this.userService.findById(req.params.userId);
-        if (user.isAdmin) {
+        if (user.isAdmin()) {
             return res.status(200).send({ due: 0, paid: 0 } as DueRevenue);
         }
 
