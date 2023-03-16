@@ -303,10 +303,12 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             }
 
             const payments_list = (await  callFicApi(FicRequest.GET_LIST_PAYMENT_METHODS, oauthRequest)) as PaymentAccount[];
+            const newReq = await this.mapInvoiceToFattura(updated, payments_list[0]);
+            delete newReq.items_list;
 
             await callFicApi(FicRequest.MODIFY_INVOICE, oauthRequest, {
                 id: invoice.fic.id,
-                data: await this.mapInvoiceToFattura(updated, payments_list[0])
+                data: newReq
             });
 
             logger.info("Updating invoice on fic completed!");
