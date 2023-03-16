@@ -286,7 +286,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         });
 
         if (!!updated.fic) {
-            logger.info("Updating invoice on fic");
+            logger.info(`Updating invoice: ${updated.id} on fic`);
             // Check if fic token is present
 
             const oauthRequest = findOauthRequest(requestParams.authorization);
@@ -311,7 +311,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 data: newReq
             });
 
-            logger.info("Updating invoice on fic completed!");
+            logger.info(`Updating invoice: ${updated.id} on fic completed!`);
         }
 
         return updated;
