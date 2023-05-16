@@ -5,6 +5,7 @@ import { LetterService } from "@services/LetterService";
 import { Request, Response } from "express";
 import httpErrors from "http-errors";
 import fs from "fs";
+import { FicMessage } from "@models/FicModel";
 
 export class InvoiceController extends CrudController {
 
@@ -47,9 +48,27 @@ export class InvoiceController extends CrudController {
 
     public async toggleInvoicePaid(req: Request, res: Response) {
         await this.authService.adminOnly(req);
+
+        if (!req.params.id || !req.body.requestUri) {
+            throw new httpErrors.BadRequest("ID della fattura mancante.");
+        }
+
         const toMark = await this.invoiceService.findById(req.params.id);
-        const updated = await this.invoiceService.toggleInvoicePaid(toMark);
-        return res.status(201).send(updated);
+
+        try {
+            const updated = await this.invoiceService.toggleInvoicePaid(toMark, {
+                action: FicMessage.CREATE_OR_UPDATE_INVOICE,
+                authorization: req.header("Authorization"),
+                requestUri: req.body.requestUri
+            });
+            return res.status(201).send(updated);
+        }
+        catch (err) {
+            if(err.message === FicMessage.GET_AUTHORIZATION_URL) {
+                return res.status(200).send({ ficAuthorizationUri: err.ficAuthorizationUri });
+            }
+            throw err;
+        }
     }
 
     public async generateInvoicePDF(req: Request, res: Response) {
@@ -70,19 +89,48 @@ export class InvoiceController extends CrudController {
 
     public async exportOneToFIC(req: Request, res: Response) {
         const user = await this.authService.adminOnly(req);
-        if (!req.params.id) {
+        if (!req.params.id || !req.body.requestUri) {
             throw new httpErrors.BadRequest("ID della fattura mancante.");
         }
 
         const invoice = await this.invoiceService.findById(req.params.id);
-        const exported = await this.invoiceService.exportToFIC(user, invoice);
 
-        return res.status(200).send(exported);
+        try {
+            const exported = await this.invoiceService.exportToFIC(user, invoice, {
+                action: FicMessage.CREATE_OR_UPDATE_INVOICE,
+                authorization: req.header("Authorization"),
+                requestUri: req.body.requestUri
+            });
+
+            return res.status(200).send(exported);
+        } catch (err) {
+            if(err.message === FicMessage.GET_AUTHORIZATION_URL) {
+                return res.status(200).send({ ficAuthorizationUri: err.ficAuthorizationUri });
+            }
+            throw err;
+        }
     }
 
     public async bulkExportToFIC(req: Request, res: Response) {
         const user = await this.authService.adminOnly(req);
-        await this.invoiceService.bulkExportToFIC(user, true);
+
+        if (!req.body.requestUri) {
+            throw new httpErrors.BadRequest("ID della fattura mancante.");
+        }
+
+        try {
+            await this.invoiceService.bulkExportToFIC(user, true, {
+                action: FicMessage.CREATE_OR_UPDATE_INVOICE,
+                authorization: req.header("Authorization"),
+                requestUri: req.body.requestUri
+            });
+        } catch (err) {
+            if(err.message === FicMessage.GET_AUTHORIZATION_URL) {
+                return res.status(200).send({ ficAuthorizationUri: err.ficAuthorizationUri });
+            }
+            throw err;
+        }
+
         return res.status(200).send({
             message: "La procedura di esportazione su Fatture in Cloud è iniziata correttamente."
         });
