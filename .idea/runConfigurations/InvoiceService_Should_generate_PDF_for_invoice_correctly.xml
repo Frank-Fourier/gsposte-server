@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="InvoiceService.Should generate PDF for invoice correctly" type="mocha-javascript-test-runner" nameIsGenerated="true">
-    <node-interpreter>project</node-interpreter>
+    <node-interpreter>$USER_HOME$/.nodenv/versions/14.21.3/bin/node</node-interpreter>
     <node-options />
     <mocha-package>$PROJECT_DIR$/node_modules/mocha</mocha-package>
     <working-directory>$PROJECT_DIR$</working-directory>
