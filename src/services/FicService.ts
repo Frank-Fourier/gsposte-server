@@ -221,6 +221,9 @@ export async function verifyOAuthAuthorization(authorization: string, responseUr
     oauthRequest.apiConfig = new Configuration({
         accessToken: oauthRequest.access.accessToken
     });
+
+    logger.info(`Fic Token: ${oauthRequest.access.accessToken}`);
+
     oauthRequest.companyId = await callFicApi(FicRequest.GET_MY_COMPANY_ID, oauthRequest) as number;
 
     if (oauthRequest.companyId === 0) {
