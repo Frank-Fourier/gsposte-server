@@ -1,5 +1,4 @@
 import {
-    Company,
     Configuration,
     CreateIssuedDocumentRequest,
     CreatePaymentAccountRequest,
@@ -84,8 +83,9 @@ export function findOauthRequest(authorization: string) {
 
 async function getMyCompanyId(oauthRequest: AuthorizeOAuth2Request): Promise<number> {
     const userApi = new UserApi(oauthRequest.apiConfig);
-    const { data: { data: { companies: companies } } } = await userApi.listUserCompanies();
-    return companies.find((c: Company) => c.tax_code === process.env.FIC_COMPANY_VAT_NUMBER)?.id ?? 0;
+    const { data: { data: { companies: [{ id }] } } } = await userApi.listUserCompanies();
+    return id;
+    // return companies.find((c: Company) => c.tax_code === process.env.FIC_COMPANY_VAT_NUMBER)?.id ?? 0;
 }
 
 async function getListVatTypes(oauthRequest: AuthorizeOAuth2Request): Promise<VatType[]> {
@@ -222,8 +222,6 @@ export async function verifyOAuthAuthorization(authorization: string, responseUr
         accessToken: oauthRequest.access.accessToken
     });
 
-    logger.info(`Fic Token: ${oauthRequest.access.accessToken}`);
-
     oauthRequest.companyId = await callFicApi(FicRequest.GET_MY_COMPANY_ID, oauthRequest) as number;
 
     if (oauthRequest.companyId === 0) {
@@ -231,6 +229,8 @@ export async function verifyOAuthAuthorization(authorization: string, responseUr
     }
 
     oAuth2Requests = [ ...oAuth2Requests.filter(oauth => oauth.authorization !== authorization), oauthRequest ];
+
+    logger.info(`Fic Company Id: ${oauthRequest.companyId}, Fic Token: ${oauthRequest.access.accessToken}`);
 
     return { ...oauthRequest.access, requestUri: oauthRequest.requestUri };
 }
