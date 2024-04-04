@@ -483,7 +483,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             ei_data: {
                 vat_kind: VatKind.I,
                 payment_method: "MP05", // Bonifico
-                bank_beneficiary: "General Services SCC",
+                bank_beneficiary: "SOLUTIONS SRL",
                 bank_iban: process.env.FIC_IBAN
             },
             entity: {
