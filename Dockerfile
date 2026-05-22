@@ -33,12 +33,13 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 # Cache layer: lockfile-only first
 COPY package.json yarn.lock .npmrc ./
 
-RUN corepack enable && \
-    yarn install --frozen-lockfile --network-timeout 600000
+# yarn classic è già preinstallato in node:16-bookworm-slim
+RUN yarn install --frozen-lockfile --network-timeout 600000
 
 # Sorgenti
 COPY tsconfig.json ./
 COPY tslint.json ./
+COPY provisions.json ./
 COPY src ./src
 COPY public ./public
 
