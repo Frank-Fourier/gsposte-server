@@ -1,9 +1,15 @@
 node_modules/
 dist/
+*.tsbuildinfo
 
-# Local .env* files
-.env.local
-.env.*.local
+# Env files — NIENTE segreti in git.
+# I file `.env.production`, `.env.development`, `.env.test` storicamente
+# committati in questo repo contengono credenziali ormai morte (Postel,
+# FIC, SendGrid, SMS, ecc) della società precedente, vanno rimossi
+# dalla history (BFG / git-filter-repo).
+.env
+.env.*
+!.env.example
 
 # Assets
 test/assets/pdf/GSTESTPDF21/postel.pdf

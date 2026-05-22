@@ -1,0 +1,55 @@
+# Env files: vengono dal compose, MAI nell'immagine
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Dependencies (le reinstalla il builder)
+node_modules/
+
+# Test
+test/
+
+# Dati persistenti (montati come volume dal compose)
+public/pdf/
+public/invoices/
+public/xlsx/
+public/attachments/
+public/logs/
+public/images/
+
+# Editor / OS
+.idea/
+.vscode/
+.history/
+.DS_Store
+Thumbs.db
+
+# Lock files alternativi
+package-lock.json
+pnpm-lock.yaml
+
+# CI
+.github/
+.gitlab-ci.yml
+
+# Vecchio scaffolding
+pm2.json
+nodemon.json
+Dockerfile
+
+# Docs
+README.md
+*.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Logs
+*.log
