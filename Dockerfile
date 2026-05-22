@@ -14,7 +14,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Stage 1: builder
 # ──────────────────────────────────────────────────────────────────────────────
-FROM node:16-bookworm-slim AS builder
+FROM node:26-bookworm-slim AS builder
 
 WORKDIR /build
 
@@ -53,7 +53,7 @@ RUN yarn install --frozen-lockfile --production --network-timeout 600000 && \
 # ──────────────────────────────────────────────────────────────────────────────
 # Stage 2: runtime
 # ──────────────────────────────────────────────────────────────────────────────
-FROM node:16-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 
 WORKDIR /usr/src/app
 
