@@ -4,6 +4,11 @@ import { array, Decoder, number, object, optional, string } from "@mojotech/json
 import uniqueValidator from "mongoose-unique-validator";
 import { generateRandomCode } from "@utils/random";
 import { InvoiceModel } from "@models/InvoiceModel";
+import {
+    RevenueShareOverride,
+    revenueShareOverrideDecoder,
+    RevenueShareOverrideSchema
+} from "@models/RevenueShareSettingModel";
 
 export enum UserRoles {
     ROLE_USER = "ROLE_USER",
@@ -104,6 +109,7 @@ export interface User {
     recipientsGift?: number
     provisionPayments?: Array<ProvisionPayment>
     smsName?: string
+    revenueShare?: RevenueShareOverride
     isAdmin?: () => boolean
     isTvManager?: () => boolean
 }
@@ -122,6 +128,7 @@ export const userDecoder: Decoder<User> = object({
         amount: number(),
     }))),
     avatar: optional(string()),
+    revenueShare: optional(revenueShareOverrideDecoder),
 });
 
 /**
@@ -222,6 +229,9 @@ export const UserSchema = new Schema<User>({
             }
         }, { _id: false })
     }],
+    revenueShare: {
+        type: RevenueShareOverrideSchema,
+    },
 }, {
     timestamps: {
         createdAt: true,

@@ -26,6 +26,7 @@ import { StatsRoute } from "@routes/StatsRoute";
 import { ProvisionRoute } from "@routes/ProvisionRoute";
 import { NoticeRoute } from "@routes/NoticeRoute";
 import { ImageRoute } from "@routes/ImageRoute";
+import { RevenueShareRoute } from "@routes/RevenueShareRoute";
 
 import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
@@ -36,6 +37,7 @@ import { queryJob, uploadJob } from "@utils/cron";
 import { initializeWebSocketServer, WebSocketClient } from "@utils/websockets";
 import { initSentry, setupSentryErrorHandlers, setupSentryHandlers } from "@utils/sentry";
 import { FicRoute } from "@routes/FicRoute";
+import { RevenueShareService } from "@services/RevenueShareService";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -60,6 +62,7 @@ export class ExpressServer {
         ioc.resolve(NoticeRoute),
         ioc.resolve(ImageRoute),
         ioc.resolve(FicRoute),
+        ioc.resolve(RevenueShareRoute),
     ];
 
     constructor(
@@ -76,6 +79,7 @@ export class ExpressServer {
         this.setupRoutes();
         this.setupPassport();
         this.setupSystemUser();
+        this.setupRevenueShareSingleton();
         this.setupSwagger();
         this.setupCronJobs();
         this.setupWebSocket();
@@ -128,6 +132,20 @@ export class ExpressServer {
     private async setupSystemUser() {
         if (await this.userService.countDocuments() > 0 || isTestEnv()) return;
         await generateSystemUser();
+    }
+
+    /**
+     * Bootstrap idempotente del singleton RevenueShareSetting "global".
+     * Eseguito a ogni boot — se esiste già non fa nulla. Su prima installazione
+     * crea il singleton con i 2 beneficiari di partenza (Solutions Srl + FFT, 50/50).
+     */
+    private async setupRevenueShareSingleton() {
+        if (isTestEnv()) return;
+        try {
+            await ioc.resolve(RevenueShareService).bootstrapIfMissing();
+        } catch (err) {
+            logger.error("[RevenueShare] Bootstrap fallito:", err);
+        }
     }
 
     private setupSwagger() {

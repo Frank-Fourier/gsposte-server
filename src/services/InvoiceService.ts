@@ -23,6 +23,7 @@ import { NoticeService } from "@services/NoticeService";
 import { RecipientDocument } from "@models/RecipientModel";
 import { authorizeOAuth2, callFicApi, findOauthRequest } from "@services/FicService";
 import { AuthorizeOAuth2ClientRequest, FicMessage, FicRequest } from "@models/FicModel";
+import { RevenueShareService } from "@services/RevenueShareService";
 import {
     CreateIssuedDocumentRequest,
     IssuedDocument,
@@ -54,6 +55,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
     @inject(UserService) private userService: UserService;
     @inject(LetterService) private letterService: LetterService;
     @inject(NoticeService) private noticeService: NoticeService;
+    @inject(RevenueShareService) private revenueShareService: RevenueShareService;
 
     private exportFlags: ExportFlags = {
         exporting: false,
@@ -284,6 +286,19 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         const updated = await this.updateById(invoice.id, {
             $set: { paid: !invoice.paid, paymentDate: Date.now() }
         });
+
+        // Revenue-share snapshot: scolpiamo la suddivisione del margine al primo
+        // passaggio a paid=true. Idempotente (lo service controlla splitSnapshot).
+        if (updated.paid) {
+            try {
+                await this.revenueShareService.snapshotOnInvoicePaid(updated);
+            } catch (err) {
+                // Non bloccare il pagamento: se lo snapshot fallisce (es. singleton
+                // mancante per qualche race condition al primo boot), logghiamo e
+                // procediamo comunque con l'aggiornamento FIC.
+                logger.error(`[RevenueShare] snapshotOnInvoicePaid fallito per invoice ${updated.id}`, err);
+            }
+        }
 
         if (!!updated.fic) {
             logger.info(`Updating invoice: ${updated.id} on fic`);

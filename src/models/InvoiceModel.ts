@@ -6,6 +6,13 @@ import { array, Decoder, number, object, optional, string } from "@mojotech/json
 import { ioc } from "@ioc";
 import { SenderService } from "@services/SenderService";
 import { UserService } from "@services/UserService";
+import {
+    RevenueShareOverride,
+    revenueShareOverrideDecoder,
+    RevenueShareOverrideSchema,
+    RevenueShareSnapshot,
+    RevenueShareSnapshotSchema
+} from "@models/RevenueShareSettingModel";
 
 export interface InvoiceFIC {
     id: number
@@ -79,6 +86,7 @@ export interface Invoice {
     taxable: number
     iva: number
     total: number
+    revenueShare?: RevenueShareOverride
 }
 export interface InvoiceDocument extends Invoice, Document {
     userName?: string;
@@ -88,6 +96,7 @@ export interface InvoiceDocument extends Invoice, Document {
     number: number
     paymentDate?: Date | string
     fic: InvoiceFIC
+    splitSnapshot?: RevenueShareSnapshot
     createdAt?: Date
     updatedAt?: Date
 }
@@ -99,6 +108,7 @@ export const invoiceDecoder: Decoder<Invoice> = object({
     taxable: number(),
     iva: number(),
     total: number(),
+    revenueShare: optional(revenueShareOverrideDecoder),
 });
 
 export const InvoiceSchema = new Schema({
@@ -157,6 +167,12 @@ export const InvoiceSchema = new Schema({
             type: String
         },
     }),
+    revenueShare: {
+        type: RevenueShareOverrideSchema,
+    },
+    splitSnapshot: {
+        type: RevenueShareSnapshotSchema,
+    },
 }, {
     timestamps: {
         createdAt: true,

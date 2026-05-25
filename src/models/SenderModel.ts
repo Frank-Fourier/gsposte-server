@@ -12,6 +12,11 @@ import { Person } from "../posteway";
 import { insert } from "@utils/misc";
 import { LetterKind } from "@models/LetterModel";
 import { InvoiceModel } from "@models/InvoiceModel";
+import {
+    RevenueShareOverride,
+    revenueShareOverrideDecoder,
+    RevenueShareOverrideSchema
+} from "@models/RevenueShareSettingModel";
 
 /**
  * @swagger
@@ -96,6 +101,7 @@ export interface Sender {
     iban?: string
     swift?: string
     info?: string
+    revenueShare?: RevenueShareOverride
 }
 export interface SenderDocument extends Sender, Document {
     address: AddressDocument
@@ -119,6 +125,7 @@ export const senderDecoder: Decoder<Sender> = object({
     iban: optional(string()),
     swift: optional(string()),
     info: optional(string()),
+    revenueShare: optional(revenueShareOverrideDecoder),
 });
 
 export function mapSenderToPerson(sender: SenderDocument, letterKind: LetterKind, notes?: string, useAddressAR?: boolean): Person {
@@ -218,7 +225,10 @@ export const SenderSchema = new Schema<Sender>({
         type: String,
         trim: true,
         maxlength: 500,
-    }
+    },
+    revenueShare: {
+        type: RevenueShareOverrideSchema,
+    },
 }, {
     timestamps: {
         createdAt: true,
