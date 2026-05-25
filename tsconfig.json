@@ -25,7 +25,8 @@
             "@models/*": [ "models/*" ],
             "@services/*": [ "services/*" ],
             "@controllers/*": [ "controllers/*" ],
-            "@routes/*": [ "routes/*" ]
+            "@routes/*": [ "routes/*" ],
+            "@templates/*": [ "templates/*" ]
         }
     },
     "include": [

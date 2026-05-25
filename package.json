@@ -22,7 +22,7 @@
 	"dependencies": {
 		"@fattureincloud/fattureincloud-ts-sdk": "^2.0.7",
 		"@mojotech/json-type-validation": "^3.1.0",
-		"@sendgrid/mail": "^7.4.2",
+		"resend": "1.0.0",
 		"@sentry/node": "^6.13.3",
 		"@sentry/tracing": "^6.13.3",
 		"bcryptjs": "^2.4.3",
@@ -98,6 +98,9 @@
 		"nodemon": "^2.0.2",
 		"supertest": "^4.0.2"
 	},
+	"resolutions": {
+		"type-fest": "0.21.3"
+	},
 	"_moduleAliases": {
 		"@ioc": "dist/src/inversify.config.js",
 		"@server": "dist/src/server.js",
@@ -105,6 +108,7 @@
 		"@models": "dist/src/models",
 		"@services": "dist/src/services",
 		"@controllers": "dist/src/controllers",
-		"@routes": "dist/src/routes"
+		"@routes": "dist/src/routes",
+		"@templates": "dist/src/templates"
 	}
 }

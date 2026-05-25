@@ -33,8 +33,10 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 # Cache layer: lockfile-only first
 COPY package.json yarn.lock .npmrc ./
 
-# yarn classic è già preinstallato in node:16-bookworm-slim
-RUN yarn install --frozen-lockfile --network-timeout 600000
+# yarn classic è già preinstallato in node:16-bookworm-slim.
+# --ignore-engines: alcune deps transitive di resend@1 (es. js-cookie@3.0.7)
+# dichiarano "engines.node >=20" ma sono puro JS e girano benissimo su Node 16.
+RUN yarn install --frozen-lockfile --network-timeout 600000 --ignore-engines
 
 # Sorgenti
 COPY tsconfig.json ./
@@ -47,7 +49,7 @@ COPY public ./public
 RUN yarn build
 
 # Riduci a sole prod deps
-RUN yarn install --frozen-lockfile --production --network-timeout 600000 && \
+RUN yarn install --frozen-lockfile --production --network-timeout 600000 --ignore-engines && \
     yarn cache clean
 
 # ──────────────────────────────────────────────────────────────────────────────
