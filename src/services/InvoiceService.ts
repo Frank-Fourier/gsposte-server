@@ -445,7 +445,6 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             })),
             smsPrice: formatCurrency(smsPrice.reduce((acc, cur) => acc + cur, 0)),
             taxable: formatCurrency(invoice.taxable),
-            discount: formatCurrency(invoice.discount ?? 0),
             iva: formatCurrency(invoice.iva),
             total: formatCurrency(invoice.total)
         });

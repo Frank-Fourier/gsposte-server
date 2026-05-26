@@ -4,14 +4,17 @@ import { inject } from "inversify";
 import { RevenueShareController } from "@controllers/RevenueShareController";
 
 /**
- * Tutti gli endpoint sotto /revenue-share sono admin-only (controllo nel controller).
- * Path:
+ * Endpoint admin-only (controllo nel controller):
  *   /revenue-share/global                          GET, PUT
  *   /revenue-share/invoice/:id/preview             GET
  *   /revenue-share/report/payouts                  GET (query ?from=YYYY-MM-DD&to=YYYY-MM-DD)
  *   /revenue-share/report/payouts/export           GET (stesso range, restituisce xlsx)
  *
- * Non esistono più endpoint di override per Sender / User / Invoice: la admin fee
+ * Endpoint user-level (accessibili a chiunque sia loggato):
+ *   /revenue-share/me/earnings                     GET (query ?from&?to opzionali)
+ *   /revenue-share/me/earnings/export              GET (xlsx)
+ *
+ * Non esistono endpoint di override per Sender / User / Invoice: la admin fee
  * è SEMPRE accreditata al User che ha emesso la fattura (invoice.user) usando
  * i dati `payoutFiscalCode` / `payoutIban` del suo profilo + `User.adminFeePercent`
  * come eventuale override personale della % rispetto al default globale.
@@ -156,6 +159,64 @@ export class RevenueShareRoute extends Route {
                 method: RequestMethod.GET,
                 requiresAuth: true,
                 handler: (req, res) => this.controller.payoutReportXlsx(req, res),
+            },
+            /**
+             * @swagger
+             *
+             * /revenue-share/me/earnings:
+             *   get:
+             *     tags: [ "Revenue Share" ]
+             *     description: |
+             *       Compensi (admin fee) maturati dall'utente loggato sulle proprie
+             *       fatture pagate. `from` e `to` opzionali (default = anno solare corrente).
+             *     security: [ { JWT: [] } ]
+             *     parameters:
+             *       - name: from
+             *         in: query
+             *         required: false
+             *         type: string
+             *         description: YYYY-MM-DD
+             *       - name: to
+             *         in: query
+             *         required: false
+             *         type: string
+             *         description: YYYY-MM-DD
+             *     responses:
+             *       200: { description: My earnings report JSON }
+             */
+            {
+                path: "/me/earnings",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.controller.myEarnings(req, res),
+            },
+            /**
+             * @swagger
+             *
+             * /revenue-share/me/earnings/export:
+             *   get:
+             *     tags: [ "Revenue Share" ]
+             *     description: Stesso myEarnings ma serializzato come xlsx (2 fogli).
+             *     security: [ { JWT: [] } ]
+             *     parameters:
+             *       - name: from
+             *         in: query
+             *         required: false
+             *         type: string
+             *       - name: to
+             *         in: query
+             *         required: false
+             *         type: string
+             *     produces:
+             *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+             *     responses:
+             *       200: { description: xlsx file }
+             */
+            {
+                path: "/me/earnings/export",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.controller.myEarningsXlsx(req, res),
             },
         ]);
     }

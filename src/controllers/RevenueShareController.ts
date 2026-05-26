@@ -178,6 +178,66 @@ export class RevenueShareController {
         return res.status(200).send(buf);
     }
 
+    // ─── MY EARNINGS (user-level, accessibile a chiunque sia loggato) ─────
+
+    /**
+     * Compensi (admin fee del 30%, o % configurata sul singolo User) maturati
+     * dall'utente loggato sulle proprie fatture pagate nel range.
+     * `from` e `to` sono opzionali (YYYY-MM-DD): default = anno solare corrente.
+     */
+    public async myEarnings(req: Request, res: Response) {
+        const user = await this.authService.getUserFromRequest(req);
+        const { from, to } = this.parseOptionalDateRange(req);
+        const report = await this.revenueShareService.myEarnings(user.id, from, to);
+        return res.status(200).send(report);
+    }
+
+    public async myEarningsXlsx(req: Request, res: Response) {
+        const user = await this.authService.getUserFromRequest(req);
+        const { from, to } = this.parseOptionalDateRange(req);
+        const report = await this.revenueShareService.myEarnings(user.id, from, to);
+
+        const wb = XLSX.utils.book_new();
+
+        const summaryRows: any[][] = [];
+        summaryRows.push([ "I MIEI COMPENSI" ]);
+        summaryRows.push([ "Periodo", `${report.from} → ${report.to}` ]);
+        summaryRows.push([ "Fatture", report.invoiceCount ]);
+        summaryRows.push([ "Imponibile totale €", Number(report.totalTaxable.toFixed(2)) ]);
+        summaryRows.push([ "Compenso totale €", Number(report.totalEarnings.toFixed(2)) ]);
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+        wsSummary["!cols"] = [ { wch: 26 }, { wch: 30 } ];
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Riepilogo");
+
+        const detailHeader = [
+            "N. Fattura", "Data Pagamento", "Cliente",
+            "Imponibile €", "% Fee", "Compenso €",
+        ];
+        const detailRows: any[][] = [ detailHeader ];
+        for (const d of report.details) {
+            detailRows.push([
+                d.invoiceNumber,
+                d.paymentDate,
+                d.senderName,
+                Number(d.taxable.toFixed(2)),
+                Number((d.adminFeePercentApplied ?? 0).toFixed(2)),
+                Number(d.amount.toFixed(2)),
+            ]);
+        }
+        const wsDetails = XLSX.utils.aoa_to_sheet(detailRows);
+        wsDetails["!cols"] = [
+            { wch: 12 }, { wch: 14 }, { wch: 30 },
+            { wch: 14 }, { wch: 10 }, { wch: 14 },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsDetails, "Dettaglio");
+
+        const buf: Buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+        const filename = `my_earnings_${report.from}_${report.to}.xlsx`;
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        return res.status(200).send(buf);
+    }
+
     private parseDateRange(req: Request): { from: Date, to: Date } {
         const fromStr = (req.query.from as string) || req.body?.from;
         const toStr = (req.query.to as string) || req.body?.to;
@@ -190,6 +250,23 @@ export class RevenueShareController {
             throw new httpErrors.BadRequest("Formato date non valido. Usa YYYY-MM-DD.");
         }
         return { from, to };
+    }
+
+    private parseOptionalDateRange(req: Request): { from?: Date, to?: Date } {
+        const fromStr = (req.query.from as string) || req.body?.from;
+        const toStr = (req.query.to as string) || req.body?.to;
+        const result: { from?: Date, to?: Date } = {};
+        if (fromStr) {
+            const d = moment(fromStr, "YYYY-MM-DD", true).startOf("day").toDate();
+            if (isNaN(d.getTime())) throw new httpErrors.BadRequest("Formato 'from' non valido. Usa YYYY-MM-DD.");
+            result.from = d;
+        }
+        if (toStr) {
+            const d = moment(toStr, "YYYY-MM-DD", true).endOf("day").toDate();
+            if (isNaN(d.getTime())) throw new httpErrors.BadRequest("Formato 'to' non valido. Usa YYYY-MM-DD.");
+            result.to = d;
+        }
+        return result;
     }
 
 }

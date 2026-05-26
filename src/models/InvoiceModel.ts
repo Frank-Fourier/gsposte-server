@@ -79,7 +79,6 @@ export interface Invoice {
     user?: string | UserDocument
     sender: string | SenderDocument
     letters: Array<string | LetterDocument>
-    discount?: number
     taxable: number
     iva: number
     total: number
@@ -100,7 +99,6 @@ export const invoiceDecoder: Decoder<Invoice> = object({
     user: optional(string()),
     sender: string(),
     letters: array(string()),
-    discount: optional(number()),
     taxable: number(),
     iva: number(),
     total: number(),
@@ -127,10 +125,6 @@ export const InvoiceSchema = new Schema({
     }],
     number: {
         type: Number,
-    },
-    discount: {
-        type: Number,
-        default: 0,
     },
     taxable: {
         type: Number,

@@ -72,6 +72,26 @@ export interface PayoutReport {
     totalResiduo: number
 }
 
+export interface MyEarningsDetail {
+    invoiceId: string
+    invoiceNumber: string
+    paymentDate: string
+    senderName: string
+    taxable: number
+    adminFeePercentApplied: number
+    amount: number
+}
+
+export interface MyEarningsReport {
+    userId: string
+    from: string
+    to: string
+    invoiceCount: number
+    totalTaxable: number
+    totalEarnings: number
+    details: MyEarningsDetail[]
+}
+
 @provide(RevenueShareService)
 export class RevenueShareService {
 
@@ -101,7 +121,7 @@ export class RevenueShareService {
                 {
                     name: "Solutions S.r.l.",
                     fiscalCode: "08886590721",
-                    iban: process.env.FIC_IBAN || "IT44Z0306941473100000015095",
+                    iban: process.env.SOLUTIONS_IBAN || process.env.FIC_IBAN || "IT44Z0306941473100000015095",
                     percent: 80,
                     isCompany: true,
                 },
@@ -411,10 +431,11 @@ export class RevenueShareService {
 
             for (const line of snap.lines) {
                 if (line.type === "admin-fee") {
-                    const key = line.userId ?? `__unknown_${line.name}`;
+                    const userIdStr = line.userId ? String(line.userId) : "";
+                    const key = userIdStr || `__unknown_${line.name}`;
                     if (!adminAgg[key]) {
                         adminAgg[key] = {
-                            userId: line.userId ?? "",
+                            userId: userIdStr,
                             name: line.name,
                             fiscalCode: line.fiscalCode,
                             iban: line.iban ?? "",
@@ -430,10 +451,11 @@ export class RevenueShareService {
                     adminAgg[key].amount = this.round2(adminAgg[key].amount + line.amount);
                 } else {
                     // type === "share"
-                    const key = line.beneficiaryId ?? `__unknown_${line.name}`;
+                    const beneficiaryIdStr = line.beneficiaryId ? String(line.beneficiaryId) : "";
+                    const key = beneficiaryIdStr || `__unknown_${line.name}`;
                     if (!residualAgg[key]) {
                         residualAgg[key] = {
-                            beneficiaryId: line.beneficiaryId ?? "",
+                            beneficiaryId: beneficiaryIdStr,
                             name: line.name,
                             fiscalCode: line.fiscalCode,
                             iban: line.iban ?? "",
@@ -462,6 +484,65 @@ export class RevenueShareService {
             totalTaxable: this.round2(totalTaxable),
             totalAdminFee: this.round2(totalAdminFee),
             totalResiduo: this.round2(totalResiduo),
+        };
+    }
+
+    /**
+     * Aggregato dei compensi (admin fee) maturati da un singolo User
+     * sul range [from..to] di paymentDate, considerando solo invoice
+     * paid=true con splitSnapshot scolpito.
+     *
+     * Default range: anno solare corrente.
+     */
+    public async myEarnings(userId: string, from?: Date, to?: Date): Promise<MyEarningsReport> {
+        const rangeFrom = from ?? moment().startOf("year").toDate();
+        const rangeTo = to ?? moment().endOf("year").toDate();
+        if (rangeFrom > rangeTo) {
+            throw new httpErrors.BadRequest("La data 'from' deve essere precedente o uguale a 'to'.");
+        }
+
+        const invoices = await InvoiceModel.find({
+            user: userId,
+            paid: true,
+            paymentDate: { $gte: rangeFrom, $lte: rangeTo },
+            splitSnapshot: { $exists: true },
+        }).populate("sender").sort({ paymentDate: 1 });
+
+        const details: MyEarningsDetail[] = [];
+        let totalTaxable = 0;
+        let totalEarnings = 0;
+
+        for (const inv of invoices) {
+            const snap = inv.splitSnapshot;
+            if (!snap) continue;
+            const adminLine = snap.lines.find(l =>
+                l.type === "admin-fee" && String(l.userId ?? "") === userId
+            );
+            if (!adminLine) continue;
+
+            totalTaxable += snap.basisValue;
+            totalEarnings += adminLine.amount;
+
+            const senderObj = inv.sender as any;
+            details.push({
+                invoiceId: inv.id,
+                invoiceNumber: `${inv.number}/${moment(inv.createdAt).year()}`,
+                paymentDate: moment(inv.paymentDate).format("YYYY-MM-DD"),
+                senderName: senderObj?.businessName ?? senderObj?.name ?? inv.senderName ?? "—",
+                taxable: snap.basisValue,
+                adminFeePercentApplied: snap.adminFeePercentApplied ?? adminLine.percent,
+                amount: adminLine.amount,
+            });
+        }
+
+        return {
+            userId,
+            from: moment(rangeFrom).format("YYYY-MM-DD"),
+            to: moment(rangeTo).format("YYYY-MM-DD"),
+            invoiceCount: details.length,
+            totalTaxable: this.round2(totalTaxable),
+            totalEarnings: this.round2(totalEarnings),
+            details,
         };
     }
 

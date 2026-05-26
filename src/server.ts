@@ -78,6 +78,7 @@ export class ExpressServer {
         this.setupPassport();
         this.setupSystemUser();
         this.setupRevenueShareSingleton();
+        this.setupSchemaMigrations();
         this.setupSwagger();
         this.setupCronJobs();
         this.setupWebSocket();
@@ -149,6 +150,28 @@ export class ExpressServer {
             await ioc.resolve(RevenueShareService).bootstrapIfMissing();
         } catch (err) {
             logger.error("[RevenueShare] Bootstrap fallito:", err);
+        }
+    }
+
+    /**
+     * Migrazioni di schema idempotenti, eseguite a ogni boot.
+     * Servono a portare i documenti pre-esistenti allo schema corrente
+     * dopo refactor che hanno rimosso campi (es. Invoice.discount).
+     */
+    private async setupSchemaMigrations() {
+        if (isTestEnv()) return;
+        try {
+            // Mongoose in strict mode filtra i campi non più presenti nello schema:
+            // usiamo la collection raw per fare l'$unset di campi rimossi.
+            const res = await mongoose.connection.collection("invoices").updateMany(
+                { discount: { $exists: true } },
+                { $unset: { discount: "" } } as any,
+            );
+            if (res?.modifiedCount) {
+                logger.info(`[Migrations] Invoice.discount $unset on ${res.modifiedCount} docs`);
+            }
+        } catch (err) {
+            logger.error("[Migrations] schema migrations failed:", err);
         }
     }
 
