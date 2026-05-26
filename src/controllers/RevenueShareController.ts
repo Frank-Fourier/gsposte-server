@@ -31,6 +31,19 @@ export class RevenueShareController {
         return res.status(200).send(setting);
     }
 
+    /**
+     * Body atteso:
+     * {
+     *   beneficiaries: [ { _id?, name, fiscalCode, iban?, percent, isCompany? }, ... ],
+     *   adminFee?: { kind: "percent"|"fixed", value, beneficiaryId, label? } | null
+     * }
+     *
+     * - beneficiaries: SEMPRE richiesto (almeno 1 elemento)
+     * - adminFee: opzionale. Tre semantiche:
+     *     undefined / non presente → mantieni quella attuale
+     *     null esplicito          → rimuovi adminFee (no fee globale)
+     *     oggetto                  → setta/sovrascrivi adminFee
+     */
     public async updateGlobal(req: Request, res: Response) {
         const user = await this.authService.adminOnly(req);
         if (!Array.isArray(req.body.beneficiaries)) {
@@ -38,6 +51,7 @@ export class RevenueShareController {
         }
         const updated = await this.revenueShareService.updateGlobalSetting(
             req.body.beneficiaries,
+            req.body.adminFee, // può essere undefined, null, o un oggetto AdminFee
             user.id
         );
         return res.status(200).send(updated);
@@ -55,6 +69,8 @@ export class RevenueShareController {
         const user = await this.authService.adminOnly(req);
         const sender = await this.senderService.findById(req.params.id);
         const normalized = await this.revenueShareService.validateAndNormalizeOverride({
+            adminFee: req.body.adminFee,
+            disableAdminFee: req.body.disableAdminFee,
             beneficiaries: req.body.beneficiaries,
             note: req.body.note,
             overriddenBy: user.id,
@@ -84,6 +100,8 @@ export class RevenueShareController {
         const admin = await this.authService.adminOnly(req);
         const targetUser = await this.userService.findById(req.params.id);
         const normalized = await this.revenueShareService.validateAndNormalizeOverride({
+            adminFee: req.body.adminFee,
+            disableAdminFee: req.body.disableAdminFee,
             beneficiaries: req.body.beneficiaries,
             note: req.body.note,
             overriddenBy: admin.id,
@@ -116,6 +134,8 @@ export class RevenueShareController {
             throw new httpErrors.BadRequest("Non è possibile modificare lo split di una fattura già pagata. Lo snapshot è immutabile.");
         }
         const normalized = await this.revenueShareService.validateAndNormalizeOverride({
+            adminFee: req.body.adminFee,
+            disableAdminFee: req.body.disableAdminFee,
             beneficiaries: req.body.beneficiaries,
             note: req.body.note,
             overriddenBy: admin.id,
@@ -181,47 +201,70 @@ export class RevenueShareController {
 
         const wb = XLSX.utils.book_new();
 
+        // ─── Foglio 1: Riepilogo per beneficiario ───
+        // Colonne separate per Admin Fee € / Share € / Totale € (così l'amministratore
+        // vede subito la quota "compenso amministratore" distinta da quella di partecipazione).
         const summaryRows = [
-            [ "Beneficiario", "Codice Fiscale / P.IVA", "IBAN", "N. Fatture", "Totale € (imponibile)" ],
+            [ "Beneficiario", "Codice Fiscale / P.IVA", "IBAN", "N. Fatture", "Admin Fee € (imponibile)", "Quota Residuo € (imponibile)", "Totale € (imponibile)" ],
             ...report.summary.map(r => [
                 r.name,
                 r.fiscalCode,
                 r.iban || "",
                 r.invoiceCount,
+                Number(r.adminFeeAmount.toFixed(2)),
+                Number(r.shareAmount.toFixed(2)),
                 Number(r.totalAmount.toFixed(2)),
-            ])
+            ]),
+            [], // separatore
+            [ "TOTALI", "", "", report.totalInvoices, Number(report.totalAdminFee.toFixed(2)), Number(report.totalResiduo.toFixed(2)), Number(report.totalTaxable.toFixed(2)) ]
         ];
         const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
         wsSummary["!cols"] = [
-            { wch: 32 }, { wch: 22 }, { wch: 30 }, { wch: 10 }, { wch: 20 },
+            { wch: 32 }, { wch: 22 }, { wch: 30 }, { wch: 10 },
+            { wch: 22 }, { wch: 22 }, { wch: 22 },
         ];
         XLSX.utils.book_append_sheet(wb, wsSummary, "Riepilogo");
 
+        // ─── Foglio 2: Dettaglio per fattura ───
+        // Per ogni beneficiario, 2 colonne: "<name> Admin Fee €" e "<name> Quota Residuo €".
+        const beneficiaryHeaderColumns: string[] = [];
+        for (const b of report.summary) {
+            beneficiaryHeaderColumns.push(`${b.name} Admin Fee €`);
+            beneficiaryHeaderColumns.push(`${b.name} Quota Residuo €`);
+        }
+
         const detailHeader = [
-            "N. Fattura", "Data Pagamento", "Cliente", "Imponibile €", "Fonte Split",
+            "N. Fattura", "Data Pagamento", "Cliente", "Imponibile €", "Admin Fee €", "Residuo €", "Fonte Split",
         ];
-        const beneficiaryColumns = report.summary.map(r => `${r.name} €`);
-        const detailRows = [
-            [ ...detailHeader, ...beneficiaryColumns ],
-            ...report.details.map(d => {
-                const baseRow: any[] = [
-                    d.invoiceNumber,
-                    d.paymentDate,
-                    d.senderName,
-                    Number(d.taxable.toFixed(2)),
-                    d.source,
-                ];
-                for (const bSummary of report.summary) {
-                    const line = d.lines.find(l => l.beneficiaryId === bSummary.beneficiaryId);
-                    baseRow.push(line ? Number(line.amount.toFixed(2)) : 0);
-                }
-                return baseRow;
-            })
-        ];
+        const detailRows: any[][] = [ [ ...detailHeader, ...beneficiaryHeaderColumns ] ];
+
+        for (const d of report.details) {
+            const baseRow: any[] = [
+                d.invoiceNumber,
+                d.paymentDate,
+                d.senderName,
+                Number(d.taxable.toFixed(2)),
+                Number(d.adminFeeAmount.toFixed(2)),
+                Number(d.residuoValue.toFixed(2)),
+                d.source,
+            ];
+            for (const bSummary of report.summary) {
+                const adminLine = d.lines.find(
+                    l => l.beneficiaryId === bSummary.beneficiaryId && l.type === "admin-fee"
+                );
+                const shareLine = d.lines.find(
+                    l => l.beneficiaryId === bSummary.beneficiaryId && l.type === "share"
+                );
+                baseRow.push(adminLine ? Number(adminLine.amount.toFixed(2)) : 0);
+                baseRow.push(shareLine ? Number(shareLine.amount.toFixed(2)) : 0);
+            }
+            detailRows.push(baseRow);
+        }
+
         const wsDetails = XLSX.utils.aoa_to_sheet(detailRows);
         wsDetails["!cols"] = [
-            { wch: 12 }, { wch: 14 }, { wch: 30 }, { wch: 14 }, { wch: 12 },
-            ...beneficiaryColumns.map(() => ({ wch: 16 } as XLSX.ColInfo)),
+            { wch: 12 }, { wch: 14 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
+            ...beneficiaryHeaderColumns.map(() => ({ wch: 22 } as XLSX.ColInfo)),
         ];
         XLSX.utils.book_append_sheet(wb, wsDetails, "Dettaglio");
 

@@ -10,6 +10,7 @@ import { InvoiceDocument, InvoiceModel } from "@models/InvoiceModel";
 import { UserDocument } from "@models/UserModel";
 import { SenderDocument } from "@models/SenderModel";
 import {
+    AdminFee,
     RevenueShareBeneficiary,
     RevenueShareOverride,
     RevenueShareOverrideBeneficiary,
@@ -20,10 +21,13 @@ import {
 } from "@models/RevenueShareSettingModel";
 
 /**
- * Tolleranza ±0.10 sulla somma delle percentuali in input.
+ * Tolleranza ±0.10 sulla somma delle percentuali in input dei beneficiaries[].
  * Esempio: 33.33 + 33.33 + 33.33 = 99.99 → accettato.
  * Esempio: 33.30 + 33.30 + 33.30 = 99.90 → ancora accettato.
  * Esempio: 50.00 + 49.00 = 99.00 → rifiutato (probabile errore di input).
+ *
+ * NB: la fee amministratore NON entra in questa validazione — può essere
+ * qualsiasi % 0..100 o un importo fisso. È un costo separato, non una "quota".
  */
 const PERCENT_SUM_TOLERANCE = 0.10;
 
@@ -37,6 +41,8 @@ export interface ResolvedSplit {
     source: SplitSource
     lines: RevenueShareSnapshotLine[]
     basisValue: number
+    adminFeeAmount: number
+    residuoValue: number
 }
 
 export interface PayoutReportRow {
@@ -45,7 +51,9 @@ export interface PayoutReportRow {
     fiscalCode: string
     iban?: string
     invoiceCount: number
-    totalAmount: number
+    adminFeeAmount: number   // somma delle righe type="admin-fee"
+    shareAmount: number      // somma delle righe type="share"
+    totalAmount: number      // adminFeeAmount + shareAmount
 }
 
 export interface PayoutReportDetail {
@@ -54,8 +62,10 @@ export interface PayoutReportDetail {
     paymentDate: string
     senderName: string
     taxable: number
+    adminFeeAmount: number
+    residuoValue: number
     source: string
-    lines: Array<{ beneficiaryId: string, name: string, amount: number }>
+    lines: Array<{ type: string, beneficiaryId: string, name: string, amount: number }>
 }
 
 export interface PayoutReport {
@@ -65,6 +75,8 @@ export interface PayoutReport {
     details: PayoutReportDetail[]
     totalInvoices: number
     totalTaxable: number
+    totalAdminFee: number
+    totalResiduo: number
 }
 
 @provide(RevenueShareService)
@@ -75,18 +87,25 @@ export class RevenueShareService {
 
     /**
      * Bootstrap idempotente del singleton globale. Chiamato al boot da server.ts.
-     * Se il singleton non esiste, lo crea con i 2 beneficiari di partenza
-     * (Solutions S.r.l. 50% — Francesco Filippo Tandoi 50%).
+     *
+     * Se il singleton non esiste, lo crea con il modello standard:
+     *   - 2 beneficiari: Solutions S.r.l. + Francesco Filippo Tandoi
+     *   - Admin fee: 30% del taxable → Francesco Filippo Tandoi
+     *   - Residuo ripartito: Solutions 80%, Tandoi 20%
+     *
      * NON sovrascrive mai un singleton esistente.
      */
     public async bootstrapIfMissing(): Promise<void> {
         const existing = await RevenueShareSettingModel.findOne({ name: "global" });
         if (existing) {
-            logger.info(`[RevenueShare] Singleton 'global' già presente (${existing.beneficiaries.length} beneficiari).`);
+            logger.info(`[RevenueShare] Singleton 'global' già presente (${existing.beneficiaries.length} beneficiari, adminFee=${!!existing.adminFee}).`);
             return;
         }
 
-        await RevenueShareSettingModel.create({
+        // Creiamo prima senza adminFee (dobbiamo conoscere gli _id che Mongoose
+        // genererà sui beneficiaries), poi facciamo un secondo save con
+        // adminFee.beneficiaryId puntato a Tandoi.
+        const seed = await RevenueShareSettingModel.create({
             name: "global",
             basis: "taxable",
             beneficiaries: [
@@ -94,26 +113,36 @@ export class RevenueShareService {
                     name: "Solutions S.r.l.",
                     fiscalCode: "08886590721",
                     iban: process.env.FIC_IBAN || "IT44Z0306941473100000015095",
-                    percent: 50,
+                    percent: 80,
                     isCompany: true,
                 },
                 {
                     name: "Francesco Filippo Tandoi",
                     fiscalCode: "TNDFNC93B08A662A",
                     iban: "",
-                    percent: 50,
+                    percent: 20,
                     isCompany: false,
                 }
             ],
             tieBreakCursor: 0,
         });
-        logger.info("[RevenueShare] Singleton 'global' creato con 2 beneficiari (50/50). IBAN del professionista da popolare via PUT /revenue-share/global.");
+
+        const tandoi = seed.beneficiaries.find(b => b.fiscalCode === "TNDFNC93B08A662A");
+        if (!tandoi) {
+            logger.error("[RevenueShare] Bootstrap: impossibile trovare Tandoi nel seed appena creato. Singleton senza adminFee.");
+            return;
+        }
+
+        seed.set("adminFee", {
+            kind: "percent",
+            value: 30,
+            beneficiaryId: (tandoi as any)._id,
+            label: "Compenso amministratore",
+        });
+        await seed.save();
+        logger.info("[RevenueShare] Singleton 'global' creato. AdminFee 30% → Tandoi. Residuo: Solutions 80%, Tandoi 20%. IBAN del professionista da popolare via PUT /revenue-share/global.");
     }
 
-    /**
-     * Restituisce il singleton globale. Lancia se non esiste (non dovrebbe MAI
-     * accadere dopo il bootstrap).
-     */
     public async getGlobalSetting(): Promise<RevenueShareSettingDocument> {
         const s = await RevenueShareSettingModel.findOne({ name: "global" });
         if (!s) {
@@ -124,13 +153,16 @@ export class RevenueShareService {
 
     /**
      * Aggiorna il singleton globale.
-     *  - Valida la somma delle percentuali (tolleranza ±0.10)
+     *  - Valida la somma delle percentuali dei beneficiaries[] (tolleranza ±0.10)
      *  - Tronca i percent a 2 decimali
-     *  - Re-attribuisce stabilmente gli _id ai beneficiari "vecchi" se il nome+CF combaciano
+     *  - Valida adminFee (se presente): kind ∈ {percent,fixed}, value ≥ 0,
+     *    beneficiaryId presente in beneficiaries[]
+     *  - Re-attribuisce stabilmente gli _id ai beneficiari "vecchi" se nome+CF combaciano
      *    (così gli override su Sender/User che referenziano vecchi beneficiaryId restano validi)
      */
     public async updateGlobalSetting(
         beneficiaries: RevenueShareBeneficiary[],
+        adminFee: AdminFee | null | undefined,
         updatedBy?: string
     ): Promise<RevenueShareSettingDocument> {
         if (!beneficiaries || beneficiaries.length < 1) {
@@ -159,6 +191,16 @@ export class RevenueShareService {
         });
 
         current.set("beneficiaries", merged);
+
+        if (adminFee === null) {
+            // null esplicito → rimuovi adminFee
+            current.set("adminFee", undefined);
+        } else if (adminFee !== undefined) {
+            const validated = this.validateAdminFee(adminFee, merged);
+            current.set("adminFee", validated);
+        }
+        // undefined → non tocca
+
         if (updatedBy) {
             current.set("updatedBy", updatedBy);
         }
@@ -167,23 +209,65 @@ export class RevenueShareService {
 
     /**
      * Lookup priority: invoice > sender > user > global.
-     * Risolve i percent override, valida che ogni beneficiaryId esista nel singleton,
-     * applica largest-remainder + tie-break round-robin, restituisce le righe in €.
+     * Esegue la risoluzione completa a 2 livelli:
+     *   1. Calcola admin fee effettiva
+     *   2. Calcola residuo = taxable - adminFee
+     *   3. Risolve i percent override sul residuo, applica largest-remainder + tie-break
      */
     public async resolve(invoice: InvoiceDocument): Promise<ResolvedSplit> {
         const setting = await this.getGlobalSetting();
         const basisValue = invoice.taxable;
 
-        const { override, source } = await this.findEffectiveOverride(invoice);
+        const { effectiveAdminFee, splitOverride, source } = await this.findEffectiveOverride(invoice, setting);
 
-        const lines: RevenueShareSnapshotLine[] = override
-            ? this.computeFromOverride(setting, override, basisValue)
-            : this.computeFromSetting(setting, basisValue);
+        // ─── Step 1: Admin Fee ────────────────────────────────────────────
+        let adminFeeAmount = 0;
+        let adminFeeLine: RevenueShareSnapshotLine | undefined;
 
-        // Largest-remainder: applico round-robin del centesimo dispari avanzando il cursore.
-        // Persisto il nuovo cursore così la prossima fattura "ruota" naturalmente.
+        if (effectiveAdminFee) {
+            const rawFee = effectiveAdminFee.kind === "percent"
+                ? basisValue * effectiveAdminFee.value / 100
+                : effectiveAdminFee.value;
+
+            adminFeeAmount = this.round2(rawFee);
+
+            if (adminFeeAmount > basisValue) {
+                logger.warn(`[RevenueShare] AdminFee ${adminFeeAmount}€ eccede taxable ${basisValue}€ — capping al 100% del taxable (invoice ${invoice.id ?? "?"}).`);
+                adminFeeAmount = this.round2(basisValue);
+            }
+
+            const feeBeneficiary = setting.beneficiaries.find(
+                b => (b as any)._id?.toString() === effectiveAdminFee.beneficiaryId?.toString()
+            );
+            if (!feeBeneficiary) {
+                throw new httpErrors.InternalServerError(
+                    `Admin fee referenzia il beneficiario ${effectiveAdminFee.beneficiaryId} che non è (più) presente nel singleton.`
+                );
+            }
+            adminFeeLine = {
+                type: "admin-fee",
+                kind: effectiveAdminFee.kind,
+                beneficiaryId: (feeBeneficiary as any)._id?.toString(),
+                name: feeBeneficiary.name,
+                fiscalCode: feeBeneficiary.fiscalCode,
+                iban: feeBeneficiary.iban,
+                percent: effectiveAdminFee.kind === "percent" ? this.round2(effectiveAdminFee.value) : 0,
+                amount: adminFeeAmount,
+                label: effectiveAdminFee.label || "Compenso amministratore",
+            };
+        }
+
+        const residuoValue = this.round2(basisValue - adminFeeAmount);
+
+        // ─── Step 2: Ripartizione del residuo ─────────────────────────────
+        // Edge case: residuo === 0 (admin fee = 100% del taxable). I beneficiaries[]
+        // ricevono comunque righe con amount=0 per coerenza del report.
+        const shareLines: RevenueShareSnapshotLine[] = splitOverride
+            ? this.computeShareFromOverride(setting, splitOverride, residuoValue)
+            : this.computeShareFromSetting(setting, residuoValue);
+
         const cursor = setting.tieBreakCursor ?? 0;
-        const adjusted = this.largestRemainder(lines, basisValue, cursor);
+        const adjusted = this.largestRemainder(shareLines, residuoValue, cursor);
 
         if (adjusted.cursorAdvanced) {
             setting.tieBreakCursor = (cursor + 1) % Math.max(adjusted.lines.length, 1);
@@ -192,154 +276,208 @@ export class RevenueShareService {
             );
         }
 
-        return { source, lines: adjusted.lines, basisValue };
+        const allLines = adminFeeLine ? [ adminFeeLine, ...adjusted.lines ] : adjusted.lines;
+
+        return {
+            source,
+            lines: allLines,
+            basisValue: this.round2(basisValue),
+            adminFeeAmount,
+            residuoValue,
+        };
     }
 
     /**
-     * Risoluzione della "fonte effettiva" dell'override seguendo la priorità:
+     * Risoluzione della "fonte effettiva" seguendo la priorità:
      *   invoice.revenueShare → sender.revenueShare → user.revenueShare → global
-     * Restituisce il primo override valido trovato (con tutti i beneficiaryId
-     * esistenti nel singleton). Se un override è "rotto" (riferimento a un beneficiario
-     * che non esiste più nel singleton), lo salta e prosegue nella catena.
+     *
+     * Per ognuno calcolo:
+     *  - effectiveAdminFee:
+     *      override.disableAdminFee=true → null (forza no fee)
+     *      override.adminFee presente   → override.adminFee
+     *      fallthrough                  → global.adminFee
+     *  - splitOverride:
+     *      override.beneficiaries presente e non vuoto → quello (validato)
+     *      fallthrough                                  → undefined (usa global.beneficiaries)
+     *
+     * La "source" è SEMPRE quella del livello più alto che ha contribuito CON
+     * QUALCOSA (admin fee o split). Se un override esiste ma non ha né adminFee
+     * né beneficiaries, viene saltato.
      */
     private async findEffectiveOverride(
-        invoice: InvoiceDocument
-    ): Promise<{ override?: RevenueShareOverride, source: SplitSource }> {
-        const setting = await this.getGlobalSetting();
+        invoice: InvoiceDocument,
+        setting: RevenueShareSettingDocument
+    ): Promise<{
+        effectiveAdminFee?: AdminFee
+        splitOverride?: RevenueShareOverrideBeneficiary[]
+        source: SplitSource
+    }> {
         const validBeneficiaryIds = new Set(
             setting.beneficiaries.map(b => (b as any)._id?.toString())
         );
 
-        const isOverrideValid = (o?: RevenueShareOverride) =>
-            !!o
-            && Array.isArray(o.beneficiaries)
-            && o.beneficiaries.length >= 1
-            && o.beneficiaries.every(b => validBeneficiaryIds.has(b.beneficiaryId?.toString()));
+        const isOverrideMeaningful = (o?: RevenueShareOverride) => {
+            if (!o) return false;
+            const hasAdminTouch = !!o.adminFee || o.disableAdminFee === true;
+            const hasSplitTouch = Array.isArray(o.beneficiaries) && o.beneficiaries.length > 0;
+            return hasAdminTouch || hasSplitTouch;
+        };
 
-        if (isOverrideValid(invoice.revenueShare)) {
-            return { override: invoice.revenueShare, source: "invoice" };
+        const isSplitOverrideValid = (bs?: RevenueShareOverrideBeneficiary[]) =>
+            Array.isArray(bs)
+            && bs.length >= 1
+            && bs.every(b => validBeneficiaryIds.has(b.beneficiaryId?.toString()));
+
+        const isAdminFeeOverrideValid = (af?: AdminFee) =>
+            !!af
+            && [ "percent", "fixed" ].includes(af.kind)
+            && typeof af.value === "number"
+            && af.value >= 0
+            && validBeneficiaryIds.has(af.beneficiaryId?.toString());
+
+        const collect = (o: RevenueShareOverride) => {
+            let effectiveAdminFee: AdminFee | undefined = setting.adminFee
+                ? (this.cloneAdminFee(setting.adminFee))
+                : undefined;
+
+            if (o.disableAdminFee === true) {
+                effectiveAdminFee = undefined;
+            } else if (isAdminFeeOverrideValid(o.adminFee)) {
+                effectiveAdminFee = o.adminFee;
+            }
+
+            const splitOverride = isSplitOverrideValid(o.beneficiaries) ? o.beneficiaries : undefined;
+
+            return { effectiveAdminFee, splitOverride };
+        };
+
+        // Invoice
+        if (isOverrideMeaningful(invoice.revenueShare)) {
+            const { effectiveAdminFee, splitOverride } = collect(invoice.revenueShare);
+            return { effectiveAdminFee, splitOverride, source: "invoice" };
         }
 
+        // Sender
         let sender: SenderDocument | undefined;
         if (invoice.sender) {
             const senderId = (invoice.sender as any)._id ?? invoice.sender;
             sender = await this.senderService.findById(senderId.toString()).catch(() => undefined);
         }
-        if (isOverrideValid(sender?.revenueShare)) {
-            return { override: sender.revenueShare, source: "sender" };
+        if (isOverrideMeaningful(sender?.revenueShare)) {
+            const { effectiveAdminFee, splitOverride } = collect(sender.revenueShare);
+            return { effectiveAdminFee, splitOverride, source: "sender" };
         }
 
+        // User
         let user: UserDocument | undefined;
         if (invoice.user) {
             const userId = (invoice.user as any)._id ?? invoice.user;
             user = await this.userService.findById(userId.toString()).catch(() => undefined);
         }
-        if (isOverrideValid(user?.revenueShare)) {
-            return { override: user.revenueShare, source: "user" };
+        if (isOverrideMeaningful(user?.revenueShare)) {
+            const { effectiveAdminFee, splitOverride } = collect(user.revenueShare);
+            return { effectiveAdminFee, splitOverride, source: "user" };
         }
 
-        return { source: "global" };
+        // Global
+        return {
+            effectiveAdminFee: setting.adminFee ? this.cloneAdminFee(setting.adminFee) : undefined,
+            source: "global",
+        };
+    }
+
+    private cloneAdminFee(af: AdminFee): AdminFee {
+        return {
+            kind: af.kind,
+            value: af.value,
+            beneficiaryId: (af.beneficiaryId as any)?.toString?.() ?? af.beneficiaryId,
+            label: af.label,
+        };
     }
 
     /**
-     * Builds righe di split partendo dal singleton (caso: nessun override).
+     * Builds righe di split partendo dal singleton (caso: nessun override di split).
      * Le righe contengono importi NON ancora aggiustati con largest-remainder.
      */
-    private computeFromSetting(
+    private computeShareFromSetting(
         setting: RevenueShareSettingDocument,
-        basisValue: number
+        residuoValue: number
     ): RevenueShareSnapshotLine[] {
         return setting.beneficiaries.map(b => ({
+            type: "share",
+            kind: "percent",
             beneficiaryId: (b as any)._id?.toString(),
             name: b.name,
             fiscalCode: b.fiscalCode,
             iban: b.iban,
             percent: this.round2(b.percent),
-            amount: basisValue * b.percent / 100,
+            amount: residuoValue * b.percent / 100,
         }));
     }
 
-    /**
-     * Builds righe di split partendo da un override valido.
-     * Recupera i dati anagrafici (name/fiscalCode/iban) dal singleton via beneficiaryId.
-     */
-    private computeFromOverride(
+    private computeShareFromOverride(
         setting: RevenueShareSettingDocument,
-        override: RevenueShareOverride,
-        basisValue: number
+        override: RevenueShareOverrideBeneficiary[],
+        residuoValue: number
     ): RevenueShareSnapshotLine[] {
-        return override.beneficiaries.map(ob => {
+        return override.map(ob => {
             const b = setting.beneficiaries.find(
                 x => (x as any)._id?.toString() === ob.beneficiaryId?.toString()
             );
             if (!b) {
-                // Non dovrebbe accadere perché findEffectiveOverride filtra,
-                // ma teniamo il branch difensivo.
                 throw new httpErrors.InternalServerError(
                     `Beneficiario ${ob.beneficiaryId} referenziato da un override ma non più presente nel singleton.`
                 );
             }
             return {
+                type: "share",
+                kind: "percent",
                 beneficiaryId: (b as any)._id?.toString(),
                 name: b.name,
                 fiscalCode: b.fiscalCode,
                 iban: b.iban,
                 percent: this.round2(ob.percent),
-                amount: basisValue * ob.percent / 100,
+                amount: residuoValue * ob.percent / 100,
             };
         });
     }
 
     /**
-     * Largest remainder method (Hare/Hamilton) applicato sui centesimi.
-     *
-     * Problema: con basisValue = 100.00 € e 3 beneficiari al 33.33%, la somma esatta
-     * sarebbe 33.33 × 3 = 99.99 → manca 1 centesimo. Idem con 50/50 su € 100.01.
-     *
-     * Soluzione (equità nel lungo periodo):
-     *  1. Converto ogni amount in centesimi (intero).
-     *  2. Calcolo la differenza tra totale-atteso e somma-arrotondata.
-     *  3. Ordino i resti decimali in ordine decrescente.
-     *  4. Distribuisco 1 cent a ciascuno dei primi N beneficiari (N = differenza).
-     *     In caso di pareggio sul resto, uso il cursor globale per scegliere a chi va.
-     *
-     * Restituisce le righe con amount aggiustato (sommano esattamente a basisValue al cent)
-     * e un flag cursorAdvanced che indica se il cursore va avanzato.
+     * Largest remainder method (Hare/Hamilton) applicato sui centesimi del residuo.
+     * Vedi commento dettagliato sulla versione singola (lo stesso ragionamento di
+     * prima del refactor admin-fee — qui agisce solo sulle righe type="share").
      */
     private largestRemainder(
         lines: RevenueShareSnapshotLine[],
-        basisValue: number,
+        targetValue: number,
         cursor: number
     ): { lines: RevenueShareSnapshotLine[], cursorAdvanced: boolean } {
-        if (lines.length === 0) {
-            return { lines, cursorAdvanced: false };
+        if (lines.length === 0 || targetValue <= 0) {
+            // Residuo 0 → tutte le righe a 0 € (caso fee = 100% taxable)
+            return {
+                lines: lines.map(l => ({ ...l, amount: 0 })),
+                cursorAdvanced: false
+            };
         }
 
-        const targetCents = Math.round(basisValue * 100);
-        const exact = lines.map(l => l.amount * 100); // centesimi frazionari
+        const targetCents = Math.round(targetValue * 100);
+        const exact = lines.map(l => l.amount * 100);
         const floors = exact.map(x => Math.floor(x));
         const sumFloors = floors.reduce((a, b) => a + b, 0);
-        const diff = targetCents - sumFloors; // centesimi da redistribuire (può essere 0..n)
+        const diff = targetCents - sumFloors;
 
         if (diff <= 0) {
-            // Nessun arrotondamento necessario (o basisValue=0).
             const adjusted = lines.map((l, i) => ({ ...l, amount: floors[i] / 100 }));
             return { lines: adjusted, cursorAdvanced: false };
         }
 
-        // Resti frazionari per ogni riga
         const remainders = exact.map((x, i) => ({ idx: i, rem: x - floors[i] }));
-
-        // Ordino per resto frazionario DESCENDING, tie-break by cursor offset (round-robin)
         remainders.sort((a, b) => {
             if (b.rem !== a.rem) return b.rem - a.rem;
-            // Tie-break: il primo che vince è quello la cui posizione è (cursor + k) mod n
-            // più "vicina a cursor". Concretamente: ordino per ((idx - cursor + n) % n).
             const n = lines.length;
             return ((a.idx - cursor + n) % n) - ((b.idx - cursor + n) % n);
         });
 
-        // Distribuisco diff centesimi ai primi `diff` beneficiari secondo l'ordine sopra
         const bonus = new Array(lines.length).fill(0);
         for (let i = 0; i < diff && i < remainders.length; i++) {
             bonus[remainders[i].idx] = 1;
@@ -349,7 +487,6 @@ export class RevenueShareService {
             ...l,
             amount: (floors[i] + bonus[i]) / 100,
         }));
-
         return { lines: adjusted, cursorAdvanced: true };
     }
 
@@ -363,7 +500,7 @@ export class RevenueShareService {
             return invoice;
         }
         if (invoice.splitSnapshot) {
-            return invoice; // immutabile, già scolpita
+            return invoice;
         }
         if (!invoice.taxable || invoice.taxable <= 0) {
             logger.warn(`[RevenueShare] Invoice ${invoice.id} con taxable<=0, nessuno snapshot.`);
@@ -377,12 +514,14 @@ export class RevenueShareService {
             lines: resolved.lines,
             basis: "taxable",
             basisValue: resolved.basisValue,
+            adminFeeAmount: resolved.adminFeeAmount,
+            residuoValue: resolved.residuoValue,
             computedAt: new Date(),
         };
 
         invoice.set("splitSnapshot", snapshot);
         const saved = await invoice.save();
-        logger.info(`[RevenueShare] Snapshot scritto su invoice ${invoice.id} (source=${resolved.source}, basisValue=${resolved.basisValue}€).`);
+        logger.info(`[RevenueShare] Snapshot scritto su invoice ${invoice.id} (source=${resolved.source}, taxable=${resolved.basisValue}€, adminFee=${resolved.adminFeeAmount}€, residuo=${resolved.residuoValue}€).`);
         return saved;
     }
 
@@ -390,7 +529,7 @@ export class RevenueShareService {
      * Report dei payout su un range di date (paymentDate inclusivo).
      * Considera SOLO invoice con paid=true e splitSnapshot presente.
      * Le fatture marcate paid PRIMA dell'introduzione di questo sistema non hanno
-     * splitSnapshot e vengono escluse (decisione: "ignora storico pre-go-live").
+     * splitSnapshot e vengono escluse.
      */
     public async payoutReport(from: Date, to: Date): Promise<PayoutReport> {
         if (from > to) {
@@ -404,14 +543,22 @@ export class RevenueShareService {
         }).populate("sender").sort({ paymentDate: 1 });
 
         const aggregate: { [beneficiaryId: string]: PayoutReportRow } = {};
+        // Map separata per non sporcare PayoutReportRow con campi di servizio.
+        // Conta la fattura una volta sola per beneficiario anche se la stessa
+        // fattura ha 2 righe per quel beneficiario (admin-fee + share).
+        const invoicesSeenByBeneficiary: { [beneficiaryId: string]: Set<string> } = {};
         const details: PayoutReportDetail[] = [];
         let totalTaxable = 0;
+        let totalAdminFee = 0;
+        let totalResiduo = 0;
 
         for (const inv of invoices) {
             const snap = inv.splitSnapshot;
             if (!snap) continue;
 
             totalTaxable += snap.basisValue;
+            totalAdminFee += snap.adminFeeAmount ?? 0;
+            totalResiduo += snap.residuoValue ?? snap.basisValue;
 
             const senderObj = inv.sender as SenderDocument;
             details.push({
@@ -420,8 +567,11 @@ export class RevenueShareService {
                 paymentDate: moment(inv.paymentDate).format("YYYY-MM-DD"),
                 senderName: senderObj?.businessName ?? senderObj?.name ?? inv.senderName ?? "—",
                 taxable: snap.basisValue,
+                adminFeeAmount: snap.adminFeeAmount ?? 0,
+                residuoValue: snap.residuoValue ?? snap.basisValue,
                 source: snap.source,
                 lines: snap.lines.map(l => ({
+                    type: l.type,
                     beneficiaryId: l.beneficiaryId,
                     name: l.name,
                     amount: l.amount,
@@ -437,11 +587,23 @@ export class RevenueShareService {
                         fiscalCode: line.fiscalCode,
                         iban: line.iban,
                         invoiceCount: 0,
+                        adminFeeAmount: 0,
+                        shareAmount: 0,
                         totalAmount: 0,
                     };
+                    invoicesSeenByBeneficiary[key] = new Set();
                 }
-                aggregate[key].invoiceCount += 1;
-                aggregate[key].totalAmount = this.round2(aggregate[key].totalAmount + line.amount);
+                if (!invoicesSeenByBeneficiary[key].has(inv.id)) {
+                    invoicesSeenByBeneficiary[key].add(inv.id);
+                    aggregate[key].invoiceCount += 1;
+                }
+
+                if (line.type === "admin-fee") {
+                    aggregate[key].adminFeeAmount = this.round2(aggregate[key].adminFeeAmount + line.amount);
+                } else {
+                    aggregate[key].shareAmount = this.round2(aggregate[key].shareAmount + line.amount);
+                }
+                aggregate[key].totalAmount = this.round2(aggregate[key].adminFeeAmount + aggregate[key].shareAmount);
             }
         }
 
@@ -452,47 +614,91 @@ export class RevenueShareService {
             details,
             totalInvoices: invoices.length,
             totalTaxable: this.round2(totalTaxable),
+            totalAdminFee: this.round2(totalAdminFee),
+            totalResiduo: this.round2(totalResiduo),
         };
     }
 
     /**
      * Validazione di un override (Sender/User/Invoice).
-     *  - Tronca i percent a 2 decimali
-     *  - Verifica somma ≈ 100 (tolleranza ±0.10)
-     *  - Verifica che tutti i beneficiaryId esistano nel singleton
+     * Tutti i campi sono opzionali — un override può limitarsi a sovrascrivere
+     * solo l'admin fee, solo lo split, o entrambi.
      */
     public async validateAndNormalizeOverride(
         override: RevenueShareOverride
     ): Promise<RevenueShareOverride> {
-        if (!override || !Array.isArray(override.beneficiaries) || override.beneficiaries.length < 1) {
-            throw new httpErrors.BadRequest("L'override deve contenere almeno un beneficiario.");
+        if (!override) {
+            throw new httpErrors.BadRequest("Override mancante.");
+        }
+        const hasAdminFee = !!override.adminFee;
+        const hasDisable = override.disableAdminFee === true;
+        const hasBeneficiaries = Array.isArray(override.beneficiaries) && override.beneficiaries.length > 0;
+        if (!hasAdminFee && !hasDisable && !hasBeneficiaries) {
+            throw new httpErrors.BadRequest("L'override deve specificare almeno uno tra adminFee, disableAdminFee=true, beneficiaries.");
         }
 
         const setting = await this.getGlobalSetting();
-        const validIds = new Set(
-            setting.beneficiaries.map(b => (b as any)._id?.toString())
-        );
+        const validIds = new Set(setting.beneficiaries.map(b => (b as any)._id?.toString()));
 
-        const normalized: RevenueShareOverrideBeneficiary[] = override.beneficiaries.map(b => {
-            if (!b.beneficiaryId || !Types.ObjectId.isValid(b.beneficiaryId)) {
-                throw new httpErrors.BadRequest(`beneficiaryId '${b.beneficiaryId}' non valido.`);
-            }
-            if (!validIds.has(b.beneficiaryId.toString())) {
-                throw new httpErrors.BadRequest(`Beneficiario ${b.beneficiaryId} non presente nelle settings globali.`);
-            }
-            if (typeof b.percent !== "number" || b.percent < 0 || b.percent > 100) {
-                throw new httpErrors.BadRequest(`Percentuale non valida per beneficiario ${b.beneficiaryId}.`);
-            }
-            return { beneficiaryId: b.beneficiaryId.toString(), percent: this.round2(b.percent) };
-        });
+        let normalizedBeneficiaries: RevenueShareOverrideBeneficiary[] | undefined;
+        if (hasBeneficiaries) {
+            normalizedBeneficiaries = override.beneficiaries.map(b => {
+                if (!b.beneficiaryId || !Types.ObjectId.isValid(b.beneficiaryId)) {
+                    throw new httpErrors.BadRequest(`beneficiaryId '${b.beneficiaryId}' non valido.`);
+                }
+                if (!validIds.has(b.beneficiaryId.toString())) {
+                    throw new httpErrors.BadRequest(`Beneficiario ${b.beneficiaryId} non presente nelle settings globali.`);
+                }
+                if (typeof b.percent !== "number" || b.percent < 0 || b.percent > 100) {
+                    throw new httpErrors.BadRequest(`Percentuale non valida per beneficiario ${b.beneficiaryId}.`);
+                }
+                return { beneficiaryId: b.beneficiaryId.toString(), percent: this.round2(b.percent) };
+            });
+            this.assertPercentSumValid(normalizedBeneficiaries.map(b => b.percent));
+        }
 
-        this.assertPercentSumValid(normalized.map(b => b.percent));
+        let normalizedAdminFee: AdminFee | undefined;
+        if (hasAdminFee) {
+            normalizedAdminFee = this.validateAdminFee(override.adminFee, setting.beneficiaries as any[]);
+        }
 
         return {
-            beneficiaries: normalized,
+            adminFee: normalizedAdminFee,
+            disableAdminFee: hasDisable ? true : undefined,
+            beneficiaries: normalizedBeneficiaries,
             note: override.note,
             overriddenBy: override.overriddenBy,
             overriddenAt: new Date(),
+        };
+    }
+
+    /**
+     * Valida + normalizza un oggetto AdminFee. Lancia BadRequest in caso di anomalie.
+     */
+    private validateAdminFee(adminFee: AdminFee, beneficiaries: any[]): AdminFee {
+        if (!adminFee.kind || ![ "percent", "fixed" ].includes(adminFee.kind)) {
+            throw new httpErrors.BadRequest("adminFee.kind deve essere 'percent' o 'fixed'.");
+        }
+        if (typeof adminFee.value !== "number" || isNaN(adminFee.value) || adminFee.value < 0) {
+            throw new httpErrors.BadRequest("adminFee.value deve essere un numero ≥ 0.");
+        }
+        if (adminFee.kind === "percent" && adminFee.value > 100) {
+            throw new httpErrors.BadRequest("adminFee.value (percent) non può eccedere 100.");
+        }
+        if (!adminFee.beneficiaryId || !Types.ObjectId.isValid(adminFee.beneficiaryId)) {
+            throw new httpErrors.BadRequest(`adminFee.beneficiaryId '${adminFee.beneficiaryId}' non valido.`);
+        }
+        const found = beneficiaries.find(
+            b => (b._id?.toString() ?? b._id) === adminFee.beneficiaryId?.toString()
+        );
+        if (!found) {
+            throw new httpErrors.BadRequest(`adminFee.beneficiaryId ${adminFee.beneficiaryId} non presente in beneficiaries.`);
+        }
+        return {
+            kind: adminFee.kind,
+            value: this.round2(adminFee.value),
+            beneficiaryId: adminFee.beneficiaryId.toString(),
+            label: adminFee.label || "Compenso amministratore",
         };
     }
 
@@ -500,7 +706,7 @@ export class RevenueShareService {
         const sum = percents.reduce((a, b) => a + b, 0);
         if (Math.abs(sum - 100) > PERCENT_SUM_TOLERANCE) {
             throw new httpErrors.BadRequest(
-                `La somma delle percentuali deve essere ≈ 100 (tolleranza ±${PERCENT_SUM_TOLERANCE}). Attuale: ${this.round2(sum)}.`
+                `La somma delle percentuali dei beneficiari del residuo deve essere ≈ 100 (tolleranza ±${PERCENT_SUM_TOLERANCE}). Attuale: ${this.round2(sum)}.`
             );
         }
     }

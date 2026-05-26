@@ -137,7 +137,9 @@ export class ExpressServer {
     /**
      * Bootstrap idempotente del singleton RevenueShareSetting "global".
      * Eseguito a ogni boot — se esiste già non fa nulla. Su prima installazione
-     * crea il singleton con i 2 beneficiari di partenza (Solutions Srl + FFT, 50/50).
+     * crea il singleton con il modello a 2 livelli:
+     *   - AdminFee 30% del taxable → Francesco Filippo Tandoi
+     *   - Residuo (70%): Solutions S.r.l. 80% / Tandoi 20%
      */
     private async setupRevenueShareSingleton() {
         if (isTestEnv()) return;
