@@ -7,9 +7,6 @@ import { ioc } from "@ioc";
 import { SenderService } from "@services/SenderService";
 import { UserService } from "@services/UserService";
 import {
-    RevenueShareOverride,
-    revenueShareOverrideDecoder,
-    RevenueShareOverrideSchema,
     RevenueShareSnapshot,
     RevenueShareSnapshotSchema
 } from "@models/RevenueShareSettingModel";
@@ -86,7 +83,6 @@ export interface Invoice {
     taxable: number
     iva: number
     total: number
-    revenueShare?: RevenueShareOverride
 }
 export interface InvoiceDocument extends Invoice, Document {
     userName?: string;
@@ -108,7 +104,6 @@ export const invoiceDecoder: Decoder<Invoice> = object({
     taxable: number(),
     iva: number(),
     total: number(),
-    revenueShare: optional(revenueShareOverrideDecoder),
 });
 
 export const InvoiceSchema = new Schema({
@@ -167,9 +162,6 @@ export const InvoiceSchema = new Schema({
             type: String
         },
     }),
-    revenueShare: {
-        type: RevenueShareOverrideSchema,
-    },
     splitSnapshot: {
         type: RevenueShareSnapshotSchema,
     },

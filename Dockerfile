@@ -41,7 +41,6 @@ RUN yarn install --frozen-lockfile --network-timeout 600000 --ignore-engines
 # Sorgenti
 COPY tsconfig.json ./
 COPY tslint.json ./
-COPY provisions.json ./
 COPY src ./src
 COPY public ./public
 

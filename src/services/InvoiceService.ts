@@ -93,7 +93,7 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
         }
 
         const errors: Array<{ letter: LetterDocument, error: Error | any }> = [];
-        let taxableSum = 0, giftSum = 0;
+        let taxableSum = 0;
 
         for (const letter of letters) {
             letter.depopulate("sender user");
@@ -115,17 +115,14 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
                 }
 
                 taxableSum += taxable + await this.priceService.calculatePriceSMS(letter);
-                giftSum += letter.recipientsGift ?? 0;
             } catch (err) {
                 errors.push({ letter: letter, error: err });
             }
         }
 
-        const taxableMinusGifts = taxableSum - giftSum;
-        const iva = (taxableMinusGifts * 22) / 100;
-        const granTotal = taxableMinusGifts + iva;
+        const iva = (taxableSum * 22) / 100;
+        const granTotal = taxableSum + iva;
         if (granTotal <= 0) {
-            // Return prematurely: this invoice has no value
             return {
                 invoice: null,
                 errors: []
@@ -137,7 +134,6 @@ export class InvoiceService extends MongoRepository<Invoice, InvoiceDocument> {
             sender: letters[0].sender,
             letters: letters.filter(l => l.sent),
             taxable: parseFloat(taxableSum.toFixed(2)),
-            discount: parseFloat(giftSum.toFixed(2)),
             iva: parseFloat(iva.toFixed(2)),
             total: parseFloat(granTotal.toFixed(2)),
         });

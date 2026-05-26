@@ -47,8 +47,8 @@ export class UserController extends CrudController {
         if (req.body.password) {
             throw new httpErrors.BadRequest("Usare la chiamata PUT /update/password per modificare la password.");
         }
-        if ((req.body.roles || req.body.active || req.body.recipientsGift) && !user.isAdmin()) {
-            throw new httpErrors.Forbidden("Solo gli amministratori possono modificare i campi proibiti (roles, active, recipientsGift).");
+        if ((req.body.roles || req.body.active) && !user.isAdmin()) {
+            throw new httpErrors.Forbidden("Solo gli amministratori possono modificare i campi proibiti (roles, active).");
         }
 
         const updated = await this.userService.updateById(user.id, req.body);

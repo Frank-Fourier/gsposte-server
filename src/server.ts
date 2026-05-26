@@ -23,7 +23,6 @@ import { PriceRoute } from "@routes/PriceRoute";
 import { InvoiceRoute } from "@routes/InvoiceRoute";
 import { TvReportRoute } from "@routes/TvReportRoute";
 import { StatsRoute } from "@routes/StatsRoute";
-import { ProvisionRoute } from "@routes/ProvisionRoute";
 import { NoticeRoute } from "@routes/NoticeRoute";
 import { ImageRoute } from "@routes/ImageRoute";
 import { RevenueShareRoute } from "@routes/RevenueShareRoute";
@@ -58,7 +57,6 @@ export class ExpressServer {
         ioc.resolve(InvoiceRoute),
         ioc.resolve(TvReportRoute),
         ioc.resolve(StatsRoute),
-        ioc.resolve(ProvisionRoute),
         ioc.resolve(NoticeRoute),
         ioc.resolve(ImageRoute),
         ioc.resolve(FicRoute),
@@ -136,10 +134,14 @@ export class ExpressServer {
 
     /**
      * Bootstrap idempotente del singleton RevenueShareSetting "global".
-     * Eseguito a ogni boot — se esiste già non fa nulla. Su prima installazione
-     * crea il singleton con il modello a 2 livelli:
-     *   - AdminFee 30% del taxable → Francesco Filippo Tandoi
-     *   - Residuo (70%): Solutions S.r.l. 80% / Tandoi 20%
+     * Eseguito a ogni boot — se esiste già non fa nulla.
+     *
+     * Default singleton (prima installazione):
+     *   - adminFeePercent: 30
+     *     → va al User (amministratore di condominio) che ha emesso la fattura
+     *   - residualBeneficiaries:
+     *       Solutions S.r.l.            (80% del residuo)
+     *       Francesco Filippo Tandoi    (20% del residuo)
      */
     private async setupRevenueShareSingleton() {
         if (isTestEnv()) return;

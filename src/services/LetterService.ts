@@ -22,7 +22,6 @@ import {
     TrackResponse
 } from "../posteway";
 import { isProdEnv, isTestEnv } from "@utils/system";
-import { ProvisionService } from "@services/ProvisionService";
 import { NoticeKind } from "@models/NoticeModel";
 import { User, UserDocument } from "@models/UserModel";
 import { UserService } from "@services/UserService";
@@ -41,7 +40,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     @inject(SmsService) private sms: SmsService;
     @inject(PosteWayService) private posteway: PosteWayService;
     @inject(PriceService) private priceService: PriceService;
-    @inject(ProvisionService) private provisionService: ProvisionService;
     @inject(NoticeService) private noticeService: NoticeService;
     @inject(UserService) private userService: UserService;
     @inject(MailService) private mailService: MailService;
@@ -53,23 +51,10 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
     }
 
     public async save(letter: Letter, depopulate = true): Promise<LetterDocument> {
-        const user = await this.userService.findById(
+        await this.userService.findById(
             typeof(letter.user) === "string" ? letter.user : (letter.user as UserDocument)._id
         );
-        const recipientsGift = letter.recipientsGift ?? 0;
 
-        if (recipientsGift > letter.recipients.length) {
-            throw new httpErrors.BadRequest(`Non è possibile assegnare più invii omaggio di quanti sono i destinatari.`);
-        }
-        if (user.recipientsGift < recipientsGift) {
-            throw new httpErrors.Forbidden(`Non hai abbastanza invii omaggio. Hai ${user.recipientsGift} invii omaggio nel tuo account.`);
-        }
-
-        // Subtract gifts from user
-        user.recipientsGift -= letter.recipientsGift ?? 0;
-        await user.save();
-
-        // Save the letter
         letter.codePdf = letter.codePdf ?? `GS${generateRandomCode()}`;
         let letterDocument = await (await super.save(letter)).populate("sender recipients").execPopulate();
 
@@ -407,9 +392,8 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             }
 
             logFile?.info(`Letter was tracked correctly:`, track);
-            logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly. Generating its provision...`);
+            logger.info(`[LETTER ${letter.codePdf}] Ok! The letter was sent correctly.`);
 
-            // Send SMS to recipients
             if (letter.smsText) {
                 try {
                     await this.sendSMS(letter);
@@ -417,12 +401,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
                     logFile?.warn("Error while sending SMS to recipients: ", err);
                     logger.warn(`[LETTER ${letter.codePdf}] Error while sending SMS to recipients: `, err);
                 }
-            }
-
-            // Everything went fine, generate provision
-            if (!await this.generateProvision(letter, userId, logFile)) {
-                logFile?.close();
-                return;
             }
 
             // Finally inform the client that this letter is ready
@@ -665,12 +643,6 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             }
         }, false, false);
 
-        // Everything went fine, generate provision
-        if (!await this.generateProvision(letter, user.id, logFile)) {
-            return;
-        }
-
-        // Send SMS to recipients
         if (letter.smsText) {
             await this.sendSMS(letter);
         }
@@ -798,38 +770,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
             throw { message: `Errore durante la chiamata TELEGRAM CONFIRM.`, error: err };
         }
 
-        // Everything went fine, generate provision
-        if (!await this.generateProvision(letter, userId, logFile)) {
-            return;
-        }
-
         return updated;
-    }
-
-    private async generateProvision(letter: LetterDocument, userId: string, logFile?: winston.Logger): Promise<boolean> {
-        try {
-            letter.provision = await this.provisionService.generateProvision(letter);
-            await letter.save();
-            logger.info(`[LETTER ${letter.codePdf}] Provision was generated with ID ${letter.provision.id}.`);
-            return true;
-        } catch (err) {
-            logFile?.error(`Error while generating the provision!`, err);
-            logger.error(`[LETTER ${letter.codePdf}] Error while generating the provision for letter '${letter.codePdf}'! Got this error: `, err);
-
-            // Inform the user that there was an error
-            this.noticeService.save({
-                user: userId,
-                title: "Invio effettuato - Generazione cashback fallita",
-                content: `${letter.isTelegramma() ? 'Il telegramma' : 'La lettera'} '${letter.codePdf}' è stata inviata correttamente, ma non è stato possibile generare il suo cashback.`,
-                data: {
-                    error: err,
-                    ...insert(!letter.isTelegramma(), { codePdf: letter.codePdf }, {})
-                },
-                kind: NoticeKind.LETTER
-            });
-
-            return;
-        }
     }
 
     private chooseSubmitKind(kind: LetterKind): SubmitKind {

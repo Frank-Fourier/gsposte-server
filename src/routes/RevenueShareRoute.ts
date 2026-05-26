@@ -5,14 +5,16 @@ import { RevenueShareController } from "@controllers/RevenueShareController";
 
 /**
  * Tutti gli endpoint sotto /revenue-share sono admin-only (controllo nel controller).
- * Path principali:
+ * Path:
  *   /revenue-share/global                          GET, PUT
- *   /revenue-share/sender/:id                      GET, PUT, DELETE
- *   /revenue-share/user/:id                        GET, PUT, DELETE
- *   /revenue-share/invoice/:id                     GET, PUT, DELETE
  *   /revenue-share/invoice/:id/preview             GET
  *   /revenue-share/report/payouts                  GET (query ?from=YYYY-MM-DD&to=YYYY-MM-DD)
  *   /revenue-share/report/payouts/export           GET (stesso range, restituisce xlsx)
+ *
+ * Non esistono più endpoint di override per Sender / User / Invoice: la admin fee
+ * è SEMPRE accreditata al User che ha emesso la fattura (invoice.user) usando
+ * i dati `payoutFiscalCode` / `payoutIban` del suo profilo + `User.adminFeePercent`
+ * come eventuale override personale della % rispetto al default globale.
  */
 @provide(RevenueShareRoute)
 export class RevenueShareRoute extends Route {
@@ -25,14 +27,12 @@ export class RevenueShareRoute extends Route {
              * /revenue-share/global:
              *   get:
              *     tags: [ "Revenue Share" ]
-             *     description: Get the global RevenueShareSetting singleton (default split percentages and beneficiaries).
+             *     description: Get the global RevenueShareSetting singleton.
              *     security: [ { JWT: [] } ]
              *     responses:
              *       200:
              *         description: Setting singleton
              *         schema: { $ref: "#/definitions/RevenueShareSetting" }
-             *       401: { $ref: "#/responses/Unauthorized" }
-             *       403: { $ref: "#/responses/Forbidden" }
              */
             {
                 path: "/global",
@@ -46,7 +46,10 @@ export class RevenueShareRoute extends Route {
              * /revenue-share/global:
              *   put:
              *     tags: [ "Revenue Share" ]
-             *     description: Update beneficiaries on the global singleton. Validates that percentages sum to ~100 (±0.10 tolerance).
+             *     description: |
+             *       Aggiorna il singleton globale. Almeno uno tra `adminFeePercent` e
+             *       `residualBeneficiaries` deve essere presente. Valida che le %
+             *       dei residuali sommino a ~100 (±0.10 di tolleranza).
              *     security: [ { JWT: [] } ]
              *     parameters:
              *       - name: body
@@ -55,14 +58,16 @@ export class RevenueShareRoute extends Route {
              *         schema:
              *           type: object
              *           properties:
-             *             beneficiaries:
+             *             adminFeePercent:
+             *               type: number
+             *             residualBeneficiaries:
              *               type: array
-             *               items: { $ref: "#/definitions/RevenueShareBeneficiary" }
+             *               minItems: 2
+             *               maxItems: 2
+             *               items: { $ref: "#/definitions/ResidualBeneficiary" }
              *     responses:
              *       200: { description: Updated singleton }
              *       400: { $ref: "#/responses/BadRequest" }
-             *       401: { $ref: "#/responses/Unauthorized" }
-             *       403: { $ref: "#/responses/Forbidden" }
              */
             {
                 path: "/global",
@@ -70,73 +75,15 @@ export class RevenueShareRoute extends Route {
                 requiresAuth: true,
                 handler: (req, res) => this.controller.updateGlobal(req, res),
             },
-
-            // ─── Sender override ────────────────────────────────────────
-            {
-                path: "/sender/:id",
-                method: RequestMethod.GET,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.getSenderOverride(req, res),
-            },
-            {
-                path: "/sender/:id",
-                method: RequestMethod.PUT,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.setSenderOverride(req, res),
-            },
-            {
-                path: "/sender/:id",
-                method: RequestMethod.DELETE,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.deleteSenderOverride(req, res),
-            },
-
-            // ─── User override ──────────────────────────────────────────
-            {
-                path: "/user/:id",
-                method: RequestMethod.GET,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.getUserOverride(req, res),
-            },
-            {
-                path: "/user/:id",
-                method: RequestMethod.PUT,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.setUserOverride(req, res),
-            },
-            {
-                path: "/user/:id",
-                method: RequestMethod.DELETE,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.deleteUserOverride(req, res),
-            },
-
-            // ─── Invoice override (solo se !paid) ───────────────────────
-            {
-                path: "/invoice/:id",
-                method: RequestMethod.GET,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.getInvoiceOverride(req, res),
-            },
-            {
-                path: "/invoice/:id",
-                method: RequestMethod.PUT,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.setInvoiceOverride(req, res),
-            },
-            {
-                path: "/invoice/:id",
-                method: RequestMethod.DELETE,
-                requiresAuth: true,
-                handler: (req, res) => this.controller.deleteInvoiceOverride(req, res),
-            },
             /**
              * @swagger
              *
              * /revenue-share/invoice/{id}/preview:
              *   get:
              *     tags: [ "Revenue Share" ]
-             *     description: Anteprima dello split che verrebbe applicato a una invoice senza modificare nulla. Se invoice ha già splitSnapshot, ritorna quello.
+             *     description: |
+             *       Anteprima dello split per una invoice senza modificare nulla.
+             *       Se la invoice ha già `splitSnapshot`, ritorna quello (immutabile).
              *     security: [ { JWT: [] } ]
              *     parameters:
              *       - name: id
@@ -145,8 +92,6 @@ export class RevenueShareRoute extends Route {
              *         type: string
              *     responses:
              *       200: { description: Resolved split }
-             *       401: { $ref: "#/responses/Unauthorized" }
-             *       403: { $ref: "#/responses/Forbidden" }
              */
             {
                 path: "/invoice/:id/preview",
@@ -154,15 +99,15 @@ export class RevenueShareRoute extends Route {
                 requiresAuth: true,
                 handler: (req, res) => this.controller.previewInvoiceSplit(req, res),
             },
-
-            // ─── Reports ────────────────────────────────────────────────
             /**
              * @swagger
              *
              * /revenue-share/report/payouts:
              *   get:
              *     tags: [ "Revenue Share" ]
-             *     description: Aggrega tutti i payout (snapshot di fatture paid) in un range di date.
+             *     description: |
+             *       Aggrega tutti i payout (snapshot di fatture paid) in un range di
+             *       date, separati per amministratori (admin fee) e beneficiari residuo.
              *     security: [ { JWT: [] } ]
              *     parameters:
              *       - name: from
@@ -190,7 +135,7 @@ export class RevenueShareRoute extends Route {
              * /revenue-share/report/payouts/export:
              *   get:
              *     tags: [ "Revenue Share" ]
-             *     description: Stesso payoutReport ma serializzato come xlsx (2 fogli: Riepilogo + Dettaglio).
+             *     description: Stesso payoutReport ma serializzato come xlsx (2 fogli).
              *     security: [ { JWT: [] } ]
              *     parameters:
              *       - name: from

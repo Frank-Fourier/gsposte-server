@@ -54,24 +54,4 @@ export class UserService extends MongoRepository<User, UserDocument> {
         });
     }
 
-    public async getUserReferrer(user: UserDocument): Promise<UserDocument> {
-        if (!user.referFrom) { return null; }
-        return this.findOne({ referCode: user.referFrom }).catch(() => null);
-    }
-
-    public async getUserReferrers(user: UserDocument, maxLevel: number): Promise<UserDocument[]> {
-        const referrers = [ user ];
-        const recursiveGetUserReferrer = async (user: UserDocument, level: number): Promise<UserDocument[]> => {
-            if (level === maxLevel + 1) return;
-            const parent = await this.getUserReferrer(user);
-            if (!!parent) {
-                referrers.push(parent);
-                return recursiveGetUserReferrer(parent, level + 1);
-            }
-        };
-
-        await recursiveGetUserReferrer(user, 0);
-        return referrers;
-    }
-
 }

@@ -1,24 +1,13 @@
 import { model, Model, Schema, Document } from "mongoose";
 import { encryptPasswordSync } from "@utils/crypto";
-import { array, Decoder, number, object, optional, string } from "@mojotech/json-type-validation";
+import { Decoder, number, object, optional, string } from "@mojotech/json-type-validation";
 import uniqueValidator from "mongoose-unique-validator";
-import { generateRandomCode } from "@utils/random";
 import { InvoiceModel } from "@models/InvoiceModel";
-import {
-    RevenueShareOverride,
-    revenueShareOverrideDecoder,
-    RevenueShareOverrideSchema
-} from "@models/RevenueShareSettingModel";
 
 export enum UserRoles {
     ROLE_USER = "ROLE_USER",
     ROLE_TV_MANAGER = "ROLE_TV_MANAGER",
     ROLE_ADMIN = "ROLE_ADMIN"
-}
-
-export interface ProvisionPayment {
-    paymentDate: string
-    amount: number
 }
 
 /**
@@ -49,14 +38,6 @@ export interface ProvisionPayment {
  *       phone:
  *          type: string
  *          example: 3281234567
- *       referFrom:
- *         type: string
- *         description: Referral code (got from someone else)
- *         example: GSC4ZSGQZO
- *       referCode:
- *         type: string
- *         description: Referral code (used to refer other people)
- *         example: GSK6UJDIUI
  *       address:
  *         $ref: "#/definitions/Address"
  *       roles:
@@ -76,6 +57,30 @@ export interface ProvisionPayment {
  *         description: Username to send sms
  *         example: 'Carmine'
  *         maxlenght: 11
+ *       payoutName:
+ *         type: string
+ *         description: |
+ *           Ragione sociale / nome completo da usare come riferimento per il
+ *           payout della admin fee. Se vuoto, viene usato `username`.
+ *         example: "Studio Amministrazione Mario Rossi"
+ *       payoutFiscalCode:
+ *         type: string
+ *         description: |
+ *           CF o P.IVA dell'amministratore per il payout della admin fee.
+ *           Distinto dal campo `iva` (che è il dato usato per la fatturazione
+ *           al CLIENTE: lì sta la P.IVA del condominio amministrato).
+ *         example: "RSSMRA80A01H501Z"
+ *       payoutIban:
+ *         type: string
+ *         description: IBAN dove versare la admin fee
+ *         example: "IT60X0542811101000000123456"
+ *       adminFeePercent:
+ *         type: number
+ *         description: |
+ *           Override personale della percentuale di admin fee (0..100, max 2
+ *           decimali). Se undefined, eredita `adminFeePercent` dal singleton
+ *           globale RevenueShareSetting (default 30%).
+ *         example: 25
  *   UserDocument:
  *     allOf:
  *       - $ref: '#/definitions/User'
@@ -101,15 +106,14 @@ export interface User {
     password: string
     iva: string
     phone: string
-    referFrom?: string
-    referCode?: string
     active?: boolean
     roles?: Array<UserRoles>
     avatar?: string
-    recipientsGift?: number
-    provisionPayments?: Array<ProvisionPayment>
     smsName?: string
-    revenueShare?: RevenueShareOverride
+    payoutName?: string
+    payoutFiscalCode?: string
+    payoutIban?: string
+    adminFeePercent?: number
     isAdmin?: () => boolean
     isTvManager?: () => boolean
 }
@@ -121,14 +125,11 @@ export const userDecoder: Decoder<User> = object({
     password: string(),
     iva: string(),
     phone: string(),
-    referFrom: optional(string()),
-    recipientsGift: optional(number()),
-    provisionPayments: optional(array(object({
-        paymentDate: optional(string()),
-        amount: number(),
-    }))),
     avatar: optional(string()),
-    revenueShare: optional(revenueShareOverrideDecoder),
+    payoutName: optional(string()),
+    payoutFiscalCode: optional(string()),
+    payoutIban: optional(string()),
+    adminFeePercent: optional(number()),
 });
 
 /**
@@ -188,14 +189,6 @@ export const UserSchema = new Schema<User>({
         maxlength: 13,
         trim: true,
     },
-    referFrom: {
-        type: String,
-        trim: true,
-    },
-    referCode: {
-        type: String,
-        default: () => `GS${generateRandomCode()}`
-    },
     active: {
         type: Boolean,
         default: false,
@@ -208,29 +201,30 @@ export const UserSchema = new Schema<User>({
     avatar: {
         type: String,
     },
-    recipientsGift: {
-        type: Number,
-        default: 0,
-    },
     smsName: {
         type: String,
         trim: true,
         maxlength: 11,
     },
-    provisionPayments: [{
-        type: new Schema<ProvisionPayment>({
-            paymentDate: {
-                type: Date,
-                default: Date.now,
-            },
-            amount: {
-                type: Number,
-                required: "Payment amount is required.",
-            }
-        }, { _id: false })
-    }],
-    revenueShare: {
-        type: RevenueShareOverrideSchema,
+    payoutName: {
+        type: String,
+        trim: true,
+        maxlength: 200,
+    },
+    payoutFiscalCode: {
+        type: String,
+        trim: true,
+        maxlength: 16,
+    },
+    payoutIban: {
+        type: String,
+        trim: true,
+        maxlength: 34,
+    },
+    adminFeePercent: {
+        type: Number,
+        min: 0,
+        max: 100,
     },
 }, {
     timestamps: {

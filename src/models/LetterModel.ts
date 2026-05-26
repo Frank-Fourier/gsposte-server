@@ -14,7 +14,6 @@ import { SenderDocument } from "@models/SenderModel";
 import { Recipient, RecipientDocument } from "@models/RecipientModel";
 import { InvoiceDocument } from "@models/InvoiceModel";
 import { Person, PriceResponse, TelegramTicket, TrackResponse } from "../posteway";
-import { ProvisionDocument } from "@models/ProvisionModel";
 import { addressDecoder, AddressSchema } from "@models/schemas/AddressSchema";
 
 export enum LetterKind {
@@ -101,10 +100,6 @@ export enum LetterKind {
  *       notes:
  *         type: string
  *         example: This is my beautiful campaign!
- *       recipientsGift:
- *         type: number
- *         description: How many recipients to gift for this letter
- *         example: 0
  *       smsText:
  *         type: string
  *         description: Text of the SMS to send (max 160 chars)
@@ -120,10 +115,6 @@ export enum LetterKind {
  *           invoice:
  *             type: string
  *             description: Invoice associated with this letter
- *             example: 5c991af86327ba47393f2fb3
- *           provision:
- *             type: string
- *             description: Provision associated with this letter
  *             example: 5c991af86327ba47393f2fb3
  *           sent:
  *             type: boolean
@@ -164,19 +155,17 @@ export interface Letter {
     bw?: boolean
     backSide?: boolean
     notes?: string
-    recipientsGift?: number
     telegramShowSenderAddress?: boolean
     smsText?: string
     isRaccomandata?: () => boolean
     isTelegramma?: () => boolean
-    getTotalPrice?: (gifts?: number) => number
+    getTotalPrice?: () => number
 }
 export interface LetterDocument extends Letter, Document {
     sent: boolean
     paid?: boolean
     error?: boolean
     invoice?: string | InvoiceDocument
-    provision?: string | ProvisionDocument
     price?: number
     posteway?: {
         requestId?: string
@@ -244,7 +233,6 @@ export const letterDecoder: Decoder<Letter> = object({
     bw: optional(boolean()),
     backSide: optional(boolean()),
     notes: optional(string()),
-    recipientsGift: optional(number()),
     telegramShowSenderAddress: optional(boolean()),
 });
 
@@ -348,16 +336,8 @@ export const LetterSchema = new Schema<Letter>({
         type: Schema.Types.ObjectId,
         ref: "Invoice",
     },
-    provision: {
-        type: Schema.Types.ObjectId,
-        ref: "Provision",
-    },
     price: {
         type: Number,
-    },
-    recipientsGift: {
-        type: Number,
-        default: 0,
     },
     posteway: new Schema({
         requestId: String,
@@ -400,8 +380,8 @@ LetterSchema.methods.isRaccomandata = function() {
 LetterSchema.methods.isTelegramma = function() {
     return this.kind === LetterKind.TELEGRAMMA;
 }
-LetterSchema.methods.getTotalPrice = function(gifts?: number) {
-    return this.price * (this.recipients.length - (gifts ?? 0));
+LetterSchema.methods.getTotalPrice = function() {
+    return this.price * this.recipients.length;
 };
 
 export const LetterModel: Model<LetterDocument> = model("Letter", LetterSchema);
