@@ -26,6 +26,7 @@ import { StatsRoute } from "@routes/StatsRoute";
 import { NoticeRoute } from "@routes/NoticeRoute";
 import { ImageRoute } from "@routes/ImageRoute";
 import { RevenueShareRoute } from "@routes/RevenueShareRoute";
+import { HealthRoute } from "@routes/HealthRoute";
 
 import { MONGO_URI } from "@utils/mongo";
 import { logger } from "@utils/winston";
@@ -45,6 +46,7 @@ export class ExpressServer {
     server: http.Server;
 
     routes: Route[] = [
+        ioc.resolve(HealthRoute),
         ioc.resolve(AuthRoute),
         ioc.resolve(UserRoute),
         ioc.resolve(SenderRoute),
