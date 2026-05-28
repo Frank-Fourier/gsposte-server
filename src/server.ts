@@ -196,7 +196,10 @@ export class ExpressServer {
             // Aspetto che la connessione Mongo sia READY prima di seedare:
             // in dev può capitare che setupDatabase non abbia ancora completato
             // quando arriviamo qui (è async-fire-and-forget nel costruttore).
-            const conn = (await import("mongoose")).connection;
+            // NB: usiamo l'import statico in cima al file; con esModuleInterop
+            // attivo `await import("mongoose")` ritorna { default: mongoose }
+            // e .connection sarebbe undefined.
+            const conn = mongoose.connection;
             if (conn.readyState !== 1) {
                 await new Promise<void>((resolve, reject) => {
                     const t = setTimeout(() => reject(new Error("Mongo connection timeout")), 30000);
