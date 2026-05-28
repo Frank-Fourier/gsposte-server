@@ -38,6 +38,7 @@ import { initializeWebSocketServer, WebSocketClient } from "@utils/websockets";
 import { initSentry, setupSentryErrorHandlers, setupSentryHandlers } from "@utils/sentry";
 import { FicRoute } from "@routes/FicRoute";
 import { RevenueShareService } from "@services/RevenueShareService";
+import { MunicipalityService } from "@services/MunicipalityService";
 
 @provide(ExpressServer)
 export class ExpressServer {
@@ -81,6 +82,7 @@ export class ExpressServer {
         this.setupSystemUser();
         this.setupRevenueShareSingleton();
         this.setupSchemaMigrations();
+        this.setupMunicipalitiesSeed();
         this.setupSwagger();
         this.setupCronJobs();
         this.setupWebSocket();
@@ -174,6 +176,37 @@ export class ExpressServer {
             }
         } catch (err) {
             logger.error("[Migrations] schema migrations failed:", err);
+        }
+    }
+
+    /**
+     * Seed idempotente dell'anagrafica comuni/CAP a partire dal file
+     * `data/municipalities.json` committato in repo (rigenerato via
+     * `scripts/build-municipalities.js` quando esce un nuovo CAP_GC_*.xlsx).
+     *
+     * No-op se il checksum sha256 del file in repo coincide con quello
+     * salvato nella collection `municipalitiesmetas` di Mongo. Tipicamente
+     * a regime stampa "Up-to-date, skip" e non tocca il DB.
+     *
+     * Si esegue *dopo* il setupDatabase() perché serve la connessione attiva.
+     */
+    private async setupMunicipalitiesSeed() {
+        if (isTestEnv()) return;
+        try {
+            // Aspetto che la connessione Mongo sia READY prima di seedare:
+            // in dev può capitare che setupDatabase non abbia ancora completato
+            // quando arriviamo qui (è async-fire-and-forget nel costruttore).
+            const conn = (await import("mongoose")).connection;
+            if (conn.readyState !== 1) {
+                await new Promise<void>((resolve, reject) => {
+                    const t = setTimeout(() => reject(new Error("Mongo connection timeout")), 30000);
+                    conn.once("connected", () => { clearTimeout(t); resolve(); });
+                    conn.once("error", (e) => { clearTimeout(t); reject(e); });
+                });
+            }
+            await ioc.resolve(MunicipalityService).ensureSeeded();
+        } catch (err) {
+            logger.error("[Municipality.seed] Bootstrap fallito:", err);
         }
     }
 

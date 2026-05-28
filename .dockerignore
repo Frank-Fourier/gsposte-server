@@ -53,3 +53,8 @@ README.md
 
 # Logs
 *.log
+
+# Anagrafica comuni: i sorgenti di build (xlsx Poste, comuni-json grezzo)
+# servono solo allo script offline `build-municipalities.js`; il container
+# in runtime usa solo data/municipalities.json e data/municipalities.meta.json.
+data/source/

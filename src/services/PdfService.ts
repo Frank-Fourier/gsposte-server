@@ -207,11 +207,11 @@ export class PdfService {
         }
 
         // Set final metadata and return as base64
-        pdfDoc.setTitle(`Documento GSPoste di ${sender.name}`);
-        pdfDoc.setProducer("GSPoste");
+        pdfDoc.setTitle(`Documento Portale Postale di ${sender.name}`);
+        pdfDoc.setProducer("Portale Postale");
         pdfDoc.setAuthor(sender.name);
-        pdfDoc.setCreator(`${sender.name} - GSPoste`);
-        pdfDoc.setSubject("Documento inviato tramite la piattaforma GSPoste");
+        pdfDoc.setCreator(`${sender.name} - Portale Postale`);
+        pdfDoc.setSubject("Documento inviato tramite la piattaforma Portale Postale");
         pdfDoc.setLanguage("it-IT");
         pdfDoc.setKeywords([]);
         pdfDoc.setCreationDate(new Date());

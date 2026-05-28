@@ -15,5 +15,5 @@ const express = ioc.resolve(ExpressServer);
 const port = parseInt(process.env.SERVER_PORT || "5000");
 
 express.server.listen(port, () => {
-    logger.info(`GSPoste server up and running in ${process.env.NODE_ENV} on port ${port}`);
+    logger.info(`Portale Postale server up and running in ${process.env.NODE_ENV} on port ${port}`);
 });

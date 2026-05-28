@@ -43,6 +43,10 @@ COPY tsconfig.json ./
 COPY tslint.json ./
 COPY src ./src
 COPY public ./public
+# Anagrafica comuni/CAP committata. Letta dal MunicipalityService al boot
+# per il seeding idempotente. Il file source xlsx è solo per riferimento
+# build-time; a runtime serve solo il municipalities.json + .meta.json.
+COPY data ./data
 
 # Build TS → dist/
 RUN yarn build
@@ -95,6 +99,8 @@ COPY --chown=node:node --from=builder /build/node_modules ./node_modules
 COPY --chown=node:node --from=builder /build/dist ./dist
 COPY --chown=node:node --from=builder /build/public ./public
 COPY --chown=node:node --from=builder /build/package.json ./package.json
+# Anagrafica comuni: serve a runtime per il boot-time seeding di Mongo.
+COPY --chown=node:node --from=builder /build/data ./data
 
 # I volumi del compose montano sopra le sotto-cartelle di public/ per persistere.
 # Senza volumi (dev) le cartelle restano scrivibili dall'utente "node".

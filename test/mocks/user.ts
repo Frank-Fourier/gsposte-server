@@ -5,12 +5,11 @@ import { UserService } from "@services/UserService";
 import { ioc } from "@ioc";
 import { AuthService } from "@services/AuthService";
 
-export function generateMockUser(referFrom?: string): User {
+export function generateMockUser(): User {
     return {
         username: faker.internet.userName(),
         email: faker.internet.email(),
         password: faker.internet.password(),
-        referFrom: referFrom,
         iva: "06998950726",
         phone: "3281426266",
     };

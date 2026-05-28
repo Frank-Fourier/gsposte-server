@@ -591,7 +591,7 @@ export class LetterService extends MongoRepository<Letter, LetterDocument> {
         const pdf = this.getOriginalPdfLink(letter);
         const { pages, letters } = await this.posteway.cds_create_bulk(
             letter.recipients.map<PW_Letter>((recipient: RecipientDocument) => ({
-                platform: "GSPoste",
+                platform: "Portale Postale",
                 code: letter.codePdf,
                 kind: "runo",
                 sender: mapSenderToPerson(letter.sender as SenderDocument, letter.kind, letter.subject),

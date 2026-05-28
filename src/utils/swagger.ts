@@ -6,15 +6,15 @@ export const swaggerOptions: SwaggerUiOptions = {
     customCss: `
         .swagger-ui .topbar { display: none }
     `,
-    customSiteTitle: "GSPoste API Docs"
+    customSiteTitle: "Portale Postale API Docs"
 };
 
 export const swaggerUi = setup(swaggerJSDoc({
     swaggerDefinition: {
         info: {
-            title: "GSPoste API",
+            title: "Portale Postale API",
             version: packageJson.version,
-            description: "API documentation for GSPoste"
+            description: "API documentation for Portale Postale"
         },
         host: `${process.env.SERVER_HOST.replace("http://", "").replace("https://", "")}:${
             process.env.NODE_ENV !== "production" ? (process.env.SERVER_PORT || "5000") : ""

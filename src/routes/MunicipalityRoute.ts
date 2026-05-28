@@ -119,6 +119,159 @@ export class MunicipalityRoute extends Route {
             /**
              * @swagger
              *
+             * /municipality/search:
+             *   get:
+             *     tags:
+             *       - Municipalities
+             *     description: Autocomplete by municipality name (prefix-then-substring, case/accent insensitive).
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: q
+             *         in: query
+             *         required: true
+             *         type: string
+             *         description: Search prefix/substring on municipality name.
+             *       - name: province
+             *         in: query
+             *         required: false
+             *         type: string
+             *         description: Filter by 2-letter province code (e.g. "MI").
+             *       - name: limit
+             *         in: query
+             *         required: false
+             *         type: integer
+             *         description: Max results (default 20, max 50).
+             *     responses:
+             *       200:
+             *         description: Array of matching municipalities
+             *         schema:
+             *           type: array
+             *           items:
+             *             $ref: "#/definitions/MunicipalityDocument"
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/search",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.municipalityController.search(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /municipality/by-zip/{zip}:
+             *   get:
+             *     tags:
+             *       - Municipalities
+             *     description: Lookup municipalities by exact CAP. Includes hamlets (frazioni) with their own CAP.
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: zip
+             *         in: path
+             *         required: true
+             *         type: string
+             *         description: 5-digit CAP.
+             *     responses:
+             *       200:
+             *         description: Municipalities and hamlets that match this CAP
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/by-zip/:zip",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.municipalityController.findByZip(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /municipality/by-istat/{istat}:
+             *   get:
+             *     tags:
+             *       - Municipalities
+             *     description: Lookup a municipality by exact ISTAT code (logical key).
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: istat
+             *         in: path
+             *         required: true
+             *         type: string
+             *     responses:
+             *       200:
+             *         description: Municipality found
+             *         schema:
+             *           $ref: "#/definitions/MunicipalityDocument"
+             *       404:
+             *         description: ISTAT not found
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/by-istat/:istat",
+                method: RequestMethod.GET,
+                requiresAuth: true,
+                handler: (req, res) => this.municipalityController.findByIstat(req, res)
+            },
+            /**
+             * @swagger
+             *
+             * /municipality/validate:
+             *   post:
+             *     tags:
+             *       - Municipalities
+             *     description: >
+             *       Address validation core. Accepts {city, zip, province?} and returns
+             *       { ok, normalized?, errors[], suggestions[] } so the frontend can
+             *       offer correction tips before submitting a letter / saving an anagrafica.
+             *     produces:
+             *       - application/json
+             *     security:
+             *       - JWT: []
+             *     parameters:
+             *       - name: body
+             *         in: body
+             *         required: true
+             *         schema:
+             *           type: object
+             *           required: [ city, zip ]
+             *           properties:
+             *             city:     { type: string, example: "Roma" }
+             *             zip:      { type: string, example: "00118" }
+             *             province: { type: string, example: "RM" }
+             *     responses:
+             *       200:
+             *         description: Validation result (ok=true|false)
+             *       400:
+             *         $ref: "#/responses/BadRequest"
+             *       401:
+             *         $ref: "#/responses/Unauthorized"
+             */
+            {
+                path: "/validate",
+                method: RequestMethod.POST,
+                requiresAuth: true,
+                handler: (req, res) => this.municipalityController.validate(req, res)
+            },
+            /**
+             * @swagger
+             *
              * /municipality/{id}:
              *   get:
              *     tags:

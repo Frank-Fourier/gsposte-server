@@ -151,3 +151,81 @@ You should use the orchestrator to deploy this thing. Clone it from gsposte-orch
 ```shell
 docker-compose up -d --build server
 ```
+
+---
+
+## Comuni & CAP — refresh del dataset
+
+Il server mantiene una collection `municipalities` seedata in modo idempotente
+all'avvio dal file `data/municipalities.json` committato. Il dataset è la
+**fusione** di:
+
+1. **CAP_GC Poste Italiane** (`CAP_GC_I_Sem<anno>.xlsx`), pubblicato due volte
+   l'anno da Poste — è la fonte autoritativa per CAP, frazioni e grandi centri.
+2. **`matteocontrini/comuni-json`** — clone open source dei dati ISTAT, fonte
+   per regione, sigla provincia, codice catastale, codice ISTAT.
+
+### Quando rilanciare il refresh
+
+- **Ogni semestre**, quando Poste pubblica un nuovo `CAP_GC_*.xlsx` (gennaio /
+  luglio).
+- Quando ISTAT aggiorna `comuni-json` (fusioni, scorpori, rinomine).
+- Mai a mano sui singoli record: per casi puntuali si usa l'admin endpoint
+  `POST /municipality/import` (legacy) descritto sotto.
+
+### Procedura
+
+```shell
+# 1) Posiziona i file sorgente in data/source/ :
+#      data/source/CAP_GC_I_Sem2025.xlsx        (ufficiale Poste)
+#      data/source/comuni-json.json             (matteocontrini/comuni-json)
+
+# 2) Genera il dataset consolidato + checksum
+node scripts/build-municipalities.js
+
+# Output:
+#   data/municipalities.json        (~12MB, ~8K records)
+#   data/municipalities.meta.json   { sha256, count, sourceCAPGC, builtAt }
+
+# 3) Commit dei due file generati. NIENTE in data/source/ (vedi .dockerignore).
+
+# 4) Deploy. Al boot, MunicipalityService.ensureSeeded() rileva il nuovo sha256
+#    nel meta file, droppa la collection municipalities e fa bulk-insert.
+#    L'operazione è ~1s su 8K record.
+```
+
+### Normalizzazione anagrafiche esistenti
+
+Dopo un refresh, le anagrafiche già a sistema (Sender, Recipient) possono
+contenere comuni con grafia obsoleta o CAP non più validi. Lo script
+`scripts/normalize-addresses.js` gira in dry-run di default e produce un report
+CSV di tutti i mismatch:
+
+```shell
+# dry run — solo report
+MONGO_URI=mongodb://localhost:27017/gsposte_dev node scripts/normalize-addresses.js
+
+# applica le normalizzazioni di grafia (city + province)
+MONGO_URI=... node scripts/normalize-addresses.js --apply
+```
+
+Il report finisce in `data/normalize-addresses-report-<timestamp>.csv` con
+colonne `collection,id,addressKey,city,zip,province,problem,suggestion` e
+codici problema `MUNI_NOT_FOUND` / `ZIP_MISMATCH` / `WOULD_NORMALIZE`.
+
+### Endpoint pubblici
+
+I form lato client devono usare:
+
+- `GET /municipality/search?q=<prefisso>&province=<sigla>&limit=<n>` — autocomplete
+- `GET /municipality/by-zip/:zip` — lookup CAP, include frazioni
+- `GET /municipality/by-istat/:istat` — lookup per codice ISTAT
+- `POST /municipality/validate` `{ city, zip, province }` — validate semantica
+  pre-submit con suggestions
+
+### Endpoint admin (legacy)
+
+- `POST /municipality/import` (multipart, file JSON in formato `comuni-json`):
+  importa **solo** la fonte ISTAT. Perde i CAP estesi del CAP_GC. Usare solo in
+  emergenza; resetta lo sha256 in modo che il successivo boot riseedi dal JSON
+  canonico.

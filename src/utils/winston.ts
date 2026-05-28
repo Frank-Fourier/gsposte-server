@@ -50,7 +50,7 @@ if (process.env.NODE_ENV === "production") {
     logger.add(new Sentry({
         sentry: {
             dsn: process.env.SENTRY_DSN,
-            serverName: "gsposte-server",
+            serverName: "portalepostale-server",
         },
         level: "error",
     }));

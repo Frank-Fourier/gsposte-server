@@ -24,7 +24,7 @@ export function createWebSocketServer(server: http.Server | https.Server): WebSo
         ws.send(JSON.stringify({
             title: "Hello!",
             content: `Hello there! Your session ID is ${ws.id}.`,
-            sender: "GSPoste",
+            sender: "Portale Postale",
             broadcast: false,
             error: false,
             data: {}

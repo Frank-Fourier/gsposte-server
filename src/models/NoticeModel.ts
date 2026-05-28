@@ -23,7 +23,7 @@ import { ws_broadcast, ws_message } from "@utils/websockets";
  *       sender:
  *         type: string
  *         description: Chi ha inviato questa notifica
- *         example: GSPoste
+ *         example: Portale Postale
  *       read:
  *         type: boolean
  *         description: True quando la notifica viene letta dall'utente
@@ -110,7 +110,7 @@ export const NoticeSchema = new Schema<Notice>({
     },
     sender: {
         type: String,
-        default: "GSPoste",
+        default: "Portale Postale",
     },
     read: {
         type: Boolean,

@@ -14,7 +14,7 @@ export function initSentry(app: Application) {
         maxBreadcrumbs: 200,
         tracesSampleRate: 1.0,
         environment: process.env.NODE_ENV,
-        release: `gsposte-server@${process.env.npm_package_version}`
+        release: `portalepostale-server@${process.env.npm_package_version}`
     });
 }
 

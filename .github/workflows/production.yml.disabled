@@ -1,3 +1,9 @@
+# DISABLED: il file e' stato rinominato in .yml.disabled per evitare l'esecuzione
+# da parte di GitHub Actions. La vecchia infrastruttura (invio.gsposte.it,
+# /home/manager/action-runner/) non esiste piu'.
+# Il deploy in produzione e' ora gestito manualmente via docker compose sul VM
+# Vultr (posteway-orch). Un nuovo workflow CI/CD potra' essere aggiunto in
+# futuro puntando al nuovo host portalepostale.it.
 name: CI-PRODUCTION
 
 # Controls when the action will run.
