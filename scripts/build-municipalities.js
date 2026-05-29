@@ -260,11 +260,18 @@ function buildMunicipalities(poste, comuniJson) {
     for (const [key, agg] of muniAgg.entries()) {
         const ne = normalize(agg.nameRaw);
         const nl = normalizeLoose(agg.nameRaw);
-        const cj =
+        // Match a cascata. I fallback "solo nome" (senza sigla) sono ammessi
+        // SOLO se la provincia del comune ISTAT combacia con quella Poste:
+        // altrimenti un omonimo in un'altra provincia (es. Corvara PE) verrebbe
+        // assegnato per errore a Corvara (BZ), con istat/regione sbagliati e un
+        // duplicato sull'indice unique{istat}.
+        let cj =
             comuniByNameSig.get(`${ne}|${agg.sigla}`) ||
-            comuniByName.get(ne) ||
-            comuniByLooseSig.get(`${nl}|${agg.sigla}`) ||
-            comuniByLoose.get(nl);
+            comuniByLooseSig.get(`${nl}|${agg.sigla}`);
+        if (!cj) {
+            const cand = comuniByName.get(ne) || comuniByLoose.get(nl);
+            if (cand && (cand.sigla || "").toUpperCase() === agg.sigla) cj = cand;
+        }
         if (!cj) {
             unmatched++;
             // Lo includiamo lo stesso: il nostro source-of-truth è Poste.
@@ -292,16 +299,58 @@ function buildMunicipalities(poste, comuniJson) {
         });
     }
 
+    // 3f) Dedup per codice ISTAT. Poste a volte scrive lo stesso comune con due
+    //     grafie (es. "Trentola Ducenta" e "Trentola-Ducenta"): generano due
+    //     aggregati distinti che però matchano lo stesso comune ISTAT. L'indice
+    //     unique{istat} li rifiuterebbe in fase di seed, quindi qui li fondiamo
+    //     in un solo record (unione di CAP e frazioni). I record senza istat
+    //     (source POSTE_GC) restano intatti.
+    const byIstat = new Map();
+    const deduped = [];
+    let merged = 0;
+    for (const rec of out) {
+        if (!rec.istat) {
+            deduped.push(rec);
+            continue;
+        }
+        const ex = byIstat.get(rec.istat);
+        if (!ex) {
+            byIstat.set(rec.istat, rec);
+            deduped.push(rec);
+            continue;
+        }
+        const caps = Array.from(new Set([ ...ex.zip, ...rec.zip ])).sort();
+        ex.zip = caps;
+        ex.zipMain = caps[0];
+        ex.isGrandeCentro = caps.length > 1;
+        const seen = new Set(ex.hamlets.map((h) => `${h.name}|${h.zip}`));
+        for (const h of rec.hamlets) {
+            const k = `${h.name}|${h.zip}`;
+            if (!seen.has(k)) {
+                ex.hamlets.push(h);
+                seen.add(k);
+            }
+        }
+        ex.hamlets.sort((a, b) => a.name.localeCompare(b.name));
+        // Preferiamo la grafia col trattino (canonica ISTAT) per il display.
+        if (rec.name.includes("-") && !ex.name.includes("-")) {
+            ex.name = rec.name;
+            ex.nameNormalized = rec.nameNormalized;
+        }
+        merged++;
+    }
+
     // Ordine deterministico per stabilità del checksum nei diff git.
-    out.sort((a, b) => {
+    deduped.sort((a, b) => {
         if (a.province !== b.province) return a.province.localeCompare(b.province);
         return a.nameNormalized.localeCompare(b.nameNormalized);
     });
 
     console.log(
-        `       comuni: ${out.length}  •  con-istat: ${out.length - unmatched}  •  senza-istat: ${unmatched}`
+        `       comuni: ${deduped.length}  •  con-istat: ${deduped.filter((m) => m.istat).length}` +
+        `  •  senza-istat: ${deduped.filter((m) => !m.istat).length}  •  fusi-per-istat: ${merged}`
     );
-    return out;
+    return deduped;
 }
 
 // ─── Step 4: write output ────────────────────────────────────────────────────
